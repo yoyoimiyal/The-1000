@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AA制分账助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-cyan-50 min-h-screen flex items-center justify-center font-sans text-slate-600">
+
+    <div class="bg-white p-0 md:p-6 rounded-3xl shadow-xl w-full max-w-4xl flex flex-col md:flex-row overflow-hidden">
+
+        <!-- Left Panel: Inputs -->
+        <div class="p-8 w-full md:w-1/2 flex flex-col justify-center">
+            <h1 class="text-2xl font-bold text-slate-700 mb-2">Splitter</h1>
+            <p class="text-slate-400 mb-8 text-sm">聚餐分账计算器</p>
+
+            <!-- Bill -->
+            <label class="text-sm font-bold text-slate-500 mb-2 block">账单总额</label>
+            <div class="relative mb-8">
+                <span class="absolute left-4 top-3 text-slate-400 text-lg">¥</span>
+                <input type="number" id="bill" placeholder="0.00"
+                    class="w-full bg-slate-100 text-right text-2xl font-bold text-cyan-800 py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+                    oninput="calculate()">
+            </div>
+
+            <!-- Tip % -->
+            <label class="text-sm font-bold text-slate-500 mb-2 block">服务费 / 小费 %</label>
+            <div class="grid grid-cols-3 gap-3 mb-8">
+                <button
+                    class="tip-btn py-2 rounded bg-cyan-800 text-white font-bold hover:bg-cyan-200 hover:text-cyan-800 transition"
+                    onclick="setTip(0)">0%</button>
+                <button
+                    class="tip-btn py-2 rounded bg-cyan-800 text-white font-bold hover:bg-cyan-200 hover:text-cyan-800 transition"
+                    onclick="setTip(5)">5%</button>
+                <button
+                    class="tip-btn py-2 rounded bg-cyan-800 text-white font-bold hover:bg-cyan-200 hover:text-cyan-800 transition"
+                    onclick="setTip(10)">10%</button>
+                <button
+                    class="tip-btn py-2 rounded bg-cyan-800 text-white font-bold hover:bg-cyan-200 hover:text-cyan-800 transition"
+                    onclick="setTip(15)">15%</button>
+                <button
+                    class="tip-btn py-2 rounded bg-cyan-800 text-white font-bold hover:bg-cyan-200 hover:text-cyan-800 transition"
+                    onclick="setTip(20)">20%</button>
+                <input type="number" id="custom-tip" placeholder="自定义"
+                    class="bg-slate-100 text-center font-bold text-cyan-800 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    oninput="setCustomTip()">
+            </div>
+
+            <!-- People -->
+            <label class="text-sm font-bold text-slate-500 mb-2 block">分摊人数</label>
+            <div class="relative">
+                <span class="absolute left-4 top-3 text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                            d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                    </svg>
+                </span>
+                <input type="number" id="people" placeholder="1" value="1"
+                    class="w-full bg-slate-100 text-right text-2xl font-bold text-cyan-800 py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+                    oninput="calculate()">
+            </div>
+        </div>
+
+        <!-- Right Panel: Result -->
+        <div class="bg-cyan-800 p-8 w-full md:w-1/2 md:rounded-2xl flex flex-col justify-between text-white">
+
+            <div class="space-y-8 mt-4">
+                <!-- Row 1 -->
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="font-bold text-sm">小费金额</p>
+                        <p class="text-cyan-300 text-xs">/ 每人</p>
+                    </div>
+                    <div class="text-3xl font-bold text-cyan-300">¥<span id="tip-amount">0.00</span></div>
+                </div>
+
+                <!-- Row 2 -->
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="font-bold text-sm">支付总额</p>
+                        <p class="text-cyan-300 text-xs">/ 每人</p>
+                    </div>
+                    <div class="text-5xl font-bold text-cyan-300">¥<span id="total-amount">0.00</span></div>
+                </div>
+
+                <!-- Extra Info -->
+                <div class="pt-6 border-t border-cyan-700 flex justify-between text-cyan-200 text-sm">
+                    <span>账单合计: ¥<span id="grand-total">0.00</span></span>
+                </div>
+            </div>
+
+            <div class="mt-12 flex flex-col gap-4">
+                <button onclick="reset()"
+                    class="w-full bg-cyan-200 text-cyan-900 font-bold py-3 rounded uppercase tracking-widest hover:bg-cyan-100 transition">
+                    重置 (RESET)
+                </button>
+                <a href="./navigation.html" class="text-center text-cyan-400 hover:text-white text-xs">返回导航</a>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        let tipPercentage = 0;
+
+        function setTip(val) {
+            tipPercentage = val;
+            document.getElementById('custom-tip').value = '';
+
+            // UI Update
+            document.querySelectorAll('.tip-btn').forEach(btn => {
+                btn.classList.remove('bg-cyan-200', 'text-cyan-800');
+                btn.classList.add('bg-cyan-800', 'text-white');
+            });
+            event.target.classList.remove('bg-cyan-800', 'text-white');
+            event.target.classList.add('bg-cyan-200', 'text-cyan-800');
+
+            calculate();
+        }
+
+        function setCustomTip() {
+            // Reset buttons
+            document.querySelectorAll('.tip-btn').forEach(btn => {
+                btn.classList.remove('bg-cyan-200', 'text-cyan-800');
+                btn.classList.add('bg-cyan-800', 'text-white');
+            });
+            tipPercentage = parseFloat(document.getElementById('custom-tip').value);
+            calculate();
+        }
+
+        function calculate() {
+            const bill = parseFloat(document.getElementById('bill').value);
+            const people = parseInt(document.getElementById('people').value);
+
+            if (bill >= 0 && people >= 1) {
+                const tipAmount = bill * (tipPercentage / 100);
+                const grandTotal = bill + tipAmount;
+
+                const tipPerPerson = tipAmount / people;
+                const totalPerPerson = grandTotal / people;
+
+                document.getElementById('tip-amount').innerText = tipPerPerson.toFixed(2);
+                document.getElementById('total-amount').innerText = totalPerPerson.toFixed(2);
+                document.getElementById('grand-total').innerText = grandTotal.toFixed(2);
+            }
+        }
+
+        function reset() {
+            document.getElementById('bill').value = '';
+            document.getElementById('people').value = '1';
+            document.getElementById('custom-tip').value = '';
+            setTip(0);
+            // Manually reset first button active state if needed, or just leave all inactive
+            calculate();
+        }
+    </script>
+</body>
+
+</html>

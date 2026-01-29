@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手机水平仪</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .bubble {
+            transition: transform 0.1s ease-out;
+            box-shadow: inset -2px -2px 5px rgba(0, 0, 0, 0.2), 2px 2px 5px rgba(255, 255, 255, 0.5);
+        }
+
+        .center-mark {
+            border: 2px solid rgba(0, 0, 0, 0.2);
+            border-radius: 50%;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden">
+
+    <div
+        class="relative w-72 h-72 bg-white rounded-full shadow-2xl border-8 border-gray-200 flex items-center justify-center mb-8 overflow-hidden">
+
+        <!-- Grid/Guides -->
+        <div class="absolute inset-0 opacity-10 pointer-events-none">
+            <div class="absolute top-1/2 w-full h-px bg-black -translate-y-1/2"></div>
+            <div class="absolute left-1/2 h-full w-px bg-black -translate-x-1/2"></div>
+        </div>
+
+        <!-- Center Target Zone -->
+        <div class="center-mark w-16 h-16 absolute z-10"></div>
+
+        <!-- The Bubble -->
+        <div id="bubble" class="bubble w-12 h-12 bg-lime-400 rounded-full z-20"></div>
+
+        <!-- Text Value -->
+        <div class="absolute bottom-10 font-mono text-xs text-gray-400 font-bold" id="coords">0°, 0°</div>
+
+    </div>
+
+    <div class="text-center max-w-xs">
+        <h1 class="text-xl font-bold text-gray-800 mb-2">Spirit Level</h1>
+        <p class="text-sm text-gray-500 mb-4">请将手机平放在桌面上</p>
+
+        <div id="permission-btn-area" class="hidden">
+            <button onclick="requestPermission()"
+                class="bg-blue-600 text-white px-6 py-2 rounded-full font-bold shadow-lg hover:bg-blue-700 transition">
+                允许访问传感器
+            </button>
+        </div>
+
+        <p class="text-xs text-gray-400 mt-6 border-t border-gray-200 pt-4">
+            * 电脑端：移动鼠标模拟倾斜<br>
+            * 手机端：使用陀螺仪
+        </p>
+    </div>
+
+    <div class="fixed top-4 right-4">
+        <a href="./navigation.html" class="text-sm text-gray-400 hover:text-gray-600">退出</a>
+    </div>
+
+    <script>
+        const bubble = document.getElementById('bubble');
+        const coords = document.getElementById('coords');
+        const permBtnArea = document.getElementById('permission-btn-area');
+
+        let maxX = 110; // Max pixels to move from center
+        let maxY = 110;
+
+        // Mobile: Device Orientation
+        function handleOrientation(event) {
+            // beta: front-back tilt [-180, 180]
+            // gamma: left-right tilt [-90, 90]
+            let x = event.gamma;
+            let y = event.beta;
+
+            // Clamp for UI
+            if (x > 45) x = 45;
+            if (x < -45) x = -45;
+            if (y > 45) y = 45;
+            if (y < -45) y = -45;
+
+            updateUI(x, y);
+        }
+
+        function updateUI(xDeg, yDeg) {
+            // Map degrees to pixels
+            // 45 deg = 110px
+            const pxX = (xDeg / 45) * maxX;
+            const pxY = (yDeg / 45) * maxY;
+
+            bubble.style.transform = `translate(${pxX}px, ${pxY}px)`;
+
+            const xFixed = Math.round(xDeg);
+            const yFixed = Math.round(yDeg);
+            coords.innerText = `X: ${xFixed}°, Y: ${yFixed}°`;
+
+            // Change color if perfectly level
+            if (Math.abs(xFixed) < 2 && Math.abs(yFixed) < 2) {
+                bubble.classList.replace('bg-lime-400', 'bg-green-500');
+                bubble.style.boxShadow = "0 0 20px #22c55e";
+            } else {
+                bubble.classList.replace('bg-green-500', 'bg-lime-400');
+                bubble.style.boxShadow = "none";
+            }
+        }
+
+        // PC: Mouse Simulation
+        document.addEventListener('mousemove', (e) => {
+            // Only if orientation not supported or active? 
+            // We just override for demo purposes on PC.
+            if (!window.DeviceOrientationEvent || !('ontouchstart' in window)) {
+                const w = window.innerWidth;
+                const h = window.innerHeight;
+                // Normalize mouse pos -1 to 1 relative to center
+                const normX = (e.clientX - w / 2) / (w / 2);
+                const normY = (e.clientY - h / 2) / (h / 2);
+
+                updateUI(normX * 45, normY * 45);
+            }
+        });
+
+        // Permission Request (iOS 13+)
+        function requestPermission() {
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(response => {
+                        if (response === 'granted') {
+                            window.addEventListener('deviceorientation', handleOrientation);
+                            permBtnArea.style.display = 'none';
+                        } else {
+                            alert('需要权限才能使用水平仪功能');
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // Non-iOS 13+ devices
+                window.addEventListener('deviceorientation', handleOrientation);
+                permBtnArea.style.display = 'none';
+            }
+        }
+
+        // Init Check
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            permBtnArea.classList.remove('hidden');
+        } else if (window.DeviceOrientationEvent) {
+            window.addEventListener('deviceorientation', handleOrientation);
+        }
+    </script>
+</body>
+
+</html>

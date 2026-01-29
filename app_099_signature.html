@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手写签名板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            touch-action: none;
+            cursor: crosshair;
+        }
+
+        .pen-btn.active {
+            border-color: #4f46e5;
+            background-color: #e0e7ff;
+            color: #4f46e5;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-3xl">
+
+        <header class="flex justify-between items-center mb-4">
+            <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                Digital Signature
+            </h1>
+            <div class="flex gap-2">
+                <button onclick="setPen('black')"
+                    class="w-6 h-6 rounded-full bg-black border-2 border-transparent hover:scale-110 transition"></button>
+                <button onclick="setPen('blue')"
+                    class="w-6 h-6 rounded-full bg-blue-700 border-2 border-transparent hover:scale-110 transition"></button>
+                <button onclick="setPen('red')"
+                    class="w-6 h-6 rounded-full bg-red-600 border-2 border-transparent hover:scale-110 transition"></button>
+            </div>
+        </header>
+
+        <div
+            class="relative w-full h-64 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl overflow-hidden mb-4 cursor-crosshair">
+            <canvas id="signature-pad" class="w-full h-full"></canvas>
+            <div id="hint"
+                class="absolute inset-0 flex items-center justify-center pointer-events-none text-gray-300 text-2xl font-bold select-none">
+                在此签名</div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex gap-2">
+                <button onclick="setLineWidth(2)" id="w-2"
+                    class="pen-btn px-3 py-1 border border-gray-200 rounded text-xs font-bold text-gray-500 hover:bg-gray-50">细</button>
+                <button onclick="setLineWidth(4)" id="w-4"
+                    class="pen-btn px-3 py-1 border border-gray-200 rounded text-xs font-bold text-gray-500 hover:bg-gray-50 active">中</button>
+                <button onclick="setLineWidth(6)" id="w-6"
+                    class="pen-btn px-3 py-1 border border-gray-200 rounded text-xs font-bold text-gray-500 hover:bg-gray-50">粗</button>
+            </div>
+
+            <div class="flex gap-3 w-full sm:w-auto">
+                <button onclick="clearPad()"
+                    class="flex-1 sm:flex-none px-6 py-2 border border-gray-300 text-gray-600 font-bold rounded-lg hover:bg-gray-50 transition">清空</button>
+                <button onclick="savePad()"
+                    class="flex-1 sm:flex-none px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow transition">保存
+                    PNG</button>
+            </div>
+        </div>
+
+    </div>
+
+    <a href="./navigation.html" class="mt-8 text-sm text-gray-400 hover:text-gray-600">返回导航</a>
+
+    <script>
+        const canvas = document.getElementById('signature-pad');
+        const ctx = canvas.getContext('2d');
+        const hint = document.getElementById('hint');
+
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Setup scaling for retina/high-dpi
+        function resize() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = 'black';
+        }
+        window.addEventListener('resize', resize);
+        // Delay slightly to ensure layout is done
+        setTimeout(resize, 100);
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function start(e) {
+            e.preventDefault();
+            isDrawing = true;
+            hint.style.display = 'none';
+            const pos = getPos(e);
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+
+        function move(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const pos = getPos(e);
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            // Quadratic curve for smoother lines? simple lineTo is okay for signature usually
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+
+        function end(e) {
+            isDrawing = false;
+        }
+
+        canvas.addEventListener('mousedown', start);
+        canvas.addEventListener('mousemove', move);
+        canvas.addEventListener('mouseup', end);
+        canvas.addEventListener('mouseout', end);
+
+        canvas.addEventListener('touchstart', start);
+        canvas.addEventListener('touchmove', move);
+        canvas.addEventListener('touchend', end);
+
+        function clearPad() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hint.style.display = 'flex';
+        }
+
+        function savePad() {
+            // Check if empty? 
+            // Save as PNG
+            const link = document.createElement('a');
+            link.download = 'signature.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        function setPen(color) {
+            ctx.strokeStyle = color;
+        }
+
+        function setLineWidth(w) {
+            ctx.lineWidth = w;
+            document.querySelectorAll('.pen-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`w-${w}`).classList.add('active');
+        }
+    </script>
+</body>
+
+</html>

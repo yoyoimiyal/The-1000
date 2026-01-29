@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji 加密通讯</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .emoji-bg {
+            background-image: radial-gradient(#f1f5f9 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+
+<body class="bg-white min-h-screen emoji-bg flex flex-col items-center p-6 text-slate-800">
+
+    <header class="w-full max-w-2xl flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold flex items-center gap-2">
+            <span class="text-4xl">🔐</span> Emoji Cipher
+        </h1>
+        <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+    </header>
+
+    <div class="w-full max-w-2xl grid md:grid-cols-2 gap-8">
+
+        <!-- Encoder -->
+        <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-100 flex flex-col h-full">
+            <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-indigo-600">
+                <span>📝</span> 加密 (Encode)
+            </h2>
+            <textarea id="input-text"
+                class="w-full flex-1 p-4 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none resize-none mb-4 text-sm"
+                placeholder="输入你想加密的文字..." oninput="encode()"></textarea>
+
+            <div class="bg-indigo-50 p-4 rounded-xl min-h-[100px] relative group cursor-pointer"
+                onclick="copyToClipboard('output-cipher')">
+                <div id="output-cipher" class="text-xl break-words tracking-widest leading-loose"></div>
+                <div
+                    class="absolute inset-0 bg-indigo-900/5 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                    <span class="text-indigo-700 font-bold text-sm">点击复制</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Decoder -->
+        <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-100 flex flex-col h-full">
+            <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-emerald-600">
+                <span>🔓</span> 解密 (Decode)
+            </h2>
+            <textarea id="input-cipher"
+                class="w-full flex-1 p-4 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none resize-none mb-4 text-xl tracking-widest"
+                placeholder="粘贴 Emoji 密文..." oninput="decode()"></textarea>
+
+            <div class="bg-emerald-50 p-4 rounded-xl min-h-[100px] text-slate-700 font-medium break-words"
+                id="output-text">
+            </div>
+        </div>
+
+    </div>
+
+    <div class="mt-8 text-center text-slate-400 text-sm max-w-lg">
+        <p>原理：将文本转换为 Base64，然后将 Base64 字符映射为特定的 Emoji 表情。</p>
+        <p class="mt-2 text-xs">⚠️ 仅供娱乐，请勿用于传输敏感信息。</p>
+    </div>
+
+    <script>
+        // Base64 chars: A-Z a-z 0-9 + / (64 chars) + = (padding)
+        // We map these to 65 distinct emojis
+        const base64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+        const emojis = [
+            "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "cow", "🐷", "🐽", "🐸",
+            "🐵", "🙈", "🙉", "🙊", "🐒", "🐔", "🐧", "🐦", "🐤", "🐣", "🐥", "🦆", "🦅", "🦉", "🦇",
+            "🐺", "🐗", "🐴", "🦄", "🐝", "🐛", "🦋", "🐌", "🐚", "🐞", "🐜", "🦗", "🕷", "🕸", "🦂",
+            "🐢", "🐍", "🦎", "🦖", "🦕", "🐙", "🦑", "🦐", "🦀", "🐡", "🐠", "🐟", "🐬", "🐳", "🐋",
+            "🦈", "🐊", "🐅", "🐆", "🦓" // 65 emojis
+        ];
+        // Note: Using simpler emojis to avoid rendering issues. 
+        // Some emojis above might be multi-codepoint. Let's use a simpler safe set if needed.
+        // For robustness, let's use a standard array of single-code-point emojis if possible, 
+        // or just handle strings. JS handles emojis as strings fine mostly.
+
+        function encode() {
+            const input = document.getElementById('input-text').value;
+            if (!input) {
+                document.getElementById('output-cipher').innerText = '';
+                return;
+            }
+
+            try {
+                // Text -> Base64 (handle utf-8)
+                const base64 = b64EncodeUnicode(input);
+                let cipher = "";
+                for (let i = 0; i < base64.length; i++) {
+                    const char = base64[i];
+                    const index = base64Chars.indexOf(char);
+                    if (index !== -1) {
+                        cipher += emojis[index];
+                    }
+                }
+                document.getElementById('output-cipher').innerText = cipher;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function decode() {
+            const input = document.getElementById('input-cipher').value; // Emoji string
+            if (!input) {
+                document.getElementById('output-text').innerText = '';
+                return;
+            }
+
+            // Map emojis back to base64 chars
+            // Since emojis can be surrogate pairs (2 chars length), we need to be careful iterating.
+            // Using Array.from or spread operator to split by emoji visual char
+            const emojiArray = [...input]; // Splits by surrogate pairs correctly for most modern emojis
+
+            let base64 = "";
+            for (let emoji of emojiArray) {
+                const index = emojis.indexOf(emoji);
+                if (index !== -1) {
+                    base64 += base64Chars[index];
+                }
+            }
+
+            try {
+                const text = b64DecodeUnicode(base64);
+                document.getElementById('output-text').innerText = text;
+            } catch (e) {
+                document.getElementById('output-text').innerText = "❌ 解密失败：密文无效";
+            }
+        }
+
+        // Helper for UTF-8 Base64
+        function b64EncodeUnicode(str) {
+            return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+                function toSolidBytes(match, p1) {
+                    return String.fromCharCode('0x' + p1);
+                }));
+        }
+
+        function b64DecodeUnicode(str) {
+            return decodeURIComponent(atob(str).split('').map(function (c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+        }
+
+        function copyToClipboard(id) {
+            const text = document.getElementById(id).innerText;
+            if (!text) return;
+            navigator.clipboard.writeText(text).then(() => {
+                alert("已复制到剪贴板!");
+            });
+        }
+    </script>
+</body>
+
+</html>

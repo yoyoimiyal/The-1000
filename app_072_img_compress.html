@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片压缩神器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex flex-col items-center p-6 text-gray-700">
+
+    <div class="w-full max-w-3xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Image Compressor
+            </h1>
+            <a href="./navigation.html" class="text-sm text-gray-400 hover:text-blue-600">退出</a>
+        </header>
+
+        <!-- Upload Area -->
+        <div class="bg-white border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition"
+            onclick="document.getElementById('file-input').click()" id="drop-zone">
+            <input type="file" id="file-input" class="hidden" accept="image/*" onchange="handleFile(event)">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <p class="text-gray-500 font-medium">点击或拖拽上传图片</p>
+            <p class="text-xs text-gray-400 mt-2">支持 PNG, JPG, WEBP</p>
+        </div>
+
+        <!-- Editor Area (Hidden initially) -->
+        <div id="editor" class="hidden mt-8 bg-white p-6 rounded-2xl shadow-lg">
+
+            <div class="flex flex-col md:flex-row gap-8">
+
+                <!-- Preview -->
+                <div
+                    class="flex-1 flex flex-col items-center justify-center bg-gray-100 rounded-xl overflow-hidden min-h-[200px]">
+                    <img id="preview-img" class="max-w-full max-h-[300px] object-contain">
+                </div>
+
+                <!-- Controls -->
+                <div class="w-full md:w-64 space-y-6">
+
+                    <div>
+                        <h3 class="font-bold text-gray-800 mb-1">压缩设置</h3>
+                        <p class="text-xs text-gray-400 mb-4" id="original-info">Original: 0 KB</p>
+                    </div>
+
+                    <div>
+                        <label class="flex justify-between text-xs font-bold text-gray-500 uppercase mb-2">
+                            <span>Quality</span>
+                            <span id="quality-val">80%</span>
+                        </label>
+                        <input type="range" id="quality" min="1" max="100" value="80"
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                            oninput="compress()">
+                    </div>
+
+                    <div>
+                        <label class="flex justify-between text-xs font-bold text-gray-500 uppercase mb-2">
+                            <span>Max Width</span>
+                            <span id="width-val">Original</span>
+                        </label>
+                        <select id="max-width" class="w-full p-2 bg-gray-50 border border-gray-200 rounded text-sm"
+                            onchange="compress()">
+                            <option value="0">Original Size</option>
+                            <option value="1920">1920px (FHD)</option>
+                            <option value="1280">1280px (HD)</option>
+                            <option value="800">800px (Web)</option>
+                        </select>
+                    </div>
+
+                    <div class="pt-4 border-t border-gray-100">
+                        <p class="text-xs text-gray-400 mb-1">Estimated Size:</p>
+                        <p class="text-xl font-bold text-blue-600 mb-4" id="new-size">Processing...</p>
+                        <button onclick="download()"
+                            class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition">
+                            下载压缩图
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const editor = document.getElementById('editor');
+        const dropZone = document.getElementById('drop-zone');
+        const previewImg = document.getElementById('preview-img');
+        const originalInfo = document.getElementById('original-info');
+        const newSizeEl = document.getElementById('new-size');
+        const qualityInput = document.getElementById('quality');
+        const qualityVal = document.getElementById('quality-val');
+        const widthInput = document.getElementById('max-width');
+
+        let originalFile = null;
+        let compressedBlob = null;
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            originalFile = file;
+            originalInfo.innerText = `Original: ${(file.size / 1024).toFixed(2)} KB`;
+
+            dropZone.classList.add('hidden');
+            editor.classList.remove('hidden');
+
+            compress();
+        }
+
+        function compress() {
+            if (!originalFile) return;
+
+            qualityVal.innerText = qualityInput.value + '%';
+            newSizeEl.innerText = 'Calculating...';
+
+            const reader = new FileReader();
+            reader.readAsDataURL(originalFile);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width;
+                    let h = img.height;
+                    const maxW = parseInt(widthInput.value);
+
+                    if (maxW > 0 && w > maxW) {
+                        h *= maxW / w;
+                        w = maxW;
+                    }
+
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+
+                    const q = qualityInput.value / 100;
+
+                    canvas.toBlob((blob) => {
+                        compressedBlob = blob;
+                        newSizeEl.innerText = (blob.size / 1024).toFixed(2) + ' KB';
+
+                        // Update preview with compressed version
+                        const newUrl = URL.createObjectURL(blob);
+                        previewImg.src = newUrl;
+
+                        // Compare savings
+                        const savings = ((originalFile.size - blob.size) / originalFile.size * 100).toFixed(0);
+                        if (savings > 0) newSizeEl.innerHTML += ` <span class="text-xs text-green-500">(-${savings}%)</span>`;
+
+                    }, 'image/jpeg', q);
+                };
+            };
+        }
+
+        function download() {
+            if (!compressedBlob) return;
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(compressedBlob);
+            link.download = `compressed_${originalFile.name.split('.')[0]}.jpg`;
+            link.click();
+        }
+    </script>
+</body>
+
+</html>

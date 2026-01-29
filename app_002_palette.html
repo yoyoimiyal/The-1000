@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>灵感配色生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Space Mono', monospace;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 h-screen flex flex-col">
+
+    <!-- Header -->
+    <div class="bg-white shadow-sm p-4 flex justify-between items-center z-10">
+        <h1 class="text-xl font-bold text-gray-800">Color<span class="text-pink-500">Gen</span></h1>
+        <div class="flex gap-4 items-center">
+            <p class="text-xs text-gray-500 hidden sm:block">按空格键生成新配色 / 点击复制</p>
+            <a href="./navigation.html" class="text-gray-400 hover:text-gray-800 text-sm">← 退出</a>
+        </div>
+    </div>
+
+    <!-- Palette Container -->
+    <div class="flex-1 flex flex-col sm:flex-row w-full h-full" id="palette-container">
+        <!-- Columns will be injected here -->
+    </div>
+
+    <!-- Controls for Mobile -->
+    <div class="sm:hidden fixed bottom-6 left-1/2 transform -translate-x-1/2">
+        <button onclick="generatePalette()" class="bg-gray-900 text-white px-6 py-3 rounded-full shadow-lg font-bold">
+            生成配色
+        </button>
+    </div>
+
+    <script>
+        const container = document.getElementById('palette-container');
+
+        function generateRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        function isLightColor(hex) {
+            const r = parseInt(hex.substr(1, 2), 16);
+            const g = parseInt(hex.substr(3, 2), 16);
+            const b = parseInt(hex.substr(5, 2), 16);
+            const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+            return yiq >= 128;
+        }
+
+        function createColumn(color) {
+            const div = document.createElement('div');
+            div.className = 'flex-1 h-full flex items-center justify-center cursor-pointer transition-all hover:flex-grow-[1.2] relative group';
+            div.style.backgroundColor = color;
+
+            const textColor = isLightColor(color) ? 'text-black' : 'text-white';
+
+            div.innerHTML = `
+                <div class="flex flex-col items-center gap-2 opacity-90 group-hover:scale-110 transition-transform duration-200">
+                    <span class="text-2xl font-bold uppercase ${textColor}">${color}</span>
+                    <span class="text-xs opacity-0 group-hover:opacity-100 transition-opacity ${textColor}">点击复制</span>
+                </div>
+                <div class="absolute inset-0 bg-white opacity-0 transition-opacity duration-100" id="flash-${color}"></div>
+            `;
+
+            div.addEventListener('click', () => {
+                copyToClipboard(color);
+                const flash = document.getElementById(`flash-${color}`);
+                flash.style.opacity = '0.5';
+                setTimeout(() => flash.style.opacity = '0', 100);
+            });
+
+            return div;
+        }
+
+        function copyToClipboard(text) {
+            const tempInput = document.createElement("input");
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+
+            // Simple toast
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded shadow-lg text-sm transition-opacity duration-500';
+            toast.innerText = `已复制: ${text}`;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 500);
+            }, 1500);
+        }
+
+        function generatePalette() {
+            container.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                container.appendChild(createColumn(generateRandomColor()));
+            }
+        }
+
+        // Init
+        generatePalette();
+
+        // Keyboard event
+        document.body.onkeyup = function (e) {
+            if (e.key == " " || e.code == "Space" || e.keyCode == 32) {
+                generatePalette();
+            }
+        }
+    </script>
+</body>
+
+</html>

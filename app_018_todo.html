@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简待办清单</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .done {
+            text-decoration: line-through;
+            color: #9ca3af;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen py-10 px-4 font-sans text-gray-800">
+
+    <div class="max-w-md mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+
+        <!-- Header -->
+        <div class="bg-indigo-600 p-8">
+            <h1 class="text-3xl font-bold text-white mb-1">My Tasks</h1>
+            <p class="text-indigo-200 text-sm" id="date-display">loading...</p>
+        </div>
+
+        <!-- Input -->
+        <div class="p-4 border-b border-gray-100 flex gap-2">
+            <input type="text" id="task-input" placeholder="添加新任务..."
+                class="flex-1 px-4 py-3 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                onkeypress="handleKeyPress(event)">
+            <button onclick="addTask()"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white w-12 rounded-lg flex items-center justify-center transition shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- List -->
+        <ul id="task-list" class="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
+            <!-- Tasks injected here -->
+        </ul>
+
+        <!-- Footer -->
+        <div class="p-4 bg-gray-50 text-center text-xs text-gray-400 flex justify-between items-center">
+            <span id="task-count">0 个任务</span>
+            <div class="flex gap-4">
+                <button onclick="clearCompleted()" class="hover:text-red-500 transition">清除已完成</button>
+                <a href="./navigation.html" class="hover:text-indigo-600 transition">退出</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const taskInput = document.getElementById('task-input');
+        const taskList = document.getElementById('task-list');
+        const countDisplay = document.getElementById('task-count');
+
+        let tasks = JSON.parse(localStorage.getItem('my_todos') || '[]');
+
+        function saveTasks() {
+            localStorage.setItem('my_todos', JSON.stringify(tasks));
+            renderTasks();
+        }
+
+        function addTask() {
+            const text = taskInput.value.trim();
+            if (text) {
+                tasks.unshift({
+                    id: Date.now(),
+                    text: text,
+                    completed: false
+                });
+                taskInput.value = '';
+                saveTasks();
+            }
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') addTask();
+        }
+
+        function toggleTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                saveTasks();
+            }
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            saveTasks();
+        }
+
+        function clearCompleted() {
+            if (confirm("确定清除所有已完成任务吗？")) {
+                tasks = tasks.filter(t => !t.completed);
+                saveTasks();
+            }
+        }
+
+        function renderTasks() {
+            taskList.innerHTML = '';
+
+            if (tasks.length === 0) {
+                taskList.innerHTML = `<li class="p-8 text-center text-gray-400 text-sm">暂无任务，享受生活吧！🎉</li>`;
+            }
+
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.className = 'p-4 flex items-center gap-3 hover:bg-gray-50 transition group fade-in';
+                li.innerHTML = `
+                    <button onclick="toggleTask(${task.id})" class="flex-shrink-0 w-6 h-6 rounded-full border-2 ${task.completed ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-gray-300 text-transparent hover:border-indigo-400'} flex items-center justify-center transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                    <span class="flex-1 ${task.completed ? 'done' : 'text-gray-700'} transition cursor-pointer" onclick="toggleTask(${task.id})">${task.text}</span>
+                    <button onclick="deleteTask(${task.id})" class="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition p-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                `;
+                taskList.appendChild(li);
+            });
+
+            const activeCount = tasks.filter(t => !t.completed).length;
+            countDisplay.innerText = `${activeCount} 个待办`;
+        }
+
+        // Init Date
+        const options = { weekday: 'long', month: 'long', day: 'numeric' };
+        document.getElementById('date-display').innerText = new Date().toLocaleDateString('zh-CN', options);
+
+        renderTasks();
+    </script>
+</body>
+
+</html>

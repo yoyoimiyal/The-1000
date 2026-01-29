@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网页特雷门琴</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            overflow: hidden;
+            touch-action: none;
+            cursor: crosshair;
+        }
+
+        .grid-bg {
+            background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        #pointer-ring {
+            transition: width 0.1s, height 0.1s, opacity 0.2s;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 h-screen w-screen relative grid-bg" onmousedown="start()" onmouseup="stop()"
+    onmouseleave="stop()" onmousemove="play(event)" ontouchstart="start()" ontouchend="stop()"
+    ontouchmove="play(event)">
+
+    <!-- UI Overlay -->
+    <div class="absolute top-0 left-0 w-full p-6 flex justify-between items-start pointer-events-none select-none z-10">
+        <div>
+            <h1 class="text-3xl font-bold text-white mb-1 tracking-wider opacity-90">THEREMIN</h1>
+            <p class="text-slate-400 text-sm">按住鼠标拖动演奏</p>
+        </div>
+        <a href="./navigation.html"
+            class="pointer-events-auto text-slate-500 hover:text-white text-sm border border-slate-700 px-3 py-1 rounded transition">退出</a>
+    </div>
+
+    <!-- Axis Labels -->
+    <div class="absolute bottom-4 left-6 text-slate-500 text-xs pointer-events-none">
+        ← 低音 (Pitch) 高音 →
+    </div>
+    <div class="absolute top-1/2 right-4 text-slate-500 text-xs pointer-events-none -rotate-90 origin-right">
+        ← 音量 (Volume)
+    </div>
+
+    <!-- Visual Feedback -->
+    <div id="pointer-ring"
+        class="absolute top-1/2 left-1/2 w-0 h-0 border-2 border-cyan-400 rounded-full opacity-0 shadow-[0_0_20px_rgba(34,211,238,0.5)] pointer-events-none">
+    </div>
+    <div id="freq-display"
+        class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-cyan-200 font-mono text-xl opacity-0 pointer-events-none transition-opacity">
+        0 Hz</div>
+
+    <script>
+        const ring = document.getElementById('pointer-ring');
+        const freqDisplay = document.getElementById('freq-display');
+        let audioCtx = null;
+        let osc = null;
+        let gainNode = null;
+        let isPlaying = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function start() {
+            initAudio();
+            if (isPlaying) return;
+
+            osc = audioCtx.createOscillator();
+            gainNode = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            // Initial ramp up to avoid click
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.1);
+
+            osc.start();
+            isPlaying = true;
+
+            ring.style.opacity = '1';
+            freqDisplay.style.opacity = '1';
+        }
+
+        function stop() {
+            if (!isPlaying) return;
+
+            // Ramp down
+            const now = audioCtx.currentTime;
+            gainNode.gain.cancelScheduledValues(now);
+            gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+            gainNode.gain.linearRampToValueAtTime(0, now + 0.1);
+
+            osc.stop(now + 0.1);
+            osc = null;
+            isPlaying = false;
+
+            ring.style.opacity = '0';
+            ring.style.width = '0px';
+            ring.style.height = '0px';
+            freqDisplay.style.opacity = '0';
+        }
+
+        function play(e) {
+            if (!isPlaying) return;
+            e.preventDefault();
+
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+
+            // X axis -> Frequency (Logarithmic scale feels more natural for pitch)
+            // Range 100Hz to 2000Hz
+            const minFreq = 100;
+            const maxFreq = 2000;
+            const pctX = clientX / w;
+            // Using exponential mapping: f = min * (max/min)^x
+            const freq = minFreq * Math.pow(maxFreq / minFreq, pctX);
+
+            // Y axis -> Volume (Linear)
+            // Top (0) is high volume? Usually Theremin vertical antenna controls pitch, horizontal loop controls volume.
+            // Let's make Bottom = Low Volume, Top = High Volume.
+            const pctY = 1 - (clientY / h);
+            const vol = pctY * 0.5; // Max vol 0.5 to protect ears
+
+            if (osc && gainNode) {
+                osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.02); // Smooth transition
+                gainNode.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.02);
+            }
+
+            // Visuals
+            ring.style.left = clientX + 'px';
+            ring.style.top = clientY + 'px';
+
+            // Size based on volume
+            const size = 20 + (vol * 200);
+            ring.style.width = size + 'px';
+            ring.style.height = size + 'px';
+
+            // Color shift based on freq
+            // Low freq = Red/Blue, High = Cyan/White?
+            // Let's keep it cyan but pulse width
+
+            freqDisplay.style.left = clientX + 'px';
+            freqDisplay.style.top = (clientY - size / 2 - 20) + 'px';
+            freqDisplay.innerText = Math.round(freq) + " Hz";
+        }
+    </script>
+</body>
+
+</html>

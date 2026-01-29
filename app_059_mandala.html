@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>万花筒绘图</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            cursor: crosshair;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="fixed top-4 left-4 z-20">
+        <h1 class="text-white font-bold text-xl opacity-80">Mandala Maker</h1>
+    </div>
+
+    <!-- Controls -->
+    <div
+        class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-slate-800/90 backdrop-blur p-4 rounded-2xl shadow-2xl flex gap-6 items-center z-20 border border-slate-700">
+
+        <div class="flex flex-col items-center">
+            <label class="text-[10px] text-slate-400 uppercase font-bold mb-1">Color</label>
+            <input type="color" id="color" value="#4f46e5"
+                class="w-8 h-8 rounded cursor-pointer bg-transparent border-0">
+        </div>
+
+        <div class="flex flex-col items-center w-24">
+            <label class="text-[10px] text-slate-400 uppercase font-bold mb-1">Segments: <span
+                    id="seg-val">8</span></label>
+            <input type="range" min="4" max="24" step="2" value="8"
+                class="w-full h-1 bg-slate-600 rounded appearance-none" oninput="updateSeg(this.value)">
+        </div>
+
+        <div class="h-8 w-px bg-slate-600"></div>
+
+        <button onclick="clearCanvas()"
+            class="text-slate-400 hover:text-white text-xs font-bold uppercase transition">Clear</button>
+        <button onclick="download()"
+            class="text-indigo-400 hover:text-indigo-300 text-xs font-bold uppercase transition">Save</button>
+        <a href="./navigation.html"
+            class="text-red-400 hover:text-red-300 text-xs font-bold uppercase transition">Exit</a>
+    </div>
+
+    <canvas id="canvas" class="bg-black shadow-2xl rounded-full"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const colorInput = document.getElementById('color');
+
+        let segments = 8;
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let hue = 0;
+        let rainbowMode = false; // Hidden feature: double click color to toggle? Let's stick to simple color for now.
+
+        function resize() {
+            const size = Math.min(window.innerWidth, window.innerHeight) - 40;
+            canvas.width = size;
+            canvas.height = size;
+            // Rounded mask
+            canvas.style.borderRadius = '50%';
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function updateSeg(val) {
+            segments = parseInt(val);
+            document.getElementById('seg-val').innerText = segments;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+
+            e.preventDefault(); // Prevent scroll on touch
+
+            const rect = canvas.getBoundingClientRect();
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = colorInput.value;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+
+            for (let i = 0; i < segments; i++) {
+                ctx.rotate((Math.PI * 2) / segments);
+
+                ctx.beginPath();
+                ctx.moveTo(lastX - cx, lastY - cy);
+                ctx.lineTo(x - cx, y - cy);
+                ctx.stroke();
+
+                // Mirror effect for better symmetry
+                ctx.save();
+                ctx.scale(1, -1);
+                ctx.beginPath();
+                ctx.moveTo(lastX - cx, lastY - cy);
+                ctx.lineTo(x - cx, y - cy);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            ctx.restore();
+
+            lastX = x;
+            lastY = y;
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            lastX = e.offsetX;
+            lastY = e.offsetY;
+        });
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', () => isDrawing = false);
+        canvas.addEventListener('mouseout', () => isDrawing = false);
+
+        // Touch support
+        canvas.addEventListener('touchstart', (e) => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            lastX = e.touches[0].clientX - rect.left;
+            lastY = e.touches[0].clientY - rect.top;
+        });
+        canvas.addEventListener('touchmove', draw);
+        canvas.addEventListener('touchend', () => isDrawing = false);
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function download() {
+            const link = document.createElement('a');
+            link.download = 'mandala.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+
+</html>

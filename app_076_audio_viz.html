@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音频频谱仪</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .glow {
+            box-shadow: 0 0 20px rgba(79, 70, 229, 0.5);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden">
+
+    <!-- Overlay -->
+    <div id="start-overlay"
+        class="fixed inset-0 bg-black/80 flex flex-col items-center justify-center z-20 text-center p-4">
+        <h1 class="text-4xl font-bold text-white mb-2 tracking-wider">AUDIO VISUALIZER</h1>
+        <p class="text-gray-400 mb-8 max-w-md">需要访问您的麦克风以显示频谱。<br>音频仅在本地处理，不会上传。</p>
+        <button onclick="startAudio()"
+            class="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-full transition shadow-lg transform hover:scale-105">
+            开启麦克风
+        </button>
+        <a href="./navigation.html" class="mt-8 text-gray-500 hover:text-white text-sm">退出</a>
+    </div>
+
+    <!-- Controls -->
+    <div class="fixed top-4 right-4 z-10 flex gap-2">
+        <button onclick="toggleMode()"
+            class="px-4 py-2 bg-gray-800/80 text-white rounded-lg text-xs font-bold hover:bg-gray-700 backdrop-blur">切换模式
+            (Mode)</button>
+        <a href="./navigation.html"
+            class="px-4 py-2 bg-gray-800/80 text-white rounded-lg text-xs font-bold hover:bg-gray-700 backdrop-blur">退出</a>
+    </div>
+
+    <!-- Canvas -->
+    <canvas id="canvas" class="fixed inset-0 z-0"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('start-overlay');
+
+        let audioCtx;
+        let analyser;
+        let source;
+        let bufferLength;
+        let dataArray;
+        let isRunning = false;
+        let mode = 'bars'; // 'bars' or 'wave'
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        async function startAudio() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                source = audioCtx.createMediaStreamSource(stream);
+
+                source.connect(analyser);
+                analyser.fftSize = 256; // Defines resolution
+
+                bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+
+                overlay.style.display = 'none';
+                isRunning = true;
+                animate();
+            } catch (err) {
+                alert("无法访问麦克风: " + err.message);
+            }
+        }
+
+        function toggleMode() {
+            mode = mode === 'bars' ? 'wave' : 'bars';
+        }
+
+        function animate() {
+            if (!isRunning) return;
+            requestAnimationFrame(animate);
+
+            ctx.fillStyle = 'rgba(17, 24, 39, 0.2)'; // Fade effect
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (mode === 'bars') {
+                analyser.getByteFrequencyData(dataArray);
+                drawBars();
+            } else {
+                analyser.getByteTimeDomainData(dataArray);
+                drawWave();
+            }
+        }
+
+        function drawBars() {
+            const barWidth = (canvas.width / bufferLength) * 2.5;
+            let barHeight;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                barHeight = dataArray[i] * 1.5; // Scale height
+
+                // Color based on height/freq
+                const r = barHeight + (25 * (i / bufferLength));
+                const g = 250 * (i / bufferLength);
+                const b = 50;
+
+                ctx.fillStyle = `rgb(${r},${g},${b})`;
+
+                // Draw mirrored bars from center vertical
+                // To keep simple, just draw from bottom
+                const y = canvas.height - barHeight;
+                ctx.fillRect(x, y, barWidth, barHeight);
+
+                x += barWidth + 1;
+            }
+        }
+
+        function drawWave() {
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#4f46e5'; // Indigo-600
+            ctx.beginPath();
+
+            const sliceWidth = canvas.width * 1.0 / bufferLength;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const v = dataArray[i] / 128.0;
+                const y = v * canvas.height / 2;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+
+                x += sliceWidth;
+            }
+
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+        }
+    </script>
+</body>
+
+</html>

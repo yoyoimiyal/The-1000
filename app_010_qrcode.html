@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二维码生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md flex flex-col items-center">
+
+        <h1 class="text-2xl font-bold text-slate-800 mb-6">QR Code Generator</h1>
+
+        <!-- Input -->
+        <div class="w-full mb-6">
+            <input type="text" id="qr-input" placeholder="输入网址或文本..."
+                class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                oninput="generateQR()" value="https://www.example.com">
+        </div>
+
+        <!-- QR Area -->
+        <div class="bg-white p-4 rounded-lg border-2 border-slate-100 mb-6 flex items-center justify-center min-h-[200px] min-w-[200px]"
+            id="qr-container">
+            <div id="qrcode"></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-4 w-full">
+            <button onclick="downloadQR()"
+                class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition flex justify-center items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                下载图片
+            </button>
+        </div>
+
+        <a href="./navigation.html" class="mt-6 text-slate-400 hover:text-indigo-600 text-sm">返回导航</a>
+
+    </div>
+
+    <script>
+        const qrContainer = document.getElementById('qrcode');
+        let qrcode = null;
+
+        function generateQR() {
+            const text = document.getElementById('qr-input').value;
+
+            // Clear previous
+            qrContainer.innerHTML = '';
+
+            if (!text.trim()) return;
+
+            // Generate new
+            qrcode = new QRCode(qrContainer, {
+                text: text,
+                width: 200,
+                height: 200,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+
+        function downloadQR() {
+            const img = qrContainer.querySelector('img');
+            if (img && img.src) {
+                const link = document.createElement('a');
+                link.href = img.src;
+                link.download = 'qrcode.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else {
+                alert("请先生成二维码");
+            }
+        }
+
+        // Init
+        // Use timeout to ensure library is loaded if network is slow, though script tag is blocking
+        setTimeout(generateQR, 100);
+    </script>
+</body>
+
+</html>

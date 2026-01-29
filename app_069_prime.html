@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>质数查询机</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-emerald-50 min-h-screen p-6 font-sans text-slate-700 flex flex-col items-center">
+
+    <div class="w-full max-w-2xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-emerald-800 flex items-center gap-2">
+                <span class="text-3xl">➗</span> Prime Number Tool
+            </h1>
+            <a href="./navigation.html" class="text-sm text-emerald-600 hover:text-emerald-800">退出</a>
+        </header>
+
+        <!-- Check Single -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm mb-6 border border-emerald-100">
+            <h2 class="font-bold text-lg mb-4 text-slate-800">质数判断 (Check)</h2>
+            <div class="flex gap-4">
+                <input type="number" id="check-input"
+                    class="flex-1 p-3 border border-emerald-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 text-lg"
+                    placeholder="输入一个数字...">
+                <button onclick="checkPrime()"
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-bold transition shadow">判断</button>
+            </div>
+            <div id="check-result" class="mt-4 h-8 text-lg font-bold"></div>
+        </div>
+
+        <!-- Generate Range -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-emerald-100 flex flex-col h-[50vh]">
+            <h2 class="font-bold text-lg mb-4 text-slate-800 flex justify-between">
+                <span>生成质数列表 (Generator)</span>
+                <span class="text-xs font-normal text-slate-400 mt-1">Max 10,000 for demo</span>
+            </h2>
+            <div class="flex gap-2 mb-4 items-center">
+                <span class="text-sm">Range: 2 to</span>
+                <input type="number" id="gen-limit"
+                    class="w-24 p-2 border border-emerald-200 rounded outline-none text-center" value="100" max="10000">
+                <button onclick="generatePrimes()"
+                    class="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-4 py-2 rounded font-bold transition text-sm">生成</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto bg-slate-50 border border-slate-100 rounded-lg p-4 font-mono text-sm break-all text-slate-600 leading-loose"
+                id="gen-output">
+                (结果将显示在这里)
+            </div>
+            <div class="mt-2 text-right text-xs text-slate-400">
+                共找到 <span id="count-result" class="font-bold text-emerald-600">0</span> 个质数
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function isPrime(num) {
+            if (num <= 1) return false;
+            if (num <= 3) return true;
+            if (num % 2 === 0 || num % 3 === 0) return false;
+            for (let i = 5; i * i <= num; i += 6) {
+                if (num % i === 0 || num % (i + 2) === 0) return false;
+            }
+            return true;
+        }
+
+        function checkPrime() {
+            const input = document.getElementById('check-input');
+            const result = document.getElementById('check-result');
+            const num = parseInt(input.value);
+
+            if (isNaN(num)) {
+                result.innerHTML = '';
+                return;
+            }
+
+            if (isPrime(num)) {
+                result.innerHTML = `<span class="text-emerald-600">YES! ${num} 是质数。</span>`;
+            } else {
+                result.innerHTML = `<span class="text-red-500">NO. ${num} 不是质数。</span>`;
+            }
+        }
+
+        function generatePrimes() {
+            const limitInput = document.getElementById('gen-limit');
+            const output = document.getElementById('gen-output');
+            const countSpan = document.getElementById('count-result');
+
+            let limit = parseInt(limitInput.value);
+            if (limit > 10000) {
+                limit = 10000;
+                limitInput.value = 10000;
+            }
+            if (limit < 2) {
+                output.innerText = "无结果";
+                countSpan.innerText = 0;
+                return;
+            }
+
+            const primes = [];
+            // Simple Sieve or loop
+            // For N=10000, simple loop is fast enough in JS
+            for (let i = 2; i <= limit; i++) {
+                if (isPrime(i)) primes.push(i);
+            }
+
+            output.innerText = primes.join(', ');
+            countSpan.innerText = primes.length;
+        }
+    </script>
+</body>
+
+</html>

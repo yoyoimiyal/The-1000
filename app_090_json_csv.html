@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON-CSV 互转</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        textarea {
+            font-family: monospace;
+            white-space: pre;
+            overflow: auto;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen p-4 flex flex-col items-center text-slate-800">
+
+    <header class="w-full max-w-5xl flex justify-between items-center mb-6">
+        <h1 class="text-xl font-bold flex items-center gap-2">
+            <span class="bg-indigo-600 text-white px-2 py-1 rounded text-sm">DEV</span> JSON <> CSV
+        </h1>
+        <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+    </header>
+
+    <div class="w-full max-w-5xl flex flex-col md:flex-row gap-4 h-[70vh]">
+
+        <!-- JSON Input -->
+        <div class="flex-1 flex flex-col">
+            <div class="flex justify-between items-center mb-2">
+                <label class="font-bold text-xs uppercase text-slate-500">JSON</label>
+                <div class="flex gap-2">
+                    <button onclick="loadSample()"
+                        class="text-xs bg-white border border-slate-200 px-2 py-1 rounded hover:bg-slate-50">加载示例</button>
+                    <button onclick="formatJSON()"
+                        class="text-xs bg-white border border-slate-200 px-2 py-1 rounded hover:bg-slate-50">格式化</button>
+                </div>
+            </div>
+            <textarea id="json-input"
+                class="flex-1 w-full border border-slate-300 rounded-lg p-4 text-xs resize-none focus:ring-2 focus:ring-indigo-500 outline-none"
+                placeholder='[{"name": "Alice", "age": 30}, ...]'></textarea>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex md:flex-col gap-4 justify-center items-center">
+            <button onclick="toCSV()"
+                class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow hover:bg-indigo-700 transition">
+                To CSV &rarr;
+            </button>
+            <button onclick="toJSON()"
+                class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow hover:bg-emerald-700 transition">
+                &larr; To JSON
+            </button>
+        </div>
+
+        <!-- CSV Input -->
+        <div class="flex-1 flex flex-col">
+            <div class="flex justify-between items-center mb-2">
+                <label class="font-bold text-xs uppercase text-slate-500">CSV</label>
+                <button onclick="downloadCSV()"
+                    class="text-xs bg-white border border-slate-200 px-2 py-1 rounded hover:bg-slate-50">下载
+                    .csv</button>
+            </div>
+            <textarea id="csv-input"
+                class="flex-1 w-full border border-slate-300 rounded-lg p-4 text-xs resize-none focus:ring-2 focus:ring-emerald-500 outline-none"
+                placeholder="name,age&#10;Alice,30..."></textarea>
+        </div>
+
+    </div>
+
+    <!-- Error Msg -->
+    <div id="error-msg"
+        class="w-full max-w-5xl mt-4 bg-red-100 text-red-600 p-3 rounded text-sm hidden border border-red-200"></div>
+
+    <script>
+        const jsonEl = document.getElementById('json-input');
+        const csvEl = document.getElementById('csv-input');
+        const errEl = document.getElementById('error-msg');
+
+        function loadSample() {
+            const data = [
+                { id: 1, name: "Alice Smith", role: "Admin", active: true },
+                { id: 2, name: "Bob Jones", role: "User", active: false },
+                { id: 3, name: "Charlie Day", role: "User", active: true }
+            ];
+            jsonEl.value = JSON.stringify(data, null, 2);
+        }
+
+        function formatJSON() {
+            try {
+                const val = jsonEl.value;
+                if (!val) return;
+                const obj = JSON.parse(val);
+                jsonEl.value = JSON.stringify(obj, null, 2);
+                errEl.classList.add('hidden');
+            } catch (e) {
+                showError("Invalid JSON: " + e.message);
+            }
+        }
+
+        function toCSV() {
+            try {
+                const raw = jsonEl.value;
+                if (!raw) return;
+
+                const arr = JSON.parse(raw);
+                if (!Array.isArray(arr)) throw new Error("JSON must be an array of objects");
+                if (arr.length === 0) return;
+
+                // Get headers
+                const headers = Object.keys(arr[0]);
+                const csvRows = [];
+                csvRows.push(headers.join(','));
+
+                for (const row of arr) {
+                    const values = headers.map(header => {
+                        const val = row[header];
+                        const escaped = ('' + val).replace(/"/g, '\\"');
+                        return `"${escaped}"`;
+                    });
+                    csvRows.push(values.join(','));
+                }
+
+                csvEl.value = csvRows.join('\n');
+                errEl.classList.add('hidden');
+            } catch (e) {
+                showError("Conversion Failed: " + e.message);
+            }
+        }
+
+        function toJSON() {
+            try {
+                const raw = csvEl.value.trim();
+                if (!raw) return;
+
+                const lines = raw.split('\n');
+                if (lines.length < 2) throw new Error("Invalid CSV format");
+
+                const headers = lines[0].split(',').map(h => h.trim());
+                const result = [];
+
+                for (let i = 1; i < lines.length; i++) {
+                    const currentline = lines[i].split(',');
+                    // Basic split, doesn't handle commas inside quotes perfectly for complex CSVs, 
+                    // but sufficient for basic tool.
+
+                    if (currentline.length === headers.length) {
+                        const obj = {};
+                        for (let j = 0; j < headers.length; j++) {
+                            let val = currentline[j].trim();
+                            // Remove quotes if present
+                            if (val.startsWith('"') && val.endsWith('"')) {
+                                val = val.substring(1, val.length - 1).replace(/\\"/g, '"');
+                            }
+                            // Auto type convert
+                            if (val === 'true') val = true;
+                            else if (val === 'false') val = false;
+                            else if (!isNaN(Number(val)) && val !== '') val = Number(val);
+
+                            obj[headers[j]] = val;
+                        }
+                        result.push(obj);
+                    }
+                }
+
+                jsonEl.value = JSON.stringify(result, null, 2);
+                errEl.classList.add('hidden');
+            } catch (e) {
+                showError("Conversion Failed: " + e.message);
+            }
+        }
+
+        function showError(msg) {
+            errEl.innerText = msg;
+            errEl.classList.remove('hidden');
+        }
+
+        function downloadCSV() {
+            const content = csvEl.value;
+            if (!content) return;
+            const blob = new Blob([content], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'data.csv';
+            a.click();
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>色觉模拟镜</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-stone-100 min-h-screen p-6 flex flex-col items-center">
+
+    <div class="w-full max-w-4xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-stone-800">Colorblind Sim</h1>
+            <a href="./navigation.html" class="text-sm text-stone-400 hover:text-stone-600">退出</a>
+        </header>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm mb-6">
+            <label
+                class="block w-full py-2 px-4 bg-stone-100 border border-stone-200 rounded-lg text-center cursor-pointer hover:bg-stone-200 transition text-stone-600 text-sm font-bold mb-6">
+                📂 上传图片测试
+                <input type="file" class="hidden" accept="image/*" onchange="loadImage(event)">
+            </label>
+
+            <div class="flex flex-col md:flex-row gap-6">
+
+                <!-- Controls -->
+                <div class="w-full md:w-64 space-y-2 shrink-0">
+                    <p class="text-xs text-stone-400 font-bold uppercase mb-2">选择模拟类型</p>
+
+                    <button onclick="setFilter('normal')"
+                        class="w-full text-left px-4 py-3 rounded-lg text-sm font-bold bg-stone-800 text-white shadow-md transition filter-btn"
+                        id="btn-normal">
+                        正常视觉 (Normal)
+                    </button>
+
+                    <button onclick="setFilter('protanopia')"
+                        class="w-full text-left px-4 py-3 rounded-lg text-sm font-medium bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 transition filter-btn"
+                        id="btn-protanopia">
+                        红色盲 (Protanopia)
+                        <span class="block text-[10px] text-stone-400 font-normal">无红色感知 (No Red)</span>
+                    </button>
+
+                    <button onclick="setFilter('deuteranopia')"
+                        class="w-full text-left px-4 py-3 rounded-lg text-sm font-medium bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 transition filter-btn"
+                        id="btn-deuteranopia">
+                        绿色盲 (Deuteranopia)
+                        <span class="block text-[10px] text-stone-400 font-normal">无绿色感知 (No Green)</span>
+                    </button>
+
+                    <button onclick="setFilter('tritanopia')"
+                        class="w-full text-left px-4 py-3 rounded-lg text-sm font-medium bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 transition filter-btn"
+                        id="btn-tritanopia">
+                        蓝色盲 (Tritanopia)
+                        <span class="block text-[10px] text-stone-400 font-normal">无蓝色感知 (No Blue)</span>
+                    </button>
+
+                    <button onclick="setFilter('achromatopsia')"
+                        class="w-full text-left px-4 py-3 rounded-lg text-sm font-medium bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 transition filter-btn"
+                        id="btn-achromatopsia">
+                        全色盲 (Achromatopsia)
+                        <span class="block text-[10px] text-stone-400 font-normal">无色彩 (Monochrome)</span>
+                    </button>
+                </div>
+
+                <!-- Preview -->
+                <div
+                    class="flex-1 bg-stone-50 rounded-xl overflow-hidden border border-stone-200 flex items-center justify-center min-h-[300px]">
+                    <img id="preview"
+                        src="https://images.unsplash.com/photo-1550684848-fac1c5b4e853?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+                        class="max-w-full max-h-[500px] object-contain transition-all duration-300">
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SVG Filters Definition -->
+    <svg style="display: none">
+        <defs>
+            <filter id="protanopia">
+                <feColorMatrix type="matrix"
+                    values="0.567, 0.433, 0, 0, 0 0.558, 0.442, 0, 0, 0 0, 0.242, 0.758, 0, 0 0, 0, 0, 1, 0" />
+            </filter>
+            <filter id="deuteranopia">
+                <feColorMatrix type="matrix"
+                    values="0.625, 0.375, 0, 0, 0 0.7, 0.3, 0, 0, 0 0, 0.3, 0.7, 0, 0 0, 0, 0, 1, 0" />
+            </filter>
+            <filter id="tritanopia">
+                <feColorMatrix type="matrix"
+                    values="0.95, 0.05, 0, 0, 0 0, 0.433, 0.567, 0, 0 0, 0.475, 0.525, 0, 0 0, 0, 0, 1, 0" />
+            </filter>
+            <filter id="achromatopsia">
+                <feColorMatrix type="saturate" values="0" />
+            </filter>
+        </defs>
+    </svg>
+
+    <script>
+        const img = document.getElementById('preview');
+
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                img.src = URL.createObjectURL(file);
+            }
+        }
+
+        function setFilter(type) {
+            // Update buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.className = 'w-full text-left px-4 py-3 rounded-lg text-sm font-medium bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 transition filter-btn';
+            });
+            const activeBtn = document.getElementById(`btn-${type}`);
+            activeBtn.className = 'w-full text-left px-4 py-3 rounded-lg text-sm font-bold bg-stone-800 text-white shadow-md transition filter-btn';
+
+            // Apply filter
+            if (type === 'normal') {
+                img.style.filter = 'none';
+            } else {
+                img.style.filter = `url(#${type})`;
+            }
+        }
+    </script>
+</body>
+
+</html>

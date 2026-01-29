@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS 渐变生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .color-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            border: 2px solid #e2e8f0;
+            cursor: pointer;
+        }
+
+        .color-input-wrapper input {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex flex-col md:flex-row">
+
+    <!-- Preview Area -->
+    <div id="preview"
+        class="w-full md:w-1/2 h-[40vh] md:h-screen flex items-center justify-center transition-all duration-300 relative group">
+        <div
+            class="bg-white/90 backdrop-blur-sm px-6 py-3 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition duration-500">
+            <span class="text-slate-500 font-mono text-sm">Preview</span>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="w-full md:w-1/2 p-8 bg-white flex flex-col justify-center h-auto md:h-screen overflow-y-auto">
+
+        <header class="flex justify-between items-center mb-10">
+            <h1 class="text-2xl font-bold text-slate-800">Gradient Generator</h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="space-y-8">
+
+            <!-- Color Pickers -->
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-4">Colors</label>
+                <div class="flex items-center gap-4">
+                    <div class="color-input-wrapper shadow-sm hover:scale-110 transition"
+                        style="background-color: #4f46e5" id="bg-c1">
+                        <input type="color" value="#4f46e5" id="color1" oninput="update()">
+                    </div>
+                    <div class="h-1 flex-1 bg-slate-100 rounded"></div>
+                    <div class="color-input-wrapper shadow-sm hover:scale-110 transition"
+                        style="background-color: #ec4899" id="bg-c2">
+                        <input type="color" value="#ec4899" id="color2" oninput="update()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Direction -->
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-4">Direction: <span id="deg-val"
+                        class="text-slate-800">45deg</span></label>
+                <input type="range" min="0" max="360" value="45"
+                    class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" id="angle"
+                    oninput="update()">
+            </div>
+
+            <!-- Presets -->
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-4">Presets</label>
+                <div class="flex gap-2">
+                    <button onclick="setPreset('#3b82f6', '#10b981')"
+                        class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-green-500 shadow-sm hover:scale-110 transition"></button>
+                    <button onclick="setPreset('#f59e0b', '#ef4444')"
+                        class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-red-500 shadow-sm hover:scale-110 transition"></button>
+                    <button onclick="setPreset('#6366f1', '#a855f7')"
+                        class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 shadow-sm hover:scale-110 transition"></button>
+                    <button onclick="setPreset('#1e293b', '#0f172a')"
+                        class="w-8 h-8 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 shadow-sm hover:scale-110 transition"></button>
+                </div>
+            </div>
+
+            <!-- CSS Code -->
+            <div class="bg-slate-800 p-4 rounded-xl shadow-lg relative group">
+                <code class="text-green-400 text-sm font-mono break-all" id="css-code">
+                    background: linear-gradient(45deg, #4f46e5, #ec4899);
+                </code>
+                <button onclick="copyCode()"
+                    class="absolute top-2 right-2 bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1 rounded transition">
+                    Copy
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const preview = document.getElementById('preview');
+        const c1 = document.getElementById('color1');
+        const c2 = document.getElementById('color2');
+        const bg1 = document.getElementById('bg-c1');
+        const bg2 = document.getElementById('bg-c2');
+        const angle = document.getElementById('angle');
+        const degVal = document.getElementById('deg-val');
+        const code = document.getElementById('css-code');
+
+        function update() {
+            const css = `linear-gradient(${angle.value}deg, ${c1.value}, ${c2.value})`;
+            preview.style.background = css;
+            bg1.style.backgroundColor = c1.value;
+            bg2.style.backgroundColor = c2.value;
+            degVal.innerText = angle.value + 'deg';
+            code.innerText = `background: ${css};`;
+        }
+
+        function setPreset(col1, col2) {
+            c1.value = col1;
+            c2.value = col2;
+            update();
+        }
+
+        function copyCode() {
+            navigator.clipboard.writeText(code.innerText);
+            alert("CSS 已复制!");
+        }
+
+        // Init
+        update();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AES 文本加密</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+
+<body class="bg-slate-800 min-h-screen flex items-center justify-center p-6 text-slate-200">
+
+    <div class="w-full max-w-lg bg-slate-900 p-8 rounded-2xl shadow-2xl border border-slate-700">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-blue-400 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                AES Encrypt
+            </h1>
+            <a href="./navigation.html" class="text-xs text-slate-500 hover:text-white">EXIT</a>
+        </header>
+
+        <!-- Form -->
+        <div class="space-y-6">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">输入文本</label>
+                <textarea id="input-text"
+                    class="w-full h-24 bg-slate-800 border border-slate-700 rounded-lg p-3 outline-none focus:border-blue-500 transition text-sm"
+                    placeholder="Secret message..."></textarea>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">密钥 (Password)</label>
+                <input type="password" id="password"
+                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 outline-none focus:border-blue-500 transition text-sm"
+                    placeholder="Key">
+            </div>
+
+            <div class="flex gap-4">
+                <button onclick="process('encrypt')"
+                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg transition text-sm">加密
+                    Encrypt</button>
+                <button onclick="process('decrypt')"
+                    class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg transition text-sm">解密
+                    Decrypt</button>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">结果</label>
+                <div class="relative">
+                    <textarea id="output-text"
+                        class="w-full h-24 bg-black border border-slate-700 rounded-lg p-3 outline-none text-sm font-mono text-green-400"
+                        readonly></textarea>
+                    <button onclick="copyResult()"
+                        class="absolute top-2 right-2 text-xs bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700 text-slate-400">Copy</button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        function process(mode) {
+            const input = document.getElementById('input-text').value;
+            const pass = document.getElementById('password').value;
+            const output = document.getElementById('output-text');
+
+            if (!input || !pass) {
+                alert("请输入文本和密码");
+                return;
+            }
+
+            try {
+                if (mode === 'encrypt') {
+                    const encrypted = CryptoJS.AES.encrypt(input, pass).toString();
+                    output.value = encrypted;
+                } else {
+                    const bytes = CryptoJS.AES.decrypt(input, pass);
+                    const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+                    if (!decrypted) throw new Error("解密失败");
+                    output.value = decrypted;
+                }
+            } catch (e) {
+                output.value = "错误：解密失败。请检查密码或密文格式。";
+            }
+        }
+
+        function copyResult() {
+            const el = document.getElementById('output-text');
+            el.select();
+            document.execCommand('copy');
+            alert("已复制");
+        }
+    </script>
+</body>
+
+</html>

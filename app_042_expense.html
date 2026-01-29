@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>随手记账</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .expense-item {
+            animation: slideIn 0.2s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800 p-4 flex justify-center items-start">
+
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden mt-4">
+
+        <!-- Balance Card -->
+        <div class="bg-indigo-600 p-8 text-white">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <p class="text-indigo-200 text-sm uppercase tracking-wider">本月结余</p>
+                    <h1 class="text-4xl font-bold mt-1">¥<span id="balance">0.00</span></h1>
+                </div>
+                <a href="./navigation.html" class="text-indigo-300 hover:text-white text-sm">退出</a>
+            </div>
+
+            <div class="flex gap-4 mt-6">
+                <div class="bg-indigo-500/50 rounded-xl p-3 flex-1">
+                    <p class="text-xs text-indigo-200 uppercase mb-1">收入</p>
+                    <p class="font-bold text-emerald-300">+<span id="income-total">0.00</span></p>
+                </div>
+                <div class="bg-indigo-500/50 rounded-xl p-3 flex-1">
+                    <p class="text-xs text-indigo-200 uppercase mb-1">支出</p>
+                    <p class="font-bold text-rose-300">-<span id="expense-total">0.00</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Transaction -->
+        <div class="p-6 border-b border-gray-100 bg-gray-50">
+            <h3 class="font-bold text-gray-700 mb-3">记一笔</h3>
+            <div class="flex flex-col gap-3">
+                <div class="flex gap-2">
+                    <input type="text" id="text" placeholder="用途 (如: 早餐)"
+                        class="flex-1 px-4 py-2 border border-gray-200 rounded-lg outline-none focus:border-indigo-500 transition">
+                    <input type="number" id="amount" placeholder="金额"
+                        class="w-24 px-4 py-2 border border-gray-200 rounded-lg outline-none focus:border-indigo-500 transition">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="addTransaction(true)"
+                        class="flex-1 bg-emerald-100 text-emerald-700 py-2 rounded-lg font-bold hover:bg-emerald-200 transition">+
+                        收入</button>
+                    <button onclick="addTransaction(false)"
+                        class="flex-1 bg-rose-100 text-rose-700 py-2 rounded-lg font-bold hover:bg-rose-200 transition">-
+                        支出</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- History -->
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-gray-700">近期明细</h3>
+                <button onclick="clearAll()" class="text-xs text-gray-400 hover:text-red-500">清空</button>
+            </div>
+            <ul id="list" class="space-y-3 max-h-[40vh] overflow-y-auto pr-2">
+                <!-- Items injected here -->
+            </ul>
+        </div>
+
+    </div>
+
+    <script>
+        const balanceEl = document.getElementById('balance');
+        const incomeEl = document.getElementById('income-total');
+        const expenseEl = document.getElementById('expense-total');
+        const listEl = document.getElementById('list');
+        const textInput = document.getElementById('text');
+        const amountInput = document.getElementById('amount');
+
+        let transactions = JSON.parse(localStorage.getItem('my_expenses') || '[]');
+
+        function updateValues() {
+            const amounts = transactions.map(t => t.amount);
+
+            const total = amounts.reduce((acc, item) => acc + item, 0).toFixed(2);
+
+            const income = amounts
+                .filter(item => item > 0)
+                .reduce((acc, item) => acc + item, 0)
+                .toFixed(2);
+
+            const expense = (amounts
+                .filter(item => item < 0)
+                .reduce((acc, item) => acc + item, 0) * -1)
+                .toFixed(2);
+
+            balanceEl.innerText = total;
+            incomeEl.innerText = income;
+            expenseEl.innerText = expense;
+
+            renderList();
+            localStorage.setItem('my_expenses', JSON.stringify(transactions));
+        }
+
+        function addTransaction(isIncome) {
+            const text = textInput.value;
+            let amount = +amountInput.value;
+
+            if (text.trim() === '' || amount === 0 || isNaN(amount)) {
+                alert('请输入有效的用途和金额');
+                return;
+            }
+
+            // If expense, make negative
+            if (!isIncome) {
+                amount = -Math.abs(amount);
+            } else {
+                amount = Math.abs(amount);
+            }
+
+            const transaction = {
+                id: Date.now(),
+                text,
+                amount
+            };
+
+            transactions.unshift(transaction);
+
+            textInput.value = '';
+            amountInput.value = '';
+
+            updateValues();
+        }
+
+        function removeTransaction(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            updateValues();
+        }
+
+        function clearAll() {
+            if (confirm('确定要清空所有记录吗？')) {
+                transactions = [];
+                updateValues();
+            }
+        }
+
+        function renderList() {
+            listEl.innerHTML = '';
+
+            if (transactions.length === 0) {
+                listEl.innerHTML = '<li class="text-center text-gray-400 text-sm py-4">暂无记录，快去记一笔吧！</li>';
+                return;
+            }
+
+            transactions.forEach(t => {
+                const sign = t.amount < 0 ? '-' : '+';
+                const item = document.createElement('li');
+
+                // Color bar class
+                const borderClass = t.amount < 0 ? 'border-rose-500' : 'border-emerald-500';
+                const textClass = t.amount < 0 ? 'text-rose-600' : 'text-emerald-600';
+
+                item.className = `expense-item bg-white p-3 shadow-sm rounded-lg flex justify-between items-center border-r-4 ${borderClass} group`;
+
+                item.innerHTML = `
+                    <span class="text-gray-700 font-medium">${t.text}</span>
+                    <div class="flex items-center gap-3">
+                        <span class="${textClass} font-bold">${sign}${Math.abs(t.amount).toFixed(2)}</span>
+                        <button class="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition" onclick="removeTransaction(${t.id})">×</button>
+                    </div>
+                `;
+
+                listEl.appendChild(item);
+            });
+        }
+
+        updateValues();
+    </script>
+</body>
+
+</html>

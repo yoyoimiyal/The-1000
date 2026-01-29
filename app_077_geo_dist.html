@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地理距离计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-sky-50 min-h-screen flex items-center justify-center p-6 text-slate-700">
+
+    <div class="w-full max-w-lg bg-white rounded-3xl shadow-xl p-8 border border-sky-100">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-sky-900 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Geo Distance
+            </h1>
+            <a href="./navigation.html" class="text-sm text-sky-500 hover:text-sky-700">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <!-- Point A -->
+            <div class="bg-sky-50 p-4 rounded-xl border border-sky-100 relative group">
+                <div
+                    class="absolute -left-3 top-4 w-6 h-6 bg-sky-600 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-md">
+                    A</div>
+                <div class="pl-4">
+                    <h3 class="text-xs font-bold text-sky-400 uppercase mb-2">地点 A (Origin)</h3>
+                    <div class="flex gap-2">
+                        <input type="number" id="lat1" placeholder="纬度 Latitude"
+                            class="w-1/2 p-2 rounded border border-sky-200 focus:ring-2 focus:ring-sky-500 outline-none text-sm"
+                            step="any">
+                        <input type="number" id="lon1" placeholder="经度 Longitude"
+                            class="w-1/2 p-2 rounded border border-sky-200 focus:ring-2 focus:ring-sky-500 outline-none text-sm"
+                            step="any">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Point B -->
+            <div class="bg-sky-50 p-4 rounded-xl border border-sky-100 relative group">
+                <div
+                    class="absolute -left-3 top-4 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-md">
+                    B</div>
+                <div class="pl-4">
+                    <h3 class="text-xs font-bold text-sky-400 uppercase mb-2">地点 B (Destination)</h3>
+                    <div class="flex gap-2">
+                        <input type="number" id="lat2" placeholder="纬度 Latitude"
+                            class="w-1/2 p-2 rounded border border-sky-200 focus:ring-2 focus:ring-sky-500 outline-none text-sm"
+                            step="any">
+                        <input type="number" id="lon2" placeholder="经度 Longitude"
+                            class="w-1/2 p-2 rounded border border-sky-200 focus:ring-2 focus:ring-sky-500 outline-none text-sm"
+                            step="any">
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="calculate()"
+                class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-lg transition transform active:scale-95">
+                计算距离
+            </button>
+
+            <!-- Result -->
+            <div class="text-center pt-4 border-t border-slate-100">
+                <p class="text-xs text-slate-400 uppercase font-bold mb-1">直线距离 (Great Circle)</p>
+                <div class="flex justify-center items-baseline gap-2">
+                    <span id="result-km" class="text-4xl font-bold text-slate-800">0.00</span>
+                    <span class="text-sm text-slate-500">km</span>
+                </div>
+                <div class="text-sm text-slate-400 mt-1">
+                    ≈ <span id="result-miles">0.00</span> miles
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Presets -->
+        <div class="mt-8">
+            <p class="text-xs text-slate-400 mb-2 text-center">快速预设</p>
+            <div class="flex flex-wrap justify-center gap-2">
+                <button onclick="setCoords(39.9042, 116.4074, 31.2304, 121.4737)"
+                    class="text-xs bg-white border border-slate-200 px-3 py-1 rounded-full hover:bg-slate-50">北京 -
+                    上海</button>
+                <button onclick="setCoords(40.7128, -74.0060, 51.5074, -0.1278)"
+                    class="text-xs bg-white border border-slate-200 px-3 py-1 rounded-full hover:bg-slate-50">纽约 -
+                    伦敦</button>
+                <button onclick="setCoords(35.6895, 139.6917, -33.8688, 151.2093)"
+                    class="text-xs bg-white border border-slate-200 px-3 py-1 rounded-full hover:bg-slate-50">东京 -
+                    悉尼</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function setCoords(lat1, lon1, lat2, lon2) {
+            document.getElementById('lat1').value = lat1;
+            document.getElementById('lon1').value = lon1;
+            document.getElementById('lat2').value = lat2;
+            document.getElementById('lon2').value = lon2;
+            calculate();
+        }
+
+        function calculate() {
+            const lat1 = parseFloat(document.getElementById('lat1').value);
+            const lon1 = parseFloat(document.getElementById('lon1').value);
+            const lat2 = parseFloat(document.getElementById('lat2').value);
+            const lon2 = parseFloat(document.getElementById('lon2').value);
+
+            if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) {
+                return;
+            }
+
+            const R = 6371; // Earth radius in km
+            const dLat = deg2rad(lat2 - lat1);
+            const dLon = deg2rad(lon2 - lon1);
+
+            const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const d = R * c; // Distance in km
+
+            document.getElementById('result-km').innerText = d.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('result-miles').innerText = (d * 0.621371).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function deg2rad(deg) {
+            return deg * (Math.PI / 180);
+        }
+    </script>
+</body>
+
+</html>

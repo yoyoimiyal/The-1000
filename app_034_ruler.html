@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>屏幕直尺</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .ruler-container {
+            background-color: #f8fafc;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .tick {
+            position: absolute;
+            top: 0;
+            background-color: #334155;
+            width: 1px;
+        }
+
+        .tick.major {
+            height: 40px;
+            width: 2px;
+        }
+
+        .tick.mid {
+            height: 25px;
+        }
+
+        .tick.minor {
+            height: 15px;
+            background-color: #94a3b8;
+        }
+
+        .tick-label {
+            position: absolute;
+            top: 45px;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: bold;
+            color: #334155;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 h-screen flex flex-col items-center justify-center p-4 overflow-hidden select-none">
+
+    <div class="mb-6 text-center">
+        <h1 class="text-2xl font-bold text-slate-800">屏幕直尺</h1>
+        <p class="text-xs text-slate-500 mt-1">请使用标准银行卡 (85.6mm) 校准以获得最佳精度</p>
+    </div>
+
+    <!-- Ruler Area -->
+    <div class="w-full max-w-3xl h-32 bg-white rounded-lg shadow-xl relative flex items-start justify-center"
+        id="ruler-wrapper">
+        <div id="ruler" class="ruler-container w-full h-full">
+            <!-- Ticks injected here -->
+        </div>
+
+        <!-- Calibration Item (Draggable/Resizable simulation) -->
+        <div id="calibrator"
+            class="absolute top-10 left-10 h-32 bg-indigo-500/20 border-2 border-indigo-500 rounded-lg flex items-center justify-center cursor-ew-resize backdrop-blur-sm z-10"
+            style="width: 300px; height: 100px;">
+            <div class="text-center text-indigo-700 font-bold text-xs p-2 pointer-events-none">
+                标准银行卡<br>85.6 mm<br>
+                <span class="font-normal opacity-75">拖动边缘调整宽度以匹配实物</span>
+            </div>
+            <!-- Resize Handles -->
+            <div class="absolute right-0 top-0 bottom-0 w-6 bg-indigo-500/50 cursor-ew-resize flex items-center justify-center hover:bg-indigo-500 text-white"
+                onmousedown="startResize(event)">
+                ⬌
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="mt-8 flex gap-4 bg-white p-4 rounded-xl shadow-sm">
+        <div class="flex flex-col">
+            <label class="text-xs font-bold text-slate-400 uppercase mb-1">当前 PPI (像素/英寸)</label>
+            <input type="number" id="ppi-input" class="w-24 p-1 border border-slate-200 rounded text-center font-mono"
+                value="96" onchange="updatePPI(this.value)">
+        </div>
+        <div class="flex flex-col justify-end">
+            <button onclick="resetCalibration()"
+                class="px-4 py-1.5 bg-slate-200 text-slate-600 text-xs font-bold rounded hover:bg-slate-300 transition">重置</button>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="./navigation.html" class="text-sm text-slate-400 hover:text-slate-600">退出</a>
+    </div>
+
+    <script>
+        const ruler = document.getElementById('ruler');
+        const ppiInput = document.getElementById('ppi-input');
+        const calibrator = document.getElementById('calibrator');
+
+        let ppi = 96; // Default web PPI
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        function initRuler() {
+            // Try to detect device PPI roughly (very hard in browser, usually defaults to 96)
+            // We rely on visual calibration
+            drawRuler();
+        }
+
+        function drawRuler() {
+            ruler.innerHTML = '';
+            const widthPx = ruler.clientWidth;
+            const pixelsPerMm = ppi / 25.4;
+
+            // Draw ticks every mm
+            const mmCount = Math.floor(widthPx / pixelsPerMm);
+
+            for (let i = 0; i <= mmCount; i++) {
+                const left = i * pixelsPerMm;
+                const tick = document.createElement('div');
+
+                if (i % 10 === 0) {
+                    tick.className = 'tick major';
+                    const label = document.createElement('div');
+                    label.className = 'tick-label';
+                    label.style.left = left + 'px';
+                    label.innerText = (i / 10) + ' cm';
+                    ruler.appendChild(label);
+                } else if (i % 5 === 0) {
+                    tick.className = 'tick mid';
+                } else {
+                    tick.className = 'tick minor';
+                }
+
+                tick.style.left = left + 'px';
+                ruler.appendChild(tick);
+            }
+        }
+
+        // Calibration Logic
+        function startResize(e) {
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = calibrator.offsetWidth;
+            document.body.style.cursor = 'ew-resize';
+            document.addEventListener('mousemove', resize);
+            document.addEventListener('mouseup', stopResize);
+            e.preventDefault();
+        }
+
+        function resize(e) {
+            if (!isResizing) return;
+            const diff = e.clientX - startX;
+            let newWidth = startWidth + diff;
+            if (newWidth < 50) newWidth = 50; // min width
+            calibrator.style.width = newWidth + 'px';
+
+            // Update PPI based on card width (85.6mm)
+            // newWidth (px) = 85.6 (mm) * (ppi / 25.4)
+            // ppi = newWidth * 25.4 / 85.6
+            ppi = newWidth * 25.4 / 85.6;
+            ppiInput.value = Math.round(ppi);
+            drawRuler();
+        }
+
+        function stopResize() {
+            isResizing = false;
+            document.body.style.cursor = 'default';
+            document.removeEventListener('mousemove', resize);
+            document.removeEventListener('mouseup', stopResize);
+        }
+
+        function updatePPI(val) {
+            ppi = parseFloat(val);
+            if (ppi < 10) ppi = 10;
+            // Reverse update calibrator width
+            // width = 85.6 * (ppi / 25.4)
+            const width = 85.6 * (ppi / 25.4);
+            calibrator.style.width = width + 'px';
+            drawRuler();
+        }
+
+        function resetCalibration() {
+            updatePPI(96);
+        }
+
+        window.addEventListener('resize', drawRuler);
+
+        // Initial Draw
+        // Set initial calibrator width for 96 PPI
+        calibrator.style.width = (85.6 * (96 / 25.4)) + 'px';
+        initRuler();
+
+    </script>
+</body>
+
+</html>

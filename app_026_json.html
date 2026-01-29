@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON 格式化工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 h-screen flex flex-col overflow-hidden text-slate-700">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center shrink-0">
+        <h1 class="font-bold text-lg flex items-center gap-2 text-indigo-600">
+            <span class="text-xl">{}</span> JSON Formatter
+        </h1>
+        <div class="flex gap-3">
+            <button onclick="formatJSON()"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded text-sm font-medium transition">格式化
+                (Beautify)</button>
+            <button onclick="minifyJSON()"
+                class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-1.5 rounded text-sm font-medium transition">压缩
+                (Minify)</button>
+            <button onclick="clearAll()" class="text-slate-400 hover:text-red-500 px-2 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+            </button>
+            <a href="./navigation.html"
+                class="ml-4 text-sm text-slate-400 hover:text-indigo-600 flex items-center">退出</a>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-200 overflow-hidden">
+
+        <!-- Input -->
+        <div class="flex-1 flex flex-col min-w-0 bg-white">
+            <div
+                class="px-4 py-2 bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase flex justify-between">
+                <span>Input</span>
+                <span class="text-slate-400 cursor-pointer hover:text-indigo-500" onclick="loadSample()">加载示例</span>
+            </div>
+            <textarea id="input"
+                class="flex-1 p-4 resize-none outline-none code-font text-sm leading-relaxed text-slate-800"
+                placeholder="在此粘贴 JSON..."></textarea>
+        </div>
+
+        <!-- Output -->
+        <div class="flex-1 flex flex-col min-w-0 bg-slate-50 relative">
+            <div
+                class="px-4 py-2 bg-slate-100 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase flex justify-between">
+                <span>Output</span>
+                <span id="status" class="text-emerald-600 hidden">Valid JSON</span>
+            </div>
+            <textarea id="output"
+                class="flex-1 p-4 resize-none outline-none code-font text-sm leading-relaxed text-slate-800 bg-slate-50"
+                readonly placeholder="结果显示区域..."></textarea>
+
+            <!-- Error Toast -->
+            <div id="error-msg"
+                class="absolute bottom-4 left-4 right-4 bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded shadow-lg hidden text-sm font-mono">
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const input = document.getElementById('input');
+        const output = document.getElementById('output');
+        const errorMsg = document.getElementById('error-msg');
+        const status = document.getElementById('status');
+
+        function loadSample() {
+            const sample = {
+                "project": "1000 Mini Apps",
+                "id": 26,
+                "tags": ["tool", "developer", "utility"],
+                "active": true,
+                "meta": {
+                    "created": "2026-05-20",
+                    "author": "Gemini"
+                }
+            };
+            input.value = JSON.stringify(sample);
+            formatJSON();
+        }
+
+        function clearAll() {
+            input.value = '';
+            output.value = '';
+            hideError();
+        }
+
+        function formatJSON() {
+            hideError();
+            const raw = input.value.trim();
+            if (!raw) return;
+
+            try {
+                const obj = JSON.parse(raw);
+                output.value = JSON.stringify(obj, null, 4); // 4 spaces indent
+                showStatus(true);
+            } catch (e) {
+                showError(e.message);
+                showStatus(false);
+            }
+        }
+
+        function minifyJSON() {
+            hideError();
+            const raw = input.value.trim();
+            if (!raw) return;
+
+            try {
+                const obj = JSON.parse(raw);
+                output.value = JSON.stringify(obj);
+                showStatus(true);
+            } catch (e) {
+                showError(e.message);
+                showStatus(false);
+            }
+        }
+
+        function showError(msg) {
+            errorMsg.innerText = "Syntax Error: " + msg;
+            errorMsg.classList.remove('hidden');
+            output.value = "";
+        }
+
+        function hideError() {
+            errorMsg.classList.add('hidden');
+        }
+
+        function showStatus(valid) {
+            if (valid) {
+                status.innerText = "Valid JSON";
+                status.className = "text-emerald-600";
+                status.classList.remove('hidden');
+            } else {
+                status.innerText = "Invalid JSON";
+                status.className = "text-red-500";
+                status.classList.remove('hidden');
+            }
+        }
+
+        // Auto format on paste might be annoying, let's stick to manual buttons
+    </script>
+</body>
+
+</html>

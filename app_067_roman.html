@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>罗马数字转换器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        .roman-font {
+            font-family: 'Cinzel', serif;
+        }
+    </style>
+</head>
+
+<body class="bg-stone-100 min-h-screen flex items-center justify-center p-4 text-stone-800">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-xl shadow-2xl border-t-8 border-stone-600">
+
+        <header class="flex justify-between items-center mb-10">
+            <h1 class="text-2xl font-bold text-stone-700 flex items-center gap-2">
+                <span class="roman-font text-3xl">IV</span> Converter
+            </h1>
+            <a href="./navigation.html" class="text-xs font-bold text-stone-400 hover:text-stone-600 uppercase">Exit</a>
+        </header>
+
+        <div class="space-y-8 relative">
+
+            <!-- Number Input -->
+            <div class="relative group">
+                <label class="block text-xs font-bold text-stone-400 uppercase mb-2 tracking-widest">Arabic Number
+                    (1-3999)</label>
+                <input type="number" id="num-input"
+                    class="w-full p-4 text-3xl font-bold bg-stone-50 border-2 border-stone-200 rounded-lg outline-none focus:border-stone-500 transition text-stone-700"
+                    placeholder="2026" oninput="convertToRoman()">
+            </div>
+
+            <!-- Arrow -->
+            <div
+                class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full border border-stone-100 shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-stone-400" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+            </div>
+
+            <!-- Roman Input -->
+            <div class="relative group">
+                <label class="block text-xs font-bold text-stone-400 uppercase mb-2 tracking-widest">Roman
+                    Numeral</label>
+                <input type="text" id="roman-input"
+                    class="w-full p-4 text-3xl font-bold roman-font bg-stone-50 border-2 border-stone-200 rounded-lg outline-none focus:border-stone-500 transition text-stone-800 uppercase"
+                    placeholder="MMXXVI" oninput="convertToArabic()">
+            </div>
+
+        </div>
+
+        <!-- Cheat Sheet -->
+        <div
+            class="mt-10 pt-6 border-t border-stone-100 grid grid-cols-7 gap-1 text-center text-xs text-stone-500 font-mono">
+            <div>
+                <span class="block font-bold">I</span>1
+            </div>
+            <div>
+                <span class="block font-bold">V</span>5
+            </div>
+            <div>
+                <span class="block font-bold">X</span>10
+            </div>
+            <div>
+                <span class="block font-bold">L</span>50
+            </div>
+            <div>
+                <span class="block font-bold">C</span>100
+            </div>
+            <div>
+                <span class="block font-bold">D</span>500
+            </div>
+            <div>
+                <span class="block font-bold">M</span>1000
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const numInput = document.getElementById('num-input');
+        const romanInput = document.getElementById('roman-input');
+
+        function convertToRoman() {
+            let num = parseInt(numInput.value);
+            if (isNaN(num) || num < 1 || num > 3999) {
+                romanInput.value = "";
+                return;
+            }
+
+            const val = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1];
+            const syms = ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"];
+            let roman = "";
+            let i = 0;
+
+            while (num > 0) {
+                while (num >= val[i]) {
+                    roman += syms[i];
+                    num -= val[i];
+                }
+                i++;
+            }
+            romanInput.value = roman;
+        }
+
+        function convertToArabic() {
+            let str = romanInput.value.toUpperCase();
+            // Validate char
+            if (/[^IVXLCDM]/.test(str)) {
+                numInput.value = ""; // Invalid char
+                return;
+            }
+
+            const map = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+            let num = 0;
+
+            for (let i = 0; i < str.length; i++) {
+                const curr = map[str[i]];
+                const next = map[str[i + 1]];
+
+                if (next && curr < next) {
+                    num -= curr;
+                } else {
+                    num += curr;
+                }
+            }
+
+            if (num > 0 && num < 4000) {
+                numInput.value = num;
+            } else {
+                numInput.value = "";
+            }
+        }
+    </script>
+</body>
+
+</html>

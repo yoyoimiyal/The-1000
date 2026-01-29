@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>舒尔特方格</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .grid-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.1s;
+        }
+
+        .grid-cell:active {
+            transform: scale(0.95);
+        }
+
+        .correct {
+            background-color: #dcfce7 !important;
+            color: #166534 !important;
+        }
+
+        .wrong {
+            animation: shake 0.3s;
+            background-color: #fee2e2 !important;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-5px);
+            }
+
+            75% {
+                transform: translateX(5px);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-md bg-white p-6 rounded-3xl shadow-xl">
+
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800">Schulte Grid</h1>
+                <p class="text-slate-400 text-sm">按顺序点击 1 - 25</p>
+            </div>
+            <div class="text-right">
+                <div class="text-3xl font-mono font-bold text-indigo-600" id="timer">0.00</div>
+                <div class="text-xs text-slate-400">SECONDS</div>
+            </div>
+        </div>
+
+        <!-- Grid -->
+        <div class="grid grid-cols-5 gap-2 mb-6" id="grid">
+            <!-- Cells -->
+        </div>
+
+        <!-- Start Overlay -->
+        <div id="overlay"
+            class="absolute inset-0 bg-white/90 backdrop-blur flex flex-col items-center justify-center z-10"
+            style="display: none;">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold mb-2 text-slate-800" id="result-title">舒尔特方格</h2>
+                <p class="text-slate-500 mb-8" id="result-msg">测试你的专注力</p>
+                <button onclick="startGame()"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-10 rounded-full shadow-lg transition transform hover:scale-105">
+                    开始测试
+                </button>
+            </div>
+            <a href="./navigation.html" class="mt-8 text-sm text-slate-400 hover:text-indigo-600 underline">退出</a>
+        </div>
+
+    </div>
+
+    <script>
+        const gridEl = document.getElementById('grid');
+        const timerEl = document.getElementById('timer');
+        const overlay = document.getElementById('overlay');
+        const resultTitle = document.getElementById('result-title');
+        const resultMsg = document.getElementById('result-msg');
+
+        let numbers = [];
+        let currentTarget = 1;
+        let startTime = 0;
+        let timerInterval;
+        let isPlaying = false;
+
+        function initGrid() {
+            // Create initial visual grid (inactive)
+            overlay.style.display = 'flex';
+            renderGrid(Array.from({ length: 25 }, (_, i) => i + 1).sort(() => Math.random() - 0.5));
+        }
+
+        function startGame() {
+            overlay.style.display = 'none';
+            currentTarget = 1;
+
+            // Generate numbers 1-25 and shuffle
+            numbers = Array.from({ length: 25 }, (_, i) => i + 1);
+            shuffle(numbers);
+            renderGrid(numbers);
+
+            startTime = Date.now();
+            isPlaying = true;
+            timerInterval = setInterval(() => {
+                const diff = (Date.now() - startTime) / 1000;
+                timerEl.innerText = diff.toFixed(2);
+            }, 30);
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function renderGrid(nums) {
+            gridEl.innerHTML = '';
+            nums.forEach(num => {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell bg-slate-100 text-slate-700 font-bold text-xl rounded-lg shadow-sm hover:bg-slate-200';
+                cell.innerText = num;
+                cell.onclick = () => handleClick(cell, num);
+                gridEl.appendChild(cell);
+            });
+        }
+
+        function handleClick(cell, num) {
+            if (!isPlaying) return;
+
+            if (num === currentTarget) {
+                // Correct
+                cell.classList.remove('bg-slate-100', 'hover:bg-slate-200', 'text-slate-700');
+                cell.classList.add('correct');
+                currentTarget++;
+
+                if (currentTarget > 25) {
+                    endGame();
+                }
+            } else {
+                // Wrong
+                cell.classList.add('wrong');
+                setTimeout(() => cell.classList.remove('wrong'), 300);
+            }
+        }
+
+        function endGame() {
+            isPlaying = false;
+            clearInterval(timerInterval);
+            const finalTime = timerEl.innerText;
+
+            let rating = "";
+            if (finalTime < 20) rating = "神级专注! 🏆";
+            else if (finalTime < 30) rating = "非常优秀 🌟";
+            else if (finalTime < 40) rating = "还不错 👍";
+            else rating = "继续加油 💪";
+
+            resultTitle.innerText = `${finalTime}s`;
+            resultMsg.innerText = rating;
+            overlay.style.display = 'flex';
+        }
+
+        initGrid();
+    </script>
+</body>
+
+</html>

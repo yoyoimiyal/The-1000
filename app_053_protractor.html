@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>透明量角器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #protractor-container {
+            touch-action: none;
+        }
+
+        .protractor {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><path d="M20,200 A180,180 0 0,1 380,200" fill="rgba(255,255,255,0.4)" stroke="black" stroke-width="2"/><line x1="200" y1="200" x2="200" y2="190" stroke="black" stroke-width="2"/><line x1="200" y1="200" x2="20" y2="200" stroke="black" stroke-width="2"/><line x1="200" y1="200" x2="380" y2="200" stroke="black" stroke-width="2"/><text x="200" y="180" text-anchor="middle" font-size="12">90</text><text x="30" y="195" font-size="12">180</text><text x="360" y="195" font-size="12">0</text><path d="M200,200 L200,20" stroke="black" stroke-dasharray="4,4" stroke-width="1"/></svg>');
+            background-size: contain;
+            background-repeat: no-repeat;
+            cursor: move;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex flex-col items-center">
+
+    <!-- Toolbar -->
+    <div class="w-full bg-white shadow-md p-4 flex justify-between items-center z-20">
+        <h1 class="text-lg font-bold text-slate-700 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+            </svg>
+            Protractor
+        </h1>
+        <div class="flex gap-4 items-center">
+            <label
+                class="cursor-pointer bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-200 transition">
+                📷 上传图片
+                <input type="file" accept="image/*" class="hidden" onchange="loadImage(event)">
+            </label>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-slate-600">退出</a>
+        </div>
+    </div>
+
+    <!-- Workspace -->
+    <div class="relative w-full flex-1 overflow-hidden bg-slate-200 flex items-center justify-center h-[80vh]"
+        id="workspace">
+
+        <!-- User Image -->
+        <img id="target-image"
+            class="max-w-full max-h-full object-contain pointer-events-none opacity-0 transition-opacity" />
+
+        <!-- Protractor Tool -->
+        <div id="protractor-container"
+            class="absolute w-[300px] h-[300px] flex items-center justify-center top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 select-none"
+            style="transform: rotate(0deg);">
+
+            <!-- The Visual SVG Protractor -->
+            <div class="w-full h-1/2 absolute top-0 bg-transparent protractor"></div>
+
+            <!-- Controls Overlay -->
+            <div
+                class="absolute w-full h-full rounded-full border-2 border-dashed border-blue-300 pointer-events-none opacity-50">
+            </div>
+
+            <!-- Center Pivot -->
+            <div class="absolute top-1/2 left-1/2 w-4 h-4 bg-blue-500 rounded-full -translate-x-1/2 -translate-y-1/2 z-10 cursor-move pointer-events-auto shadow hover:scale-110 transition"
+                onmousedown="startDrag(event)"></div>
+
+            <!-- Rotate Handle -->
+            <div class="absolute top-0 left-1/2 w-8 h-8 bg-white border-2 border-blue-500 rounded-full -translate-x-1/2 -translate-y-1/2 z-10 cursor-alias pointer-events-auto flex items-center justify-center shadow hover:bg-blue-50"
+                onmousedown="startRotate(event)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Info Bar -->
+    <div class="bg-white p-4 w-full text-center text-sm text-slate-500 shadow-inner z-20">
+        <span class="font-bold text-slate-800">当前角度:</span> <span id="angle-display">0</span>°
+        <span class="mx-2">|</span>
+        拖动中心移动，拖动顶部手柄旋转
+    </div>
+
+    <script>
+        const container = document.getElementById('protractor-container');
+        const display = document.getElementById('angle-display');
+        const img = document.getElementById('target-image');
+
+        let rotation = 0;
+        let posX = 0, posY = 0;
+
+        // Drag logic
+        let isDragging = false;
+        let startX, startY;
+
+        // Rotate logic
+        let isRotating = false;
+
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                img.src = URL.createObjectURL(file);
+                img.classList.remove('opacity-0');
+            }
+        }
+
+        function startDrag(e) {
+            e.stopPropagation();
+            isDragging = true;
+            startX = e.clientX - container.offsetLeft;
+            startY = e.clientY - container.offsetTop;
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopAction);
+        }
+
+        function onDrag(e) {
+            if (!isDragging) return;
+            container.style.left = (e.clientX - startX) + 'px';
+            container.style.top = (e.clientY - startY) + 'px';
+        }
+
+        function startRotate(e) {
+            e.stopPropagation();
+            isRotating = true;
+            document.addEventListener('mousemove', onRotate);
+            document.addEventListener('mouseup', stopAction);
+        }
+
+        function onRotate(e) {
+            if (!isRotating) return;
+
+            // Calculate angle based on center of container
+            const rect = container.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            const dx = e.clientX - centerX;
+            const dy = e.clientY - centerY;
+
+            // atan2 returns angle in radians from -PI to PI
+            // We adjust by +90deg because our handle is at top (not right)
+            let angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+
+            rotation = angle;
+            container.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+
+            // Normalize angle for display (0-360)
+            let displayAngle = Math.round(rotation % 360);
+            if (displayAngle < 0) displayAngle += 360;
+            display.innerText = displayAngle;
+        }
+
+        function stopAction() {
+            isDragging = false;
+            isRotating = false;
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mousemove', onRotate);
+            document.removeEventListener('mouseup', stopAction);
+        }
+    </script>
+</body>
+
+</html>

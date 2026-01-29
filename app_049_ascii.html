@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片转字符画</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        pre {
+            font-family: 'Courier New', Courier, monospace;
+            line-height: 0.6;
+            font-size: 8px;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center p-6 text-gray-300">
+
+    <header class="w-full max-w-4xl flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-white">Img to ASCII</h1>
+        <a href="./navigation.html" class="text-sm hover:text-white">退出</a>
+    </header>
+
+    <div class="w-full max-w-4xl flex flex-col gap-6">
+
+        <!-- Controls -->
+        <div class="bg-gray-800 p-6 rounded-xl shadow-lg flex flex-col md:flex-row gap-4 items-center justify-between">
+            <label
+                class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold shadow transition">
+                <span>📂 上传图片</span>
+                <input type="file" class="hidden" accept="image/*" id="file-input" onchange="handleFile(event)">
+            </label>
+
+            <div class="flex gap-4 items-center">
+                <div class="flex flex-col">
+                    <label class="text-xs text-gray-500 uppercase font-bold">分辨率 (Width)</label>
+                    <input type="range" id="resolution" min="20" max="150" value="80" class="w-32"
+                        oninput="updateResolution(this.value)">
+                    <span id="res-val" class="text-xs text-center">80 char</span>
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-xs text-gray-500 uppercase font-bold">对比度</label>
+                    <button onclick="invertColor()"
+                        class="text-xs bg-gray-700 px-2 py-1 rounded hover:bg-gray-600">反转颜色</button>
+                </div>
+            </div>
+
+            <button onclick="copyAscii()"
+                class="text-gray-400 hover:text-white border border-gray-600 px-4 py-2 rounded-lg text-sm">复制文本</button>
+        </div>
+
+        <!-- Output -->
+        <div
+            class="bg-black p-4 rounded-xl shadow-inner overflow-auto flex justify-center min-h-[50vh] border border-gray-800">
+            <pre id="ascii-output" class="text-white whitespace-pre select-all text-center">
+
+   (等待上传...)
+   
+            </pre>
+        </div>
+
+    </div>
+
+    <canvas id="canvas" class="hidden"></canvas>
+
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const output = document.getElementById('ascii-output');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const resVal = document.getElementById('res-val');
+
+        let currentImg = null;
+        let width = 80;
+        let isInverted = false;
+
+        // Density string: from dark to light
+        const density = "Ñ@#W$9876543210?!abc;:+=-,._                    ";
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    currentImg = img;
+                    generateAscii();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updateResolution(val) {
+            width = parseInt(val);
+            resVal.innerText = width + " char";
+            if (currentImg) generateAscii();
+        }
+
+        function invertColor() {
+            isInverted = !isInverted;
+            if (currentImg) generateAscii();
+        }
+
+        function generateAscii() {
+            if (!currentImg) return;
+
+            // Calculate height to maintain aspect ratio
+            // Font aspect ratio correction: chars are taller than wide (~0.5 - 0.6)
+            // So we compress height by factor ~0.5
+            const w = width;
+            const h = Math.floor(currentImg.height / currentImg.width * w * 0.55);
+
+            canvas.width = w;
+            canvas.height = h;
+
+            ctx.drawImage(currentImg, 0, 0, w, h);
+
+            const imageData = ctx.getImageData(0, 0, w, h);
+            const data = imageData.data;
+
+            let asciiStr = "";
+
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const offset = (y * w + x) * 4;
+                    const r = data[offset];
+                    const g = data[offset + 1];
+                    const b = data[offset + 2];
+
+                    // Brightness
+                    let avg = (r + g + b) / 3;
+
+                    if (isInverted) avg = 255 - avg;
+
+                    // Map to char
+                    const len = density.length;
+                    const charIndex = Math.floor((avg / 255) * len);
+                    const c = density.charAt(len - 1 - charIndex); // density string is dark->light? Adjust as needed
+
+                    // Actually usually standard is: dark chars for dark pixels.
+                    // My string: Ñ (dense) -> space (light).
+                    // If avg is 0 (black), index 0. density[0] = Ñ. Correct.
+                    // But wait, 0 index is end of string?
+                    // Let's verify mapping: avg 0 -> charIndex 0. 
+                    // To get Ñ (darkest) for 0 (black), we need density[0]. 
+                    // So: density.charAt(charIndex).
+
+                    asciiStr += density.charAt(charIndex) || ' ';
+                }
+                asciiStr += "\n";
+            }
+
+            output.innerText = asciiStr;
+        }
+
+        function copyAscii() {
+            navigator.clipboard.writeText(output.innerText);
+            alert("已复制!");
+        }
+    </script>
+</body>
+
+</html>

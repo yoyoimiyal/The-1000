@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片取色器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Color Thief Library for extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.0/color-thief.umd.js"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen p-6 flex flex-col items-center">
+
+    <div class="w-full max-w-2xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-gray-800">Palette Extractor</h1>
+            <a href="./navigation.html" class="text-sm text-gray-400 hover:text-gray-600">退出</a>
+        </header>
+
+        <div class="bg-white p-6 rounded-2xl shadow-md mb-6">
+            <label
+                class="block w-full h-32 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition">
+                <span class="text-gray-400 font-bold">📂 点击上传图片</span>
+                <input type="file" class="hidden" accept="image/*" onchange="loadFile(event)">
+            </label>
+        </div>
+
+        <div id="result-area" class="hidden">
+            <!-- Image Preview -->
+            <div class="mb-6 rounded-xl overflow-hidden shadow-sm border border-gray-200">
+                <img id="preview" class="w-full h-64 object-cover">
+            </div>
+
+            <!-- Colors -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4" id="palette-grid">
+                <!-- Color Cards injected here -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const colorThief = new ColorThief();
+        const img = document.getElementById('preview');
+        const grid = document.getElementById('palette-grid');
+        const resultArea = document.getElementById('result-area');
+
+        function loadFile(event) {
+            const file = event.target.files[0];
+            if (file) {
+                img.src = URL.createObjectURL(file);
+                // Wait for image load
+                img.onload = () => {
+                    resultArea.classList.remove('hidden');
+                    extractColors();
+                }
+            }
+        }
+
+        function extractColors() {
+            // Extract 5 colors
+            const colors = colorThief.getPalette(img, 5);
+            grid.innerHTML = '';
+
+            colors.forEach(rgb => {
+                const hex = rgbToHex(rgb[0], rgb[1], rgb[2]);
+                const card = document.createElement('div');
+                card.className = 'group bg-white rounded-xl overflow-hidden shadow-sm cursor-pointer hover:shadow-md transition';
+                card.onclick = () => copyColor(hex);
+
+                card.innerHTML = `
+                    <div class="h-24 w-full" style="background-color: ${hex}"></div>
+                    <div class="p-3 text-center">
+                        <p class="font-bold text-gray-700 text-sm">${hex}</p>
+                        <p class="text-xs text-gray-400 mt-1">RGB(${rgb.join(',')})</p>
+                        <span class="text-[10px] text-green-500 opacity-0 group-hover:opacity-100 transition">点击复制</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+        }
+
+        function copyColor(text) {
+            navigator.clipboard.writeText(text);
+            alert(`已复制: ${text}`);
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 物理骰子</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .scene {
+            width: 200px;
+            height: 200px;
+            perspective: 600px;
+        }
+
+        .cube {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: translateZ(-100px) rotateX(0deg) rotateY(0deg);
+            transition: transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .cube.rolling {
+            transition: transform 0.5s linear;
+        }
+
+        .face {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* Dots positioning */
+        .dot {
+            width: 30px;
+            height: 30px;
+            background: #333;
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .red-dot {
+            background: #ef4444;
+        }
+
+        .front {
+            transform: rotateY(0deg) translateZ(100px);
+        }
+
+        .right {
+            transform: rotateY(90deg) translateZ(100px);
+        }
+
+        .back {
+            transform: rotateY(180deg) translateZ(100px);
+        }
+
+        .left {
+            transform: rotateY(-90deg) translateZ(100px);
+        }
+
+        .top {
+            transform: rotateX(90deg) translateZ(100px);
+        }
+
+        .bottom {
+            transform: rotateX(-90deg) translateZ(100px);
+        }
+
+        /* Face layouts */
+        .face-1 .dot {}
+
+        /* Center */
+        .face-2 .dot:nth-child(1) {
+            top: 40px;
+            left: 40px;
+        }
+
+        .face-2 .dot:nth-child(2) {
+            bottom: 40px;
+            right: 40px;
+        }
+
+        .face-3 .dot:nth-child(1) {
+            top: 40px;
+            left: 40px;
+        }
+
+        .face-3 .dot:nth-child(2) {
+            top: 85px;
+            left: 85px;
+        }
+
+        .face-3 .dot:nth-child(3) {
+            bottom: 40px;
+            right: 40px;
+        }
+
+        .face-4 .dot:nth-child(1) {
+            top: 40px;
+            left: 40px;
+        }
+
+        .face-4 .dot:nth-child(2) {
+            top: 40px;
+            right: 40px;
+        }
+
+        .face-4 .dot:nth-child(3) {
+            bottom: 40px;
+            left: 40px;
+        }
+
+        .face-4 .dot:nth-child(4) {
+            bottom: 40px;
+            right: 40px;
+        }
+
+        .face-5 .dot:nth-child(1) {
+            top: 40px;
+            left: 40px;
+        }
+
+        .face-5 .dot:nth-child(2) {
+            top: 40px;
+            right: 40px;
+        }
+
+        .face-5 .dot:nth-child(3) {
+            bottom: 40px;
+            left: 40px;
+        }
+
+        .face-5 .dot:nth-child(4) {
+            bottom: 40px;
+            right: 40px;
+        }
+
+        .face-5 .dot:nth-child(5) {
+            top: 85px;
+            left: 85px;
+        }
+
+        .face-6 .dot:nth-child(1) {
+            top: 40px;
+            left: 40px;
+        }
+
+        .face-6 .dot:nth-child(2) {
+            top: 40px;
+            right: 40px;
+        }
+
+        .face-6 .dot:nth-child(3) {
+            top: 85px;
+            left: 40px;
+        }
+
+        .face-6 .dot:nth-child(4) {
+            top: 85px;
+            right: 40px;
+        }
+
+        .face-6 .dot:nth-child(5) {
+            bottom: 40px;
+            left: 40px;
+        }
+
+        .face-6 .dot:nth-child(6) {
+            bottom: 40px;
+            right: 40px;
+        }
+    </style>
+</head>
+
+<body class="bg-indigo-100 min-h-screen flex flex-col items-center justify-center overflow-hidden">
+
+    <div class="mb-12 text-center">
+        <h1 class="text-3xl font-bold text-indigo-900 mb-2">3D Dice Roller</h1>
+        <p class="text-indigo-500">点击骰子或按钮投掷</p>
+    </div>
+
+    <div class="scene">
+        <div class="cube" id="cube" onclick="rollDice()">
+            <div class="face front face-1">
+                <div class="dot red-dot" style="width: 50px; height: 50px;"></div>
+            </div>
+            <div class="face back face-6">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="face right face-3">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="face left face-4">
+                <div class="dot red-dot"></div>
+                <div class="dot red-dot"></div>
+                <div class="dot red-dot"></div>
+                <div class="dot red-dot"></div>
+            </div>
+            <div class="face top face-2">
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="face bottom face-5">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-20 flex flex-col items-center gap-4">
+        <button onclick="rollDice()"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-10 rounded-full shadow-lg transform transition active:scale-95 text-lg">
+            Roll!
+        </button>
+        <a href="./navigation.html" class="text-indigo-400 text-sm hover:underline">返回导航</a>
+    </div>
+
+    <script>
+        const cube = document.getElementById('cube');
+
+        // Rotation mapping for each face to be front
+        // 1: front (0, 0)
+        // 2: top (-90, 0)
+        // 3: right (0, -90)
+        // 4: left (0, 90)
+        // 5: bottom (90, 0)
+        // 6: back (0, 180)
+
+        // We add multiples of 360 to ensure spin animation
+
+        let currentRotX = 0;
+        let currentRotY = 0;
+
+        function rollDice() {
+            // Random 1-6
+            const result = Math.floor(Math.random() * 6) + 1;
+
+            // Add at least 1 full spin (360) + extra
+            // To animate, we increment current rotation values considerably
+            const spins = 2; // full spins
+
+            let xOff = 0, yOff = 0;
+
+            switch (result) {
+                case 1: xOff = 0; yOff = 0; break;
+                case 2: xOff = 90; yOff = 0; break; // Top face needs to rotate X down? No, rotate box so top faces front. 
+                    // Current state: Top is at X=90. To bring it to front (0), we rotate cube X by -90?
+                    // Actually, CSS transforms are applied to the cube.
+                    // If Top face has rotateX(90deg). To show it, Cube needs rotateX(-90deg).
+                    xOff = -90; yOff = 0; break; // This shows Top? Wait.
+                    // Let's visually check.
+                    // If I rotate cube -90deg X-axis. The top face (which is +90 relative to cube) becomes 0 relative to viewer? Yes.
+                    // wait, standard dice orientation: 1 opposite 6, 2 opposite 5, 3 opposite 4.
+                    break;
+                case 3: xOff = 0; yOff = -90; break; // Right face (90Y). Cube needs -90Y to show it.
+                case 4: xOff = 0; yOff = 90; break; // Left face (-90Y). Cube needs 90Y.
+                case 5: xOff = 90; yOff = 0; break; // Bottom face (-90X). Cube needs 90X.
+                case 6: xOff = 0; yOff = 180; break; // Back face (180Y). Cube needs 180Y.
+                // Wait, logic check on face 2/5.
+                // Top face class: rotateX(90). To see it, rotate cube rotateX(-90).
+            }
+
+            // Add random spins to current rotation to ensure it keeps spinning in one direction or chaotic
+            // To make it look like a new roll, we add 360*k + offset.
+
+            // We need to calculate target rotation relative to 0,0,0
+            // But we want to accumulate rotation so it doesn't spin back.
+
+            // Round current to nearest 360 to remove offset? No.
+            // Just add huge numbers.
+
+            // Let's refine:
+            // targetX must be congruent to xOff mod 360.
+            // targetX = currentRotX + (multiple of 360) + (diff to reach xOff)
+
+            // Simplify: Just set new random rotation that lands on correct face?
+            // No, user wants visual consistency.
+
+            // Let's generate a random number of extra 360 spins (1 to 3)
+            const extraX = (Math.floor(Math.random() * 2) + 2) * 360;
+            const extraY = (Math.floor(Math.random() * 2) + 2) * 360;
+
+            // We need to find the next value for X that ends in xOff % 360
+            // Actually, we can just set style directly if we track total degs.
+
+            // Force reset to a clean state visually? No, smooth transition.
+
+            // Hacky but works: 
+            // Calculate next target that is > current and matches offset
+            // But simple addition works if we align axes.
+
+            // Current X might be 720. Target is 90. Next is 720+90? No 810.
+            // Or 720 + 360 + 90.
+
+            // Let's simply set absolute rotation based on result, plus a growing "round count" * 360.
+            // But xOff changes.
+
+            // Let's try this simple accumulation:
+            // Remove previous modulo 360? No.
+
+            // Let's just create a new target.
+            // We want the final visual to be xOff, yOff.
+            // So we add 360s to xOff until it's larger than currentRotX.
+
+            let targetX = xOff;
+            while (targetX <= currentRotX) targetX += 360;
+            targetX += 360; // Add one more spin for fun
+
+            let targetY = yOff;
+            while (targetY <= currentRotY) targetY += 360;
+            targetY += 360;
+
+            // Add some randomness to X/Y if the target is 0?
+            // Dice usually tumbles on all axes.
+            // If we only need to rotate Y to show 3, we might want X to spin 360 too.
+            // So we ensure X spins a multiple of 360 even if result doesn't need X change.
+
+            if (targetX - currentRotX < 360) targetX += 360;
+
+            currentRotX = targetX;
+            currentRotY = targetY;
+
+            cube.style.transform = `translateZ(-100px) rotateX(${currentRotX}deg) rotateY(${currentRotY}deg)`;
+        }
+    </script>
+</body>
+
+</html>

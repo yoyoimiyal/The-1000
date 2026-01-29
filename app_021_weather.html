@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模拟天气站</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .weather-card {
+            backdrop-filter: blur(12px);
+        }
+
+        .float-anim {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+
+            100% {
+                transform: translateY(0px);
+            }
+        }
+    </style>
+</head>
+
+<body
+    class="bg-gradient-to-br from-blue-400 to-indigo-600 min-h-screen flex items-center justify-center p-4 text-white font-sans">
+
+    <div
+        class="weather-card bg-white/20 border border-white/30 rounded-3xl p-8 w-full max-w-sm shadow-2xl relative overflow-hidden">
+
+        <!-- Background Elements -->
+        <div class="absolute -top-10 -right-10 w-32 h-32 bg-yellow-300 rounded-full blur-3xl opacity-50"></div>
+        <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-300 rounded-full blur-3xl opacity-50"></div>
+
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8 relative z-10">
+            <div>
+                <h2 class="text-2xl font-bold" id="city-name">Xiamen</h2>
+                <p class="text-sm text-blue-100" id="date-display">Monday, 12 Oct</p>
+            </div>
+            <button onclick="randomizeWeather()" class="p-2 bg-white/20 rounded-full hover:bg-white/30 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Main Weather -->
+        <div class="flex flex-col items-center mb-8 relative z-10">
+            <div id="weather-icon" class="mb-4 float-anim text-yellow-300">
+                <!-- SVG Icon injected by JS -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+            </div>
+            <h1 class="text-6xl font-light mb-2"><span id="temp">28</span>°</h1>
+            <p class="text-xl font-medium tracking-wide" id="condition">Sunny</p>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="grid grid-cols-3 gap-4 border-t border-white/20 pt-6 relative z-10">
+            <div class="text-center">
+                <p class="text-xs text-blue-100 mb-1">Wind</p>
+                <p class="font-bold"><span id="wind">12</span> km/h</p>
+            </div>
+            <div class="text-center border-l border-r border-white/10">
+                <p class="text-xs text-blue-100 mb-1">Humidity</p>
+                <p class="font-bold"><span id="humidity">45</span>%</p>
+            </div>
+            <div class="text-center">
+                <p class="text-xs text-blue-100 mb-1">Chance</p>
+                <p class="font-bold"><span id="rain">10</span>%</p>
+            </div>
+        </div>
+
+        <div class="mt-8 text-center relative z-10">
+            <a href="./navigation.html" class="text-blue-200 hover:text-white text-xs underline">返回导航</a>
+        </div>
+    </div>
+
+    <script>
+        const cities = ["Xiamen", "Taipei", "Singapore", "New York", "London", "Tokyo"];
+        const conditions = [
+            { name: "Sunny", icon: "sun", color: "text-yellow-300" },
+            { name: "Cloudy", icon: "cloud", color: "text-gray-200" },
+            { name: "Rainy", icon: "rain", color: "text-blue-300" },
+            { name: "Storm", icon: "storm", color: "text-purple-300" }
+        ];
+
+        const icons = {
+            sun: `<svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>`,
+            cloud: `<svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /></svg>`,
+            rain: `<svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>`, // Simplified rain
+            storm: `<svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>`
+        };
+
+        function randomizeWeather() {
+            // Random City
+            const city = cities[Math.floor(Math.random() * cities.length)];
+            document.getElementById('city-name').innerText = city;
+
+            // Random Condition
+            const cond = conditions[Math.floor(Math.random() * conditions.length)];
+            document.getElementById('condition').innerText = cond.name;
+            const iconEl = document.getElementById('weather-icon');
+            iconEl.innerHTML = icons[cond.icon];
+            iconEl.className = `mb-4 float-anim ${cond.color}`;
+
+            // Random Numbers
+            document.getElementById('temp').innerText = Math.floor(Math.random() * 20) + 15;
+            document.getElementById('wind').innerText = Math.floor(Math.random() * 30) + 5;
+            document.getElementById('humidity').innerText = Math.floor(Math.random() * 60) + 30;
+            document.getElementById('rain').innerText = Math.floor(Math.random() * 100);
+
+            // Date
+            const now = new Date();
+            document.getElementById('date-display').innerText = now.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short' });
+        }
+
+        // Init
+        randomizeWeather();
+    </script>
+</body>
+
+</html>

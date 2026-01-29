@@ -1,0 +1,110 @@
+app_063_storage.html<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>色号猜猜看</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .option-btn {
+            transition: transform 0.1s;
+        }
+
+        .option-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-white font-mono">
+
+    <div class="w-full max-w-md text-center">
+
+        <header class="flex justify-between items-end mb-10 border-b border-gray-700 pb-4">
+            <h1 class="text-2xl font-bold tracking-wider">HEX GAME</h1>
+            <div class="text-sm">
+                Streak: <span id="streak" class="text-yellow-400 font-bold text-xl">0</span>
+            </div>
+        </header>
+
+        <div class="mb-12">
+            <p class="text-gray-400 text-sm mb-2">WHICH COLOR IS</p>
+            <h2 class="text-5xl font-black tracking-widest" id="hex-code">#------</h2>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 mb-8" id="options-container">
+            <!-- Buttons injected here -->
+        </div>
+
+        <div id="feedback" class="h-8 text-lg font-bold"></div>
+
+        <div class="mt-12">
+            <a href="./navigation.html" class="text-xs text-gray-600 hover:text-gray-400 underline">EXIT</a>
+        </div>
+
+    </div>
+
+    <script>
+        const hexCodeEl = document.getElementById('hex-code');
+        const optionsContainer = document.getElementById('options-container');
+        const feedbackEl = document.getElementById('feedback');
+        const streakEl = document.getElementById('streak');
+
+        let correctColor = '';
+        let streak = 0;
+
+        function generateRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        function startGame() {
+            feedbackEl.innerText = '';
+            correctColor = generateRandomColor();
+            hexCodeEl.innerText = correctColor;
+
+            // Generate 2 wrong answers
+            const answers = [correctColor, generateRandomColor(), generateRandomColor()];
+
+            // Shuffle
+            answers.sort(() => Math.random() - 0.5);
+
+            optionsContainer.innerHTML = '';
+            answers.forEach(color => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn w-full aspect-square rounded-xl shadow-lg border-4 border-transparent hover:border-white transition';
+                btn.style.backgroundColor = color;
+                btn.onclick = () => checkAnswer(color);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selectedColor) {
+            if (selectedColor === correctColor) {
+                feedbackEl.innerText = "CORRECT!";
+                feedbackEl.className = "h-8 text-lg font-bold text-green-400";
+                streak++;
+                streakEl.innerText = streak;
+                setTimeout(startGame, 500); // Auto next
+            } else {
+                feedbackEl.innerText = "WRONG!";
+                feedbackEl.className = "h-8 text-lg font-bold text-red-500";
+                streak = 0;
+                streakEl.innerText = streak;
+                // Highlight correct one?
+                // Just reset for now to keep it fast paced
+                setTimeout(startGame, 800);
+            }
+        }
+
+        // Init
+        startGame();
+    </script>
+</body>
+
+</html>

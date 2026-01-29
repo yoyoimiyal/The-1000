@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专业秒表</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        /* Hide scrollbar for lap list */
+        .lap-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .lap-list::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[600px]">
+
+        <!-- Timer Display -->
+        <div class="bg-slate-100 flex-none h-64 flex flex-col items-center justify-center relative">
+            <div class="text-6xl sm:text-7xl font-light text-slate-800 tracking-tighter" id="display">
+                00:00.00
+            </div>
+            <div class="mt-2 flex gap-1 justify-center w-full px-12">
+                <div class="h-1 flex-1 bg-slate-200 rounded overflow-hidden">
+                    <div id="ms-bar" class="h-full bg-orange-500 w-0 transition-none"></div>
+                </div>
+            </div>
+
+            <a href="./navigation.html" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </a>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex-none flex justify-around items-center p-6 border-b border-slate-100">
+            <button onclick="reset()" id="btn-reset"
+                class="w-16 h-16 rounded-full bg-slate-200 text-slate-600 font-bold hover:bg-slate-300 transition flex items-center justify-center">
+                复位
+            </button>
+
+            <button onclick="toggleStart()" id="btn-start"
+                class="w-20 h-20 rounded-full bg-green-500 text-white font-bold hover:bg-green-600 transition shadow-lg flex items-center justify-center text-lg">
+                开始
+            </button>
+
+            <button onclick="lap()" id="btn-lap"
+                class="w-16 h-16 rounded-full bg-slate-200 text-slate-600 font-bold hover:bg-slate-300 transition flex items-center justify-center"
+                disabled>
+                计次
+            </button>
+        </div>
+
+        <!-- Lap List -->
+        <div class="flex-1 overflow-y-auto lap-list bg-white p-4">
+            <table class="w-full text-sm">
+                <thead class="text-slate-400 border-b border-slate-100">
+                    <tr>
+                        <th class="py-2 text-left font-normal pl-4">次序</th>
+                        <th class="py-2 text-center font-normal">间隔</th>
+                        <th class="py-2 text-right font-normal pr-4">总计</th>
+                    </tr>
+                </thead>
+                <tbody id="laps-body" class="text-slate-600">
+                    <!-- Laps injected here -->
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+        let startTime = 0;
+        let elapsedTime = 0;
+        let timerInterval;
+        let isRunning = false;
+        let laps = [];
+        let lastLapTime = 0;
+
+        const display = document.getElementById('display');
+        const msBar = document.getElementById('ms-bar');
+        const btnStart = document.getElementById('btn-start');
+        const btnLap = document.getElementById('btn-lap');
+        const lapsBody = document.getElementById('laps-body');
+
+        function formatTime(ms) {
+            const date = new Date(ms);
+            const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+            const seconds = date.getUTCSeconds().toString().padStart(2, '0');
+            const centiseconds = Math.floor(date.getUTCMilliseconds() / 10).toString().padStart(2, '0');
+            return `${minutes}:${seconds}.${centiseconds}`;
+        }
+
+        function updateDisplay() {
+            const now = Date.now();
+            const diff = now - startTime + elapsedTime;
+            display.innerText = formatTime(diff);
+
+            // Bar animation loop (1000ms)
+            const ms = (diff % 1000) / 1000 * 100;
+            msBar.style.width = `${ms}%`;
+        }
+
+        function toggleStart() {
+            if (isRunning) {
+                // Stop
+                clearInterval(timerInterval);
+                elapsedTime += Date.now() - startTime;
+                isRunning = false;
+                btnStart.innerText = "开始";
+                btnStart.classList.remove('bg-red-500', 'hover:bg-red-600');
+                btnStart.classList.add('bg-green-500', 'hover:bg-green-600');
+                btnLap.disabled = true;
+            } else {
+                // Start
+                startTime = Date.now();
+                timerInterval = setInterval(updateDisplay, 10); // 10ms update for smooth UI
+                isRunning = true;
+                btnStart.innerText = "停止";
+                btnStart.classList.remove('bg-green-500', 'hover:bg-green-600');
+                btnStart.classList.add('bg-red-500', 'hover:bg-red-600');
+                btnLap.disabled = false;
+            }
+        }
+
+        function reset() {
+            if (isRunning) toggleStart();
+            elapsedTime = 0;
+            lastLapTime = 0;
+            laps = [];
+            display.innerText = "00:00.00";
+            msBar.style.width = "0%";
+            lapsBody.innerHTML = "";
+            btnLap.disabled = true;
+        }
+
+        function lap() {
+            if (!isRunning) return;
+            const currentTotal = Date.now() - startTime + elapsedTime;
+            const lapDiff = currentTotal - lastLapTime;
+            lastLapTime = currentTotal;
+
+            const lapNum = laps.length + 1;
+            laps.unshift({ num: lapNum, diff: lapDiff, total: currentTotal });
+
+            const row = document.createElement('tr');
+            row.classList.add('border-b', 'border-slate-50', 'hover:bg-slate-50', 'transition');
+
+            // Highlight fastest/slowest logic could be added here
+
+            row.innerHTML = `
+                <td class="py-3 pl-4 text-slate-400">#${lapNum.toString().padStart(2, '0')}</td>
+                <td class="py-3 text-center text-slate-800">${formatTime(lapDiff)}</td>
+                <td class="py-3 pr-4 text-right font-bold text-slate-800">${formatTime(currentTotal)}</td>
+            `;
+            lapsBody.prepend(row);
+        }
+    </script>
+</body>
+
+</html>

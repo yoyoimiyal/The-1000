@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flexbox 布局实验室</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .box {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+        }
+
+        .box:nth-child(1) {
+            background-color: #ef4444;
+        }
+
+        .box:nth-child(2) {
+            background-color: #f59e0b;
+        }
+
+        .box:nth-child(3) {
+            background-color: #10b981;
+        }
+
+        .box:nth-child(4) {
+            background-color: #3b82f6;
+        }
+
+        .box:nth-child(5) {
+            background-color: #8b5cf6;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 h-screen flex flex-col md:flex-row overflow-hidden">
+
+    <!-- Sidebar Controls -->
+    <div class="w-full md:w-80 bg-white border-r border-gray-200 p-6 overflow-y-auto z-10 shadow-lg shrink-0">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="font-bold text-gray-800 flex items-center gap-2">
+                <span class="bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs">CSS</span> Flexbox
+            </h1>
+            <a href="./navigation.html" class="text-xs text-gray-400 hover:text-blue-600">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <div class="control-group">
+                <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">flex-direction</label>
+                <select id="flex-direction"
+                    class="w-full p-2 bg-gray-50 border border-gray-200 rounded text-sm outline-none focus:border-blue-500"
+                    onchange="update()">
+                    <option value="row">row</option>
+                    <option value="row-reverse">row-reverse</option>
+                    <option value="column">column</option>
+                    <option value="column-reverse">column-reverse</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">justify-content</label>
+                <select id="justify-content"
+                    class="w-full p-2 bg-gray-50 border border-gray-200 rounded text-sm outline-none focus:border-blue-500"
+                    onchange="update()">
+                    <option value="flex-start">flex-start</option>
+                    <option value="flex-end">flex-end</option>
+                    <option value="center">center</option>
+                    <option value="space-between">space-between</option>
+                    <option value="space-around">space-around</option>
+                    <option value="space-evenly">space-evenly</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">align-items</label>
+                <select id="align-items"
+                    class="w-full p-2 bg-gray-50 border border-gray-200 rounded text-sm outline-none focus:border-blue-500"
+                    onchange="update()">
+                    <option value="stretch">stretch</option>
+                    <option value="flex-start">flex-start</option>
+                    <option value="flex-end">flex-end</option>
+                    <option value="center">center</option>
+                    <option value="baseline">baseline</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">flex-wrap</label>
+                <select id="flex-wrap"
+                    class="w-full p-2 bg-gray-50 border border-gray-200 rounded text-sm outline-none focus:border-blue-500"
+                    onchange="update()">
+                    <option value="nowrap">nowrap</option>
+                    <option value="wrap">wrap</option>
+                    <option value="wrap-reverse">wrap-reverse</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">gap</label>
+                <input type="range" id="gap" min="0" max="50" value="10"
+                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="update()">
+                <div class="text-right text-xs text-gray-400 mt-1" id="gap-val">10px</div>
+            </div>
+
+            <div class="bg-gray-100 p-4 rounded-lg font-mono text-xs text-gray-600 break-all border border-gray-200"
+                id="code-output">
+                .container { display: flex; ... }
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Playground -->
+    <div class="flex-1 bg-gray-100 p-8 flex items-center justify-center relative overflow-hidden">
+
+        <!-- Container Boundary -->
+        <div id="container"
+            class="bg-white border-2 border-dashed border-gray-300 w-full h-full rounded-xl transition-all duration-300 flex overflow-hidden p-4 relative"
+            style="display: flex;">
+            <div class="box">1</div>
+            <div class="box">2</div>
+            <div class="box">3</div>
+            <div class="box">4</div>
+            <div class="box">5</div>
+        </div>
+
+    </div>
+
+    <script>
+        const container = document.getElementById('container');
+        const codeOut = document.getElementById('code-output');
+        const gapVal = document.getElementById('gap-val');
+
+        function update() {
+            const flexDirection = document.getElementById('flex-direction').value;
+            const justifyContent = document.getElementById('justify-content').value;
+            const alignItems = document.getElementById('align-items').value;
+            const flexWrap = document.getElementById('flex-wrap').value;
+            const gap = document.getElementById('gap').value + 'px';
+
+            container.style.flexDirection = flexDirection;
+            container.style.justifyContent = justifyContent;
+            container.style.alignItems = alignItems;
+            container.style.flexWrap = flexWrap;
+            container.style.gap = gap;
+
+            gapVal.innerText = gap;
+
+            codeOut.innerHTML = `
+.container {
+  display: flex;
+  flex-direction: <span class="text-blue-600">${flexDirection}</span>;
+  justify-content: <span class="text-blue-600">${justifyContent}</span>;
+  align-items: <span class="text-blue-600">${alignItems}</span>;
+  flex-wrap: <span class="text-blue-600">${flexWrap}</span>;
+  gap: <span class="text-blue-600">${gap}</span>;
+}`;
+        }
+
+        // Init
+        update();
+    </script>
+</body>
+
+</html>

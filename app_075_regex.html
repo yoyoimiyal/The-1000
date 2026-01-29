@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>正则实验室</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .highlight {
+            background-color: #fef08a;
+            border-radius: 2px;
+        }
+
+        #output-view {
+            white-space: pre-wrap;
+            word-break: break-all;
+            min-height: 100px;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen p-6 font-sans text-slate-700 flex flex-col items-center">
+
+    <div class="w-full max-w-4xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-indigo-600">Regex Tester</h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <!-- Regex Input -->
+        <div class="bg-white p-4 rounded-xl shadow-sm mb-4 border border-indigo-100">
+            <div
+                class="flex items-center gap-2 text-xl font-mono text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <span class="text-gray-400">/</span>
+                <input type="text" id="regex-input" class="flex-1 bg-transparent outline-none text-indigo-600 font-bold"
+                    placeholder="pattern" value="[a-zA-Z]+" oninput="testRegex()">
+                <span class="text-gray-400">/</span>
+                <input type="text" id="flags-input" class="w-12 bg-transparent outline-none text-green-600"
+                    placeholder="flags" value="g" oninput="testRegex()">
+            </div>
+            <div id="error-msg" class="text-xs text-red-500 mt-2 pl-2 h-4"></div>
+        </div>
+
+        <!-- Text Area -->
+        <div class="flex flex-col md:flex-row gap-6">
+
+            <!-- Input Text -->
+            <div class="flex-1 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">测试文本 (Test String)</label>
+                <textarea id="test-text" class="w-full h-64 outline-none resize-none text-sm font-mono leading-relaxed"
+                    oninput="testRegex()">Hello World! 123
+Email: test@example.com
+Date: 2026-05-20</textarea>
+            </div>
+
+            <!-- Match Result -->
+            <div class="flex-1 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="block text-xs font-bold text-slate-400 uppercase">匹配结果 (Match)</label>
+                    <span class="text-xs text-indigo-500 font-bold" id="match-count">0 matches</span>
+                </div>
+                <div id="output-view" class="text-sm font-mono leading-relaxed text-gray-800"></div>
+            </div>
+
+        </div>
+
+        <!-- Cheat Sheet -->
+        <div class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-slate-500">
+            <div class="bg-white p-2 rounded border border-gray-200"><code>\d</code> Digit</div>
+            <div class="bg-white p-2 rounded border border-gray-200"><code>\w</code> Word char</div>
+            <div class="bg-white p-2 rounded border border-gray-200"><code>.</code> Any char</div>
+            <div class="bg-white p-2 rounded border border-gray-200"><code>^</code> Start</div>
+            <div class="bg-white p-2 rounded border border-gray-200"><code>$</code> End</div>
+            <div class="bg-white p-2 rounded border border-gray-200"><code>*</code> 0 or more</div>
+            <div class="bg-white p-2 rounded border border-gray-200"><code>+</code> 1 or more</div>
+            <div class="bg-white p-2 rounded border border-gray-200"><code>?</code> 0 or 1</div>
+        </div>
+
+    </div>
+
+    <script>
+        const regexIn = document.getElementById('regex-input');
+        const flagsIn = document.getElementById('flags-input');
+        const textIn = document.getElementById('test-text');
+        const output = document.getElementById('output-view');
+        const errEl = document.getElementById('error-msg');
+        const countEl = document.getElementById('match-count');
+
+        function testRegex() {
+            const pattern = regexIn.value;
+            const flags = flagsIn.value;
+            const text = textIn.value;
+
+            errEl.innerText = "";
+
+            if (!pattern) {
+                output.innerText = text;
+                countEl.innerText = "0 matches";
+                return;
+            }
+
+            try {
+                const regex = new RegExp(pattern, flags);
+
+                // Highlight logic
+                // Replace matches with <mark> tags
+                // We need to escape HTML in text first to prevent injection/rendering issues
+                const safeText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+                // If global flag is set, replace all. If not, only first.
+                // But replacing inside HTML string is tricky if regex matches html tags we just added.
+                // Simple approach: split string by regex and join with highlighted parts?
+
+                let matchCount = 0;
+                let html = "";
+
+                // Use replace with callback to construct HTML
+                // Note: regex needs 'g' to count all, but highlighting logic depends on flags user typed.
+                // If user didn't type 'g', only first match highlights.
+
+                const highlighted = text.replace(regex, (match) => {
+                    matchCount++;
+                    return `<span class="highlight border-b-2 border-yellow-400 text-black">${match}</span>`;
+                });
+
+                // Since we operate on raw text then insert to HTML, we need to be careful.
+                // The replace above works on raw text. But `match` inside callback might contain special chars.
+                // Better approach:
+
+                if (text.match(regex)) {
+                    // Re-run safely
+                    // We can't easily modify the user's regex to add 'g' for counting without breaking their logic if they didn't want 'g'.
+                    // But for highlighting visualization, we usually treat it as string processing.
+
+                    // Simple viz:
+                    output.innerHTML = text.replace(regex, (match) => {
+                        return `<span class="highlight">${match.replace(/</g, '&lt;')}</span>`;
+                    }).replace(/\n/g, '<br>');
+
+                    // Count
+                    const matches = text.match(regex);
+                    matchCount = matches ? matches.length : 0;
+                    if (!flags.includes('g') && matchCount > 0) matchCount = 1;
+                } else {
+                    output.innerText = text;
+                }
+
+                countEl.innerText = `${matchCount} match${matchCount !== 1 ? 'es' : ''}`;
+
+            } catch (e) {
+                errEl.innerText = "Invalid Regex: " + e.message;
+                output.innerText = text;
+                countEl.innerText = "-";
+            }
+        }
+
+        // Init
+        testRegex();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>经典贪吃蛇</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            touch-action: none;
+        }
+    </style>
+</head>
+
+<body class="bg-emerald-50 min-h-screen flex flex-col items-center justify-center p-4 font-mono text-emerald-900">
+
+    <div class="mb-4 text-center">
+        <h1 class="text-3xl font-bold mb-1">SNAKE</h1>
+        <p class="text-sm opacity-70">Score: <span id="score" class="font-bold text-xl">0</span></p>
+    </div>
+
+    <div class="relative group">
+        <canvas id="gameCanvas" width="400" height="400"
+            class="bg-emerald-100 rounded-lg border-4 border-emerald-200"></canvas>
+
+        <!-- Start Overlay -->
+        <div id="overlay"
+            class="absolute inset-0 bg-emerald-900/40 flex flex-col items-center justify-center rounded-lg backdrop-blur-sm transition-opacity">
+            <button onclick="startGame()"
+                class="px-8 py-3 bg-white text-emerald-800 font-bold rounded-full shadow-lg hover:scale-105 transition transform">
+                开始游戏
+            </button>
+            <p class="text-white text-xs mt-4 opacity-80">使用方向键或滑动屏幕控制</p>
+        </div>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div class="mt-8 grid grid-cols-3 gap-2 sm:hidden">
+        <div></div>
+        <button
+            class="w-14 h-14 bg-emerald-200 rounded-full flex items-center justify-center text-2xl active:bg-emerald-300"
+            onclick="changeDir('UP')">▲</button>
+        <div></div>
+        <button
+            class="w-14 h-14 bg-emerald-200 rounded-full flex items-center justify-center text-2xl active:bg-emerald-300"
+            onclick="changeDir('LEFT')">◀</button>
+        <button
+            class="w-14 h-14 bg-emerald-200 rounded-full flex items-center justify-center text-2xl active:bg-emerald-300"
+            onclick="changeDir('DOWN')">▼</button>
+        <button
+            class="w-14 h-14 bg-emerald-200 rounded-full flex items-center justify-center text-2xl active:bg-emerald-300"
+            onclick="changeDir('RIGHT')">▶</button>
+    </div>
+
+    <div class="mt-4">
+        <a href="./navigation.html" class="text-xs text-emerald-400 hover:text-emerald-600 underline">退出</a>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const overlay = document.getElementById('overlay');
+
+        const gridSize = 20;
+        const tileCount = canvas.width / gridSize;
+
+        let velocity = { x: 0, y: 0 };
+        let trail = [];
+        let tail = 5;
+        let head = { x: 10, y: 10 };
+        let apple = { x: 15, y: 15 };
+        let score = 0;
+        let intervalId;
+        let isGameRunning = false;
+
+        function startGame() {
+            if (isGameRunning) return;
+
+            // Reset
+            head = { x: 10, y: 10 };
+            trail = [];
+            tail = 5;
+            velocity = { x: 1, y: 0 }; // Start moving right
+            score = 0;
+            scoreEl.innerText = 0;
+
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.style.display = 'none', 300); // Fade out
+
+            isGameRunning = true;
+            if (intervalId) clearInterval(intervalId);
+            intervalId = setInterval(gameLoop, 1000 / 10); // 10 FPS
+        }
+
+        function gameLoop() {
+            head.x += velocity.x;
+            head.y += velocity.y;
+
+            // Wrap around
+            if (head.x < 0) head.x = tileCount - 1;
+            if (head.x > tileCount - 1) head.x = 0;
+            if (head.y < 0) head.y = tileCount - 1;
+            if (head.y > tileCount - 1) head.y = 0;
+
+            // Draw Background
+            ctx.fillStyle = '#d1fae5'; // emerald-100
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Snake
+            ctx.fillStyle = '#059669'; // emerald-600
+            for (let i = 0; i < trail.length; i++) {
+                ctx.fillRect(trail[i].x * gridSize, trail[i].y * gridSize, gridSize - 2, gridSize - 2);
+
+                // Collision with tail
+                if (trail[i].x === head.x && trail[i].y === head.y) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            trail.push({ x: head.x, y: head.y });
+            while (trail.length > tail) {
+                trail.shift();
+            }
+
+            // Draw Apple
+            ctx.fillStyle = '#ef4444'; // red-500
+            ctx.beginPath();
+            ctx.arc(apple.x * gridSize + gridSize / 2, apple.y * gridSize + gridSize / 2, gridSize / 2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eat Apple
+            if (apple.x === head.x && apple.y === head.y) {
+                tail++;
+                score += 10;
+                scoreEl.innerText = score;
+                placeApple();
+            }
+        }
+
+        function placeApple() {
+            apple.x = Math.floor(Math.random() * tileCount);
+            apple.y = Math.floor(Math.random() * tileCount);
+            // Don't place on snake
+            for (let t of trail) {
+                if (t.x === apple.x && t.y === apple.y) {
+                    placeApple();
+                    break;
+                }
+            }
+        }
+
+        function gameOver() {
+            isGameRunning = false;
+            clearInterval(intervalId);
+            overlay.style.display = 'flex';
+            setTimeout(() => overlay.style.opacity = '1', 10);
+            document.querySelector('#overlay button').innerText = "再玩一次";
+        }
+
+        function changeDir(dir) {
+            if (!isGameRunning) return;
+
+            switch (dir) {
+                case 'LEFT':
+                    if (velocity.x !== 1) velocity = { x: -1, y: 0 };
+                    break;
+                case 'UP':
+                    if (velocity.y !== 1) velocity = { x: 0, y: -1 };
+                    break;
+                case 'RIGHT':
+                    if (velocity.x !== -1) velocity = { x: 1, y: 0 };
+                    break;
+                case 'DOWN':
+                    if (velocity.y !== -1) velocity = { x: 0, y: 1 };
+                    break;
+            }
+        }
+
+        document.addEventListener('keydown', e => {
+            switch (e.key) {
+                case 'ArrowLeft': changeDir('LEFT'); break;
+                case 'ArrowUp': changeDir('UP'); break;
+                case 'ArrowRight': changeDir('RIGHT'); break;
+                case 'ArrowDown': changeDir('DOWN'); break;
+            }
+        });
+
+        // Simple Touch Swipe
+        let touchStartX = 0;
+        let touchStartY = 0;
+        canvas.addEventListener('touchstart', e => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            e.preventDefault();
+        });
+        canvas.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+        canvas.addEventListener('touchend', e => {
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            const dy = e.changedTouches[0].clientY - touchStartY;
+            if (Math.abs(dx) > Math.abs(dy)) {
+                if (dx > 0) changeDir('RIGHT');
+                else changeDir('LEFT');
+            } else {
+                if (dy > 0) changeDir('DOWN');
+                else changeDir('UP');
+            }
+        });
+    </script>
+</body>
+
+</html>

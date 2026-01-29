@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>反应速度测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .no-select {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+    </style>
+</head>
+
+<body class="h-screen w-screen overflow-hidden font-sans no-select cursor-pointer">
+
+    <div id="game-area"
+        class="w-full h-full flex flex-col items-center justify-center text-center p-6 transition-colors duration-200 bg-blue-500 text-white">
+
+        <div id="icon" class="mb-6 text-6xl opacity-80">⚡</div>
+
+        <h1 id="title" class="text-4xl md:text-6xl font-bold mb-4">反应速度测试</h1>
+
+        <p id="instruction" class="text-xl md:text-2xl font-medium opacity-90 max-w-lg">
+            当背景变成绿色时，尽快点击屏幕！<br>
+            <span class="text-sm mt-4 block opacity-75">点击任意处开始</span>
+        </p>
+
+        <div id="result" class="hidden mt-4">
+            <div class="text-6xl font-bold mb-2"><span id="time-ms">0</span> ms</div>
+            <button onclick="resetGame(event)"
+                class="mt-8 bg-white text-slate-800 px-6 py-3 rounded-full font-bold shadow-lg hover:bg-slate-100 transition">
+                再试一次
+            </button>
+            <div class="mt-8">
+                <a href="./navigation.html" class="text-white/60 hover:text-white underline text-sm">退出</a>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const area = document.getElementById('game-area');
+        const title = document.getElementById('title');
+        const instruction = document.getElementById('instruction');
+        const resultDiv = document.getElementById('result');
+        const timeMs = document.getElementById('time-ms');
+        const icon = document.getElementById('icon');
+
+        let state = 'waiting'; // waiting, ready, now, result
+        let startTime = 0;
+        let timeoutId = null;
+
+        area.addEventListener('mousedown', handleClick);
+        area.addEventListener('touchstart', handleClick); // Mobile support
+
+        function handleClick(e) {
+            // Prevent double firing on some touch devices
+            if (e.type === 'touchstart') e.preventDefault();
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') return;
+
+            if (state === 'waiting') {
+                startGame();
+            } else if (state === 'ready') {
+                tooSoon();
+            } else if (state === 'now') {
+                endGame();
+            }
+        }
+
+        function startGame() {
+            state = 'ready';
+            area.className = 'w-full h-full flex flex-col items-center justify-center text-center p-6 transition-colors duration-200 bg-red-500 text-white';
+            title.innerText = "等待...";
+            instruction.innerText = "看到绿色再点击";
+            icon.innerText = "✋";
+            resultDiv.classList.add('hidden');
+
+            const randomDelay = Math.floor(Math.random() * 3000) + 2000; // 2-5 seconds
+
+            timeoutId = setTimeout(() => {
+                if (state === 'ready') {
+                    state = 'now';
+                    startTime = Date.now();
+                    area.className = 'w-full h-full flex flex-col items-center justify-center text-center p-6 transition-colors duration-0 bg-green-500 text-white';
+                    title.innerText = "点我！";
+                    instruction.innerText = "快！快！快！";
+                    icon.innerText = "💥";
+                }
+            }, randomDelay);
+        }
+
+        function tooSoon() {
+            state = 'waiting';
+            clearTimeout(timeoutId);
+            area.className = 'w-full h-full flex flex-col items-center justify-center text-center p-6 transition-colors duration-200 bg-blue-500 text-white';
+            title.innerText = "太快了!";
+            instruction.innerHTML = "你点击得太早了。<br><br><span class='text-sm opacity-75'>点击重试</span>";
+            icon.innerText = "⚠️";
+        }
+
+        function endGame() {
+            const endTime = Date.now();
+            const duration = endTime - startTime;
+            state = 'result';
+
+            title.innerText = "测试结果";
+            instruction.classList.add('hidden');
+            resultDiv.classList.remove('hidden');
+            timeMs.innerText = duration;
+            icon.innerText = getComment(duration);
+        }
+
+        function getComment(ms) {
+            if (ms < 150) return "🚀 神级反应!";
+            if (ms < 250) return "⚡ 非常快!";
+            if (ms < 350) return "🐰 一般般";
+            return "🐢 有点慢哦";
+        }
+
+        function resetGame(e) {
+            e.stopPropagation(); // Stop bubbling to area click
+            state = 'waiting';
+            area.className = 'w-full h-full flex flex-col items-center justify-center text-center p-6 transition-colors duration-200 bg-blue-500 text-white';
+            title.innerText = "反应速度测试";
+            instruction.classList.remove('hidden');
+            instruction.innerHTML = "当背景变成绿色时，尽快点击屏幕！<br><span class='text-sm mt-4 block opacity-75'>点击任意处开始</span>";
+            resultDiv.classList.add('hidden');
+            icon.innerText = "⚡";
+        }
+    </script>
+</body>
+
+</html>

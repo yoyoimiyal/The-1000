@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>长宽比计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-6 text-gray-800">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-2xl shadow-xl border border-gray-200">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-gray-700 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+                Aspect Ratio Calc
+            </h1>
+            <a href="./navigation.html" class="text-sm text-gray-400 hover:text-blue-600">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <!-- Ratio Inputs -->
+            <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                <label class="block text-xs font-bold text-blue-400 uppercase mb-2">长宽比 (Ratio)</label>
+                <div class="flex items-center gap-2">
+                    <input type="number" id="ratio-w" value="16"
+                        class="w-full p-2 rounded border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none text-center font-bold text-blue-900"
+                        oninput="calculate('ratio')">
+                    <span class="text-blue-300 font-bold">:</span>
+                    <input type="number" id="ratio-h" value="9"
+                        class="w-full p-2 rounded border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none text-center font-bold text-blue-900"
+                        oninput="calculate('ratio')">
+                </div>
+                <div class="flex justify-center gap-2 mt-3">
+                    <button onclick="setRatio(16, 9)"
+                        class="text-xs bg-white text-blue-600 px-3 py-1 rounded border border-blue-200 hover:bg-blue-100 transition">16:9</button>
+                    <button onclick="setRatio(4, 3)"
+                        class="text-xs bg-white text-blue-600 px-3 py-1 rounded border border-blue-200 hover:bg-blue-100 transition">4:3</button>
+                    <button onclick="setRatio(1, 1)"
+                        class="text-xs bg-white text-blue-600 px-3 py-1 rounded border border-blue-200 hover:bg-blue-100 transition">1:1</button>
+                    <button onclick="setRatio(21, 9)"
+                        class="text-xs bg-white text-blue-600 px-3 py-1 rounded border border-blue-200 hover:bg-blue-100 transition">21:9</button>
+                </div>
+            </div>
+
+            <!-- Dimensions -->
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">宽度 (Width)</label>
+                    <input type="number" id="width" value="1920"
+                        class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-400 outline-none font-mono"
+                        oninput="calculate('width')">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">高度 (Height)</label>
+                    <input type="number" id="height" value="1080"
+                        class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-400 outline-none font-mono"
+                        oninput="calculate('height')">
+                </div>
+            </div>
+
+            <!-- Visual Preview -->
+            <div
+                class="w-full h-48 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden border border-gray-200 relative">
+                <div class="absolute inset-0 grid grid-cols-8 grid-rows-8 opacity-5">
+                    <!-- Grid background -->
+                    <div class="border-r border-b border-gray-900"></div>
+                    <div class="border-r border-b border-gray-900"></div>
+                    <div class="border-r border-b border-gray-900"></div>
+                    <div class="border-r border-b border-gray-900"></div>
+                    <div class="border-r border-b border-gray-900"></div>
+                    <div class="border-r border-b border-gray-900"></div>
+                    <div class="border-r border-b border-gray-900"></div>
+                    <div class="border-b border-gray-900"></div>
+                    <!-- Simplified grid... -->
+                </div>
+                <div id="preview-box"
+                    class="bg-blue-500 shadow-lg transition-all duration-300 flex items-center justify-center text-white text-xs font-bold opacity-90"
+                    style="width: 160px; height: 90px;">
+                    Preview
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const rw = document.getElementById('ratio-w');
+        const rh = document.getElementById('ratio-h');
+        const wInput = document.getElementById('width');
+        const hInput = document.getElementById('height');
+        const box = document.getElementById('preview-box');
+
+        function setRatio(w, h) {
+            rw.value = w;
+            rh.value = h;
+            calculate('ratio');
+        }
+
+        function calculate(source) {
+            const r_w = parseFloat(rw.value) || 1;
+            const r_h = parseFloat(rh.value) || 1;
+
+            if (source === 'ratio' || source === 'width') {
+                // Calc Height based on Width
+                const w = parseFloat(wInput.value) || 0;
+                const h = w * (r_h / r_w);
+                hInput.value = h % 1 === 0 ? h : h.toFixed(2);
+            } else if (source === 'height') {
+                // Calc Width based on Height
+                const h = parseFloat(hInput.value) || 0;
+                const w = h * (r_w / r_h);
+                wInput.value = w % 1 === 0 ? w : w.toFixed(2);
+            }
+
+            updatePreview(r_w, r_h);
+        }
+
+        function updatePreview(rw, rh) {
+            // Scale to fit 100% of container (h-48 = 192px approx height, width full)
+            // Container is roughly 400x192
+            const maxW = 300;
+            const maxH = 150;
+
+            let w = maxW;
+            let h = w * (rh / rw);
+
+            if (h > maxH) {
+                h = maxH;
+                w = h * (rw / rh);
+            }
+
+            box.style.width = `${w}px`;
+            box.style.height = `${h}px`;
+        }
+
+        // Init
+        calculate('ratio');
+    </script>
+</body>
+
+</html>

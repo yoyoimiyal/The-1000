@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>逻辑门实验室</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .wire {
+            transition: stroke 0.2s;
+        }
+
+        .active-wire {
+            stroke: #22c55e;
+            filter: drop-shadow(0 0 2px #22c55e);
+        }
+
+        .inactive-wire {
+            stroke: #475569;
+        }
+
+        .switch {
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .switch:active {
+            transform: scale(0.95);
+        }
+
+        .bulb-on {
+            fill: #fbbf24;
+            filter: drop-shadow(0 0 10px #fbbf24);
+        }
+
+        .bulb-off {
+            fill: #334155;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4 select-none">
+
+    <div class="w-full max-w-2xl bg-slate-800 rounded-3xl p-8 shadow-2xl border border-slate-700">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold tracking-wider">LOGIC LAB</h1>
+            <select id="gate-select"
+                class="bg-slate-700 border-none text-white text-sm py-2 px-4 rounded outline-none cursor-pointer"
+                onchange="updateLogic()">
+                <option value="AND">AND (与门)</option>
+                <option value="OR">OR (或门)</option>
+                <option value="NOT">NOT (非门)</option>
+                <option value="NAND">NAND (与非门)</option>
+                <option value="NOR">NOR (或非门)</option>
+                <option value="XOR">XOR (异或门)</option>
+            </select>
+        </header>
+
+        <!-- Circuit SVG -->
+        <svg viewBox="0 0 400 200" class="w-full h-auto">
+
+            <!-- Input A -->
+            <g id="switch-a" class="switch" onclick="toggleSwitch('a')">
+                <rect x="20" y="40" width="40" height="40" rx="8" class="fill-slate-600" id="rect-a" />
+                <text x="40" y="65" text-anchor="middle"
+                    class="fill-white font-bold text-xs pointer-events-none">A</text>
+                <text x="40" y="100" text-anchor="middle" class="fill-slate-400 text-[10px]" id="val-a">0</text>
+            </g>
+
+            <!-- Input B (Hidden for NOT gate) -->
+            <g id="switch-b" class="switch" onclick="toggleSwitch('b')">
+                <rect x="20" y="120" width="40" height="40" rx="8" class="fill-slate-600" id="rect-b" />
+                <text x="40" y="145" text-anchor="middle"
+                    class="fill-white font-bold text-xs pointer-events-none">B</text>
+                <text x="40" y="180" text-anchor="middle" class="fill-slate-400 text-[10px]" id="val-b">0</text>
+            </g>
+
+            <!-- Wires Input -->
+            <line x1="60" y1="60" x2="150" y2="60" stroke-width="4" class="wire inactive-wire" id="wire-a" />
+            <line x1="60" y1="140" x2="150" y2="140" stroke-width="4" class="wire inactive-wire" id="wire-b" />
+
+            <!-- Gate Box -->
+            <rect x="150" y="30" width="100" height="140" rx="10" class="fill-slate-700 stroke-slate-500"
+                stroke-width="2" />
+            <text x="200" y="105" text-anchor="middle" class="fill-white font-bold text-xl" id="gate-label">AND</text>
+
+            <!-- Wire Output -->
+            <line x1="250" y1="100" x2="320" y2="100" stroke-width="4" class="wire inactive-wire" id="wire-out" />
+
+            <!-- Output Bulb -->
+            <circle cx="340" cy="100" r="20" class="bulb-off transition-all duration-300" id="bulb" />
+            <text x="340" y="140" text-anchor="middle" class="fill-slate-400 text-[10px]">OUTPUT</text>
+
+        </svg>
+
+        <div class="mt-8 text-center text-slate-400 text-sm h-8" id="desc">
+            当输入 A 和 B 均为 1 时，输出为 1。
+        </div>
+
+        <div class="mt-4 text-center">
+            <a href="./navigation.html" class="text-xs text-slate-500 hover:text-white underline">退出</a>
+        </div>
+
+    </div>
+
+    <script>
+        let stateA = 0;
+        let stateB = 0;
+        let currentGate = 'AND';
+
+        function toggleSwitch(id) {
+            if (id === 'a') stateA = 1 - stateA;
+            if (id === 'b') stateB = 1 - stateB;
+            updateUI();
+        }
+
+        function updateLogic() {
+            currentGate = document.getElementById('gate-select').value;
+            // Handle NOT gate (single input)
+            const switchB = document.getElementById('switch-b');
+            const wireB = document.getElementById('wire-b');
+
+            if (currentGate === 'NOT') {
+                switchB.style.display = 'none';
+                wireB.style.display = 'none';
+                // Adjust wire A visual path if needed, but keeping it simple is fine
+            } else {
+                switchB.style.display = 'block';
+                wireB.style.display = 'block';
+            }
+            updateUI();
+        }
+
+        function calculateOutput() {
+            switch (currentGate) {
+                case 'AND': return stateA && stateB;
+                case 'OR': return stateA || stateB;
+                case 'NOT': return !stateA;
+                case 'NAND': return !(stateA && stateB);
+                case 'NOR': return !(stateA || stateB);
+                case 'XOR': return stateA !== stateB; // 1 if different
+                default: return 0;
+            }
+        }
+
+        function getDescription() {
+            switch (currentGate) {
+                case 'AND': return "当输入 A 和 B 均为 1 时，输出为 1。";
+                case 'OR': return "只要输入 A 或 B 任意一个为 1，输出即为 1。";
+                case 'NOT': return "输出与输入 A 相反。";
+                case 'NAND': return "AND 的反向。只有当 A 和 B 都为 1 时，输出才为 0。";
+                case 'NOR': return "OR 的反向。只有当 A 和 B 都为 0 时，输出才为 1。";
+                case 'XOR': return "当 A 和 B 不同时（一个为1，一个为0），输出为 1。";
+            }
+        }
+
+        function updateUI() {
+            const out = calculateOutput() ? 1 : 0;
+
+            // Switch A
+            document.getElementById('rect-a').setAttribute('class', stateA ? 'fill-green-600' : 'fill-slate-600');
+            document.getElementById('val-a').textContent = stateA;
+            document.getElementById('wire-a').setAttribute('class', `wire ${stateA ? 'active-wire' : 'inactive-wire'}`);
+
+            // Switch B
+            document.getElementById('rect-b').setAttribute('class', stateB ? 'fill-green-600' : 'fill-slate-600');
+            document.getElementById('val-b').textContent = stateB;
+            document.getElementById('wire-b').setAttribute('class', `wire ${stateB ? 'active-wire' : 'inactive-wire'}`);
+
+            // Gate Label
+            document.getElementById('gate-label').textContent = currentGate;
+
+            // Output
+            document.getElementById('wire-out').setAttribute('class', `wire ${out ? 'active-wire' : 'inactive-wire'}`);
+            document.getElementById('bulb').setAttribute('class', `transition-all duration-300 ${out ? 'bulb-on' : 'bulb-off'}`);
+
+            // Desc
+            document.getElementById('desc').textContent = getDescription();
+        }
+
+        // Init
+        updateLogic();
+    </script>
+</body>
+
+</html>

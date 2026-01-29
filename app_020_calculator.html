@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拟物计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .calc-btn {
+            height: 4rem;
+            width: 4rem;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            font-weight: 500;
+            transition: filter 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .calc-btn:active {
+            filter: brightness(1.2);
+        }
+
+        .btn-gray {
+            background-color: #a5a5a5;
+            color: black;
+        }
+
+        .btn-dark {
+            background-color: #333333;
+            color: white;
+        }
+
+        .btn-orange {
+            background-color: #fe9f09;
+            color: white;
+        }
+
+        .btn-zero {
+            width: auto;
+            border-radius: 9999px;
+            justify-content: flex-start;
+            padding-left: 1.7rem;
+        }
+    </style>
+</head>
+
+<body class="bg-black min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-xs">
+
+        <!-- Display -->
+        <div class="text-white text-right text-6xl font-light mb-4 px-2 truncate" id="display">
+            0
+        </div>
+
+        <!-- Keypad -->
+        <div class="grid grid-cols-4 gap-3">
+
+            <!-- Row 1 -->
+            <button class="calc-btn btn-gray" onclick="clearDisplay()">AC</button>
+            <button class="calc-btn btn-gray" onclick="toggleSign()">+/-</button>
+            <button class="calc-btn btn-gray" onclick="percentage()">%</button>
+            <button class="calc-btn btn-orange" onclick="setOp('/')">÷</button>
+
+            <!-- Row 2 -->
+            <button class="calc-btn btn-dark" onclick="append('7')">7</button>
+            <button class="calc-btn btn-dark" onclick="append('8')">8</button>
+            <button class="calc-btn btn-dark" onclick="append('9')">9</button>
+            <button class="calc-btn btn-orange" onclick="setOp('*')">×</button>
+
+            <!-- Row 3 -->
+            <button class="calc-btn btn-dark" onclick="append('4')">4</button>
+            <button class="calc-btn btn-dark" onclick="append('5')">5</button>
+            <button class="calc-btn btn-dark" onclick="append('6')">6</button>
+            <button class="calc-btn btn-orange" onclick="setOp('-')">−</button>
+
+            <!-- Row 4 -->
+            <button class="calc-btn btn-dark" onclick="append('1')">1</button>
+            <button class="calc-btn btn-dark" onclick="append('2')">2</button>
+            <button class="calc-btn btn-dark" onclick="append('3')">3</button>
+            <button class="calc-btn btn-orange" onclick="setOp('+')">+</button>
+
+            <!-- Row 5 -->
+            <button class="calc-btn btn-dark btn-zero col-span-2" onclick="append('0')">0</button>
+            <button class="calc-btn btn-dark" onclick="append('.')">.</button>
+            <button class="calc-btn btn-orange" onclick="calculate()">=</button>
+
+        </div>
+
+        <div class="mt-8 text-center">
+            <a href="./navigation.html" class="text-gray-500 text-sm hover:text-white transition">返回导航</a>
+        </div>
+
+    </div>
+
+    <script>
+        const display = document.getElementById('display');
+        let currentInput = '0';
+        let previousInput = null;
+        let operator = null;
+        let waitingForNewInput = false;
+
+        function updateDisplay() {
+            // Format number to avoid overflow or scientific notation for long numbers if possible
+            // For simplicity, we just truncate string length
+            let str = currentInput.toString();
+            if (str.length > 9) {
+                str = str.substring(0, 9);
+            }
+            display.innerText = str;
+        }
+
+        function append(num) {
+            if (waitingForNewInput) {
+                currentInput = num;
+                waitingForNewInput = false;
+            } else {
+                if (currentInput === '0' && num !== '.') {
+                    currentInput = num;
+                } else {
+                    if (num === '.' && currentInput.includes('.')) return;
+                    currentInput += num;
+                }
+            }
+            updateDisplay();
+        }
+
+        function clearDisplay() {
+            currentInput = '0';
+            previousInput = null;
+            operator = null;
+            waitingForNewInput = false;
+            updateDisplay();
+        }
+
+        function toggleSign() {
+            currentInput = (parseFloat(currentInput) * -1).toString();
+            updateDisplay();
+        }
+
+        function percentage() {
+            currentInput = (parseFloat(currentInput) / 100).toString();
+            updateDisplay();
+        }
+
+        function setOp(op) {
+            if (operator && !waitingForNewInput) {
+                calculate();
+            }
+            previousInput = currentInput;
+            operator = op;
+            waitingForNewInput = true;
+        }
+
+        function calculate() {
+            if (!operator || !previousInput) return;
+
+            const prev = parseFloat(previousInput);
+            const current = parseFloat(currentInput);
+            let result = 0;
+
+            switch (operator) {
+                case '+': result = prev + current; break;
+                case '-': result = prev - current; break;
+                case '*': result = prev * current; break;
+                case '/': result = prev / current; break;
+            }
+
+            currentInput = result.toString();
+            operator = null;
+            waitingForNewInput = true; // result displayed, next input starts new
+            updateDisplay();
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>哈希生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        input[readonly] {
+            background-color: #f8fafc;
+            color: #475569;
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen p-6 flex flex-col items-center text-slate-800">
+
+    <div class="w-full max-w-3xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-indigo-700 flex items-center gap-2">
+                <span class="text-3xl">#</span> Hash Generator
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <!-- Input -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">输入文本 (Input String)</label>
+            <textarea id="input-text"
+                class="w-full h-24 p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition resize-none"
+                placeholder="在此输入..." oninput="generateHash()"></textarea>
+        </div>
+
+        <!-- Outputs -->
+        <div class="space-y-4">
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between mb-2">
+                    <span class="text-xs font-bold text-indigo-600 uppercase">MD5</span>
+                    <button onclick="copy('md5')" class="text-xs text-slate-400 hover:text-indigo-600">复制</button>
+                </div>
+                <input type="text" id="out-md5" class="w-full p-2 border border-slate-200 rounded text-sm outline-none"
+                    readonly>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between mb-2">
+                    <span class="text-xs font-bold text-indigo-600 uppercase">SHA-1</span>
+                    <button onclick="copy('sha1')" class="text-xs text-slate-400 hover:text-indigo-600">复制</button>
+                </div>
+                <input type="text" id="out-sha1" class="w-full p-2 border border-slate-200 rounded text-sm outline-none"
+                    readonly>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between mb-2">
+                    <span class="text-xs font-bold text-indigo-600 uppercase">SHA-256</span>
+                    <button onclick="copy('sha256')" class="text-xs text-slate-400 hover:text-indigo-600">复制</button>
+                </div>
+                <input type="text" id="out-sha256"
+                    class="w-full p-2 border border-slate-200 rounded text-sm outline-none" readonly>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between mb-2">
+                    <span class="text-xs font-bold text-indigo-600 uppercase">SHA-512</span>
+                    <button onclick="copy('sha512')" class="text-xs text-slate-400 hover:text-indigo-600">复制</button>
+                </div>
+                <input type="text" id="out-sha512"
+                    class="w-full p-2 border border-slate-200 rounded text-sm outline-none" readonly>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        function generateHash() {
+            const input = document.getElementById('input-text').value;
+
+            if (!input) {
+                document.getElementById('out-md5').value = '';
+                document.getElementById('out-sha1').value = '';
+                document.getElementById('out-sha256').value = '';
+                document.getElementById('out-sha512').value = '';
+                return;
+            }
+
+            document.getElementById('out-md5').value = CryptoJS.MD5(input).toString();
+            document.getElementById('out-sha1').value = CryptoJS.SHA1(input).toString();
+            document.getElementById('out-sha256').value = CryptoJS.SHA256(input).toString();
+            document.getElementById('out-sha512').value = CryptoJS.SHA512(input).toString();
+        }
+
+        function copy(id) {
+            const el = document.getElementById('out-' + id);
+            if (el.value) {
+                el.select();
+                document.execCommand('copy');
+                // No alert to keep it smooth
+            }
+        }
+    </script>
+</body>
+
+</html>

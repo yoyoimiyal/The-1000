@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>四象限法则</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .quadrant {
+            min-height: 200px;
+            transition: all 0.2s;
+        }
+
+        .quadrant:hover {
+            filter: brightness(0.98);
+        }
+
+        .task-item {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen p-4 md:p-8 font-sans text-gray-800">
+
+    <div class="max-w-6xl mx-auto h-full flex flex-col">
+
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-700">Eisenhower Matrix</h1>
+            <div class="flex gap-4 items-center">
+                <button onclick="clearAll()" class="text-sm text-red-500 hover:text-red-700">清空所有</button>
+                <a href="./navigation.html" class="text-sm text-gray-400 hover:text-gray-600">退出</a>
+            </div>
+        </header>
+
+        <!-- Input Area -->
+        <div class="bg-white p-4 rounded-xl shadow-sm mb-6 flex gap-2">
+            <input type="text" id="new-task"
+                class="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="添加新任务..." onkeypress="handleEnter(event)">
+            <select id="task-priority"
+                class="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 outline-none cursor-pointer">
+                <option value="q1">重要且紧急 (Do)</option>
+                <option value="q2">重要不紧急 (Plan)</option>
+                <option value="q3">紧急不重要 (Delegate)</option>
+                <option value="q4">不重要不紧急 (Delete)</option>
+            </select>
+            <button onclick="addTask()"
+                class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 transition">添加</button>
+        </div>
+
+        <!-- Matrix Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+
+            <!-- Q1: Important & Urgent -->
+            <div class="quadrant bg-red-50 rounded-2xl p-4 border border-red-100 flex flex-col">
+                <div class="flex justify-between items-center mb-4 border-b border-red-200 pb-2">
+                    <h2 class="font-bold text-red-700 text-lg">重要且紧急</h2>
+                    <span class="text-xs bg-red-200 text-red-800 px-2 py-1 rounded">立刻做 (Do)</span>
+                </div>
+                <ul id="list-q1" class="space-y-2 flex-1"></ul>
+            </div>
+
+            <!-- Q2: Important & Not Urgent -->
+            <div class="quadrant bg-blue-50 rounded-2xl p-4 border border-blue-100 flex flex-col">
+                <div class="flex justify-between items-center mb-4 border-b border-blue-200 pb-2">
+                    <h2 class="font-bold text-blue-700 text-lg">重要不紧急</h2>
+                    <span class="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">计划做 (Plan)</span>
+                </div>
+                <ul id="list-q2" class="space-y-2 flex-1"></ul>
+            </div>
+
+            <!-- Q3: Urgent & Not Important -->
+            <div class="quadrant bg-yellow-50 rounded-2xl p-4 border border-yellow-100 flex flex-col">
+                <div class="flex justify-between items-center mb-4 border-b border-yellow-200 pb-2">
+                    <h2 class="font-bold text-yellow-700 text-lg">紧急不重要</h2>
+                    <span class="text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded">授权做 (Delegate)</span>
+                </div>
+                <ul id="list-q3" class="space-y-2 flex-1"></ul>
+            </div>
+
+            <!-- Q4: Not Urgent & Not Important -->
+            <div class="quadrant bg-green-50 rounded-2xl p-4 border border-green-100 flex flex-col">
+                <div class="flex justify-between items-center mb-4 border-b border-green-200 pb-2">
+                    <h2 class="font-bold text-green-700 text-lg">不重要不紧急</h2>
+                    <span class="text-xs bg-green-200 text-green-800 px-2 py-1 rounded">尽量别做 (Delete)</span>
+                </div>
+                <ul id="list-q4" class="space-y-2 flex-1"></ul>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('matrix_tasks') || '[]');
+
+        function saveTasks() {
+            localStorage.setItem('matrix_tasks', JSON.stringify(tasks));
+            renderTasks();
+        }
+
+        function addTask() {
+            const input = document.getElementById('new-task');
+            const priority = document.getElementById('task-priority').value;
+            const text = input.value.trim();
+
+            if (text) {
+                tasks.push({
+                    id: Date.now(),
+                    text: text,
+                    quadrant: priority,
+                    done: false
+                });
+                input.value = '';
+                saveTasks();
+            }
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') addTask();
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            saveTasks();
+        }
+
+        function toggleTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.done = !task.done;
+                saveTasks();
+            }
+        }
+
+        function clearAll() {
+            if (confirm("确定清空所有任务吗？")) {
+                tasks = [];
+                saveTasks();
+            }
+        }
+
+        function renderTasks() {
+            ['q1', 'q2', 'q3', 'q4'].forEach(q => {
+                const list = document.getElementById(`list-${q}`);
+                list.innerHTML = '';
+
+                tasks.filter(t => t.quadrant === q).forEach(task => {
+                    const li = document.createElement('li');
+                    li.className = 'task-item bg-white p-3 rounded shadow-sm flex gap-3 items-center group';
+                    li.innerHTML = `
+                        <input type="checkbox" ${task.done ? 'checked' : ''} onclick="toggleTask(${task.id})" class="cursor-pointer w-4 h-4 text-indigo-600 rounded focus:ring-0">
+                        <span class="flex-1 ${task.done ? 'line-through text-gray-400' : 'text-gray-700'}">${task.text}</span>
+                        <button onclick="deleteTask(${task.id})" class="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition">✕</button>
+                    `;
+                    list.appendChild(li);
+                });
+            });
+        }
+
+        // Init
+        renderTasks();
+    </script>
+</body>
+
+</html>

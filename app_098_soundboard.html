@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>直播音效板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .sound-btn {
+            transition: all 0.1s;
+            user-select: none;
+        }
+
+        .sound-btn:active {
+            transform: scale(0.95);
+            filter: brightness(0.9);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-white">
+
+    <div class="w-full max-w-3xl">
+
+        <header class="flex justify-between items-center mb-10">
+            <h1 class="text-3xl font-bold flex items-center gap-2 text-yellow-400">
+                <span class="text-4xl">🎛️</span> Soundboard
+            </h1>
+            <a href="./navigation.html"
+                class="text-sm text-gray-500 hover:text-white border border-gray-700 px-3 py-1 rounded transition">退出</a>
+        </header>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+            <button onclick="playTone('success')"
+                class="sound-btn h-32 bg-green-500 rounded-2xl flex flex-col items-center justify-center shadow-[0_6px_0_#15803d] active:shadow-none active:translate-y-[6px]">
+                <span class="text-4xl mb-2">✅</span>
+                <span class="font-bold">Correct</span>
+            </button>
+
+            <button onclick="playTone('error')"
+                class="sound-btn h-32 bg-red-500 rounded-2xl flex flex-col items-center justify-center shadow-[0_6px_0_#b91c1c] active:shadow-none active:translate-y-[6px]">
+                <span class="text-4xl mb-2">❌</span>
+                <span class="font-bold">Wrong</span>
+            </button>
+
+            <button onclick="playTone('alert')"
+                class="sound-btn h-32 bg-yellow-500 rounded-2xl flex flex-col items-center justify-center shadow-[0_6px_0_#b45309] active:shadow-none active:translate-y-[6px]">
+                <span class="text-4xl mb-2">⚠️</span>
+                <span class="font-bold">Alert</span>
+            </button>
+
+            <button onclick="playTone('jump')"
+                class="sound-btn h-32 bg-blue-500 rounded-2xl flex flex-col items-center justify-center shadow-[0_6px_0_#1d4ed8] active:shadow-none active:translate-y-[6px]">
+                <span class="text-4xl mb-2">⬆️</span>
+                <span class="font-bold">Jump</span>
+            </button>
+
+            <button onclick="playTone('laser')"
+                class="sound-btn h-32 bg-purple-500 rounded-2xl flex flex-col items-center justify-center shadow-[0_6px_0_#7e22ce] active:shadow-none active:translate-y-[6px]">
+                <span class="text-4xl mb-2">🔫</span>
+                <span class="font-bold">Laser</span>
+            </button>
+
+            <button onclick="playTone('coin')"
+                class="sound-btn h-32 bg-yellow-400 rounded-2xl flex flex-col items-center justify-center shadow-[0_6px_0_#a16207] active:shadow-none active:translate-y-[6px]">
+                <span class="text-4xl mb-2">💰</span>
+                <span class="font-bold text-yellow-900">Coin</span>
+            </button>
+
+            <button onclick="playTone('explosion')"
+                class="sound-btn h-32 bg-orange-600 rounded-2xl flex flex-col items-center justify-center shadow-[0_6px_0_#9a3412] active:shadow-none active:translate-y-[6px]">
+                <span class="text-4xl mb-2">💥</span>
+                <span class="font-bold">Boom</span>
+            </button>
+
+            <button onclick="playTone('powerup')"
+                class="sound-btn h-32 bg-pink-500 rounded-2xl flex flex-col items-center justify-center shadow-[0_6px_0_#be185d] active:shadow-none active:translate-y-[6px]">
+                <span class="text-4xl mb-2">🍄</span>
+                <span class="font-bold">PowerUp</span>
+            </button>
+
+        </div>
+
+    </div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playTone(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const t = audioCtx.currentTime;
+
+            if (type === 'success') {
+                // Ding: High sine + harmonic
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, t);
+                osc.frequency.exponentialRampToValueAtTime(1200, t + 0.1);
+                gain.gain.setValueAtTime(0.5, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+                osc.start(t);
+                osc.stop(t + 0.5);
+            } else if (type === 'error') {
+                // Buzz: Sawtooth low
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, t);
+                osc.frequency.linearRampToValueAtTime(100, t + 0.3);
+                gain.gain.setValueAtTime(0.5, t);
+                gain.gain.linearRampToValueAtTime(0.01, t + 0.3);
+                osc.start(t);
+                osc.stop(t + 0.3);
+            } else if (type === 'alert') {
+                // Siren
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(600, t);
+                osc.frequency.linearRampToValueAtTime(800, t + 0.1);
+                osc.frequency.linearRampToValueAtTime(600, t + 0.2);
+                gain.gain.setValueAtTime(0.3, t);
+                gain.gain.linearRampToValueAtTime(0.01, t + 0.3);
+                osc.start(t);
+                osc.stop(t + 0.3);
+            } else if (type === 'jump') {
+                // Slide up
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(200, t);
+                osc.frequency.linearRampToValueAtTime(600, t + 0.15);
+                gain.gain.setValueAtTime(0.2, t);
+                gain.gain.linearRampToValueAtTime(0.01, t + 0.15);
+                osc.start(t);
+                osc.stop(t + 0.15);
+            } else if (type === 'laser') {
+                // Pew pew
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(1200, t);
+                osc.frequency.exponentialRampToValueAtTime(200, t + 0.15);
+                gain.gain.setValueAtTime(0.3, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+                osc.start(t);
+                osc.stop(t + 0.15);
+            } else if (type === 'coin') {
+                // Ding ding
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1200, t);
+                osc.frequency.setValueAtTime(1600, t + 0.05);
+                gain.gain.setValueAtTime(0.3, t);
+                gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+                osc.start(t);
+                osc.stop(t + 0.4);
+            } else if (type === 'explosion') {
+                // Noise buffer
+                const bufferSize = audioCtx.sampleRate * 0.5; // 0.5s
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+
+                // Filter lowpass
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(1000, t);
+                filter.frequency.exponentialRampToValueAtTime(100, t + 0.4);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                gain.gain.setValueAtTime(1, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+
+                noise.start(t);
+            } else if (type === 'powerup') {
+                // Arpeggio
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, t);
+                osc.frequency.setValueAtTime(554, t + 0.1);
+                osc.frequency.setValueAtTime(659, t + 0.2);
+                osc.frequency.setValueAtTime(880, t + 0.3);
+                gain.gain.setValueAtTime(0.3, t);
+                gain.gain.linearRampToValueAtTime(0.01, t + 0.6);
+                osc.start(t);
+                osc.stop(t + 0.6);
+            }
+        }
+    </script>
+</body>
+
+</html>

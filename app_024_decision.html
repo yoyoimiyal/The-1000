@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>决策大转盘</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            transition: transform 0.1s;
+        }
+
+        .arrow-down {
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #1f2937;
+            /* slate-800 */
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body class="bg-amber-50 min-h-screen flex flex-col items-center py-10">
+
+    <h1 class="text-3xl font-bold text-amber-800 mb-6">今晚吃什么?</h1>
+
+    <div class="relative mb-8">
+        <div class="arrow-down"></div>
+        <canvas id="wheel" width="350" height="350" class="rounded-full shadow-2xl border-4 border-white"></canvas>
+    </div>
+
+    <div class="flex gap-4 mb-8">
+        <button onclick="spin()" id="spin-btn"
+            class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-10 rounded-full shadow-lg transform transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+            开始旋转
+        </button>
+    </div>
+
+    <div class="w-full max-w-sm bg-white p-6 rounded-2xl shadow-sm">
+        <label class="block text-sm font-bold text-slate-500 mb-2">选项 (用逗号分隔)</label>
+        <textarea id="options-input"
+            class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none text-sm h-24 resize-none"
+            placeholder="火锅, 烧烤, 披萨, 沙拉, 面条, 汉堡">火锅, 烧烤, 披萨, 沙拉, 面条, 汉堡</textarea>
+        <button onclick="updateWheel()" class="mt-2 text-xs text-amber-600 font-bold hover:underline">更新转盘</button>
+    </div>
+
+    <a href="./navigation.html" class="mt-8 text-amber-400 text-sm hover:text-amber-600">返回导航</a>
+
+    <script>
+        const canvas = document.getElementById('wheel');
+        const ctx = canvas.getContext('2d');
+        const spinBtn = document.getElementById('spin-btn');
+        const input = document.getElementById('options-input');
+
+        let options = [];
+        let startAngle = 0;
+        let arc = 0;
+        let spinTimeout = null;
+        let spinAngleStart = 10;
+        let spinTime = 0;
+        let spinTimeTotal = 0;
+
+        const colors = ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40", "#C9CBCF"];
+
+        function drawRouletteWheel() {
+            const raw = input.value;
+            options = raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            if (options.length === 0) options = ["?"];
+
+            arc = Math.PI * 2 / options.length;
+
+            ctx.clearRect(0, 0, 350, 350);
+            ctx.strokeStyle = "white";
+            ctx.lineWidth = 2;
+
+            const outsideRadius = 170;
+            const textRadius = 130;
+            const insideRadius = 40;
+
+            const cx = 175;
+            const cy = 175;
+
+            for (let i = 0; i < options.length; i++) {
+                const angle = startAngle + i * arc;
+
+                // Segment
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.beginPath();
+                ctx.arc(cx, cy, outsideRadius, angle, angle + arc, false);
+                ctx.arc(cx, cy, insideRadius, angle + arc, angle, true);
+                ctx.stroke();
+                ctx.fill();
+
+                // Text
+                ctx.save();
+                ctx.fillStyle = "white";
+                ctx.shadowColor = "rgba(0,0,0,0.5)";
+                ctx.shadowBlur = 4;
+                ctx.translate(cx + Math.cos(angle + arc / 2) * textRadius, cy + Math.sin(angle + arc / 2) * textRadius);
+                ctx.rotate(angle + arc / 2 + Math.PI / 2);
+                const text = options[i];
+                ctx.font = 'bold 16px Arial';
+                ctx.fillText(text, -ctx.measureText(text).width / 2, 0);
+                ctx.restore();
+            }
+        }
+
+        function spin() {
+            spinAngleStart = Math.random() * 10 + 10;
+            spinTime = 0;
+            spinTimeTotal = Math.random() * 3000 + 4000 * 1;
+            rotateWheel();
+        }
+
+        function rotateWheel() {
+            spinTime += 30;
+            if (spinTime >= spinTimeTotal) {
+                stopRotateWheel();
+                return;
+            }
+            const spinAngle = spinAngleStart - easeOut(spinTime, 0, spinAngleStart, spinTimeTotal);
+            startAngle += (spinAngle * Math.PI / 180);
+            drawRouletteWheel();
+            spinTimeout = requestAnimationFrame(rotateWheel);
+            spinBtn.disabled = true;
+        }
+
+        function stopRotateWheel() {
+            cancelAnimationFrame(spinTimeout);
+            spinBtn.disabled = false;
+
+            // Calculate winner
+            // Arrow is at Top (270deg or -90deg in canvas coord, but we draw from 0).
+            // Actually, arrow is at angle -PI/2 relative to center.
+            // Simplified: The angle at the top is 1.5 * PI (270 deg)
+            const degrees = startAngle * 180 / Math.PI + 90;
+            const arcd = arc * 180 / Math.PI;
+            const index = Math.floor((360 - degrees % 360) / arcd);
+
+            // Just highlight visual stop (no alert for smoother UX, maybe simple log)
+            // console.log("Result:", options[index]);
+        }
+
+        function easeOut(t, b, c, d) {
+            const ts = (t /= d) * t;
+            const tc = ts * t;
+            return b + c * (tc + -3 * ts + 3 * t);
+        }
+
+        function updateWheel() {
+            drawRouletteWheel();
+        }
+
+        // Init
+        drawRouletteWheel();
+
+    </script>
+</body>
+
+</html>

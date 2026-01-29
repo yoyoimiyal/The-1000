@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>魔镜相机</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        video {
+            transform: scaleX(-1);
+            /* Default Mirror */
+            object-fit: cover;
+        }
+
+        .filter-sepia {
+            filter: sepia(1);
+        }
+
+        .filter-grayscale {
+            filter: grayscale(1);
+        }
+
+        .filter-invert {
+            filter: invert(1);
+        }
+
+        .filter-contrast {
+            filter: contrast(1.5);
+        }
+    </style>
+</head>
+
+<body class="bg-black min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden">
+
+    <div class="relative w-full max-w-4xl bg-gray-900 rounded-3xl overflow-hidden shadow-2xl border border-gray-800">
+
+        <!-- Camera View -->
+        <div class="relative aspect-video bg-black flex items-center justify-center">
+            <video id="video" autoplay playsinline class="w-full h-full"></video>
+            <div id="placeholder" class="absolute text-gray-500 flex flex-col items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-2 opacity-50" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <span>点击下方按钮开启摄像头</span>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="p-6 bg-gray-900/90 backdrop-blur absolute bottom-0 w-full flex flex-col gap-4 transition-transform duration-300 transform translate-y-0 hover:translate-y-0"
+            id="controls">
+
+            <div class="flex justify-between items-center">
+                <h1 class="text-white font-bold text-lg flex items-center gap-2">
+                    <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse" id="status-dot"></span>
+                    Magic Mirror
+                </h1>
+                <div class="flex gap-2">
+                    <button onclick="toggleFlip()"
+                        class="p-2 bg-gray-800 text-white rounded-full hover:bg-gray-700 transition" title="水平翻转">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                    </button>
+                    <a href="./navigation.html"
+                        class="p-2 bg-gray-800 text-gray-400 rounded-full hover:text-white transition">✕</a>
+                </div>
+            </div>
+
+            <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                <button onclick="setFilter('')"
+                    class="px-4 py-1 bg-white text-black rounded-full text-xs font-bold shrink-0">正常</button>
+                <button onclick="setFilter('filter-grayscale')"
+                    class="px-4 py-1 bg-gray-700 text-white rounded-full text-xs font-bold shrink-0 hover:bg-gray-600">黑白</button>
+                <button onclick="setFilter('filter-sepia')"
+                    class="px-4 py-1 bg-amber-900/50 text-amber-200 rounded-full text-xs font-bold shrink-0 hover:bg-amber-900">怀旧</button>
+                <button onclick="setFilter('filter-contrast')"
+                    class="px-4 py-1 bg-gray-700 text-white rounded-full text-xs font-bold shrink-0 hover:bg-gray-600">高对比</button>
+                <button onclick="setFilter('filter-invert')"
+                    class="px-4 py-1 bg-indigo-900 text-indigo-200 rounded-full text-xs font-bold shrink-0 hover:bg-indigo-800">反色</button>
+            </div>
+
+            <button onclick="startCamera()" id="btn-start"
+                class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg transition">
+                开启摄像头
+            </button>
+
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const placeholder = document.getElementById('placeholder');
+        const statusDot = document.getElementById('status-dot');
+        const btnStart = document.getElementById('btn-start');
+        let isFlipped = true;
+        let currentFilter = '';
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                placeholder.style.display = 'none';
+                statusDot.classList.replace('bg-red-500', 'bg-green-500');
+                btnStart.style.display = 'none';
+            } catch (err) {
+                alert("无法访问摄像头: " + err.message);
+            }
+        }
+
+        function toggleFlip() {
+            isFlipped = !isFlipped;
+            updateStyle();
+        }
+
+        function setFilter(cls) {
+            currentFilter = cls;
+            updateStyle();
+        }
+
+        function updateStyle() {
+            // Combine transform and filter
+            const transform = isFlipped ? 'scaleX(-1)' : 'scaleX(1)';
+            video.style.transform = transform;
+            video.className = `w-full h-full ${currentFilter}`;
+        }
+    </script>
+</body>
+
+</html>

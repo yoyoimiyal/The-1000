@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>万能单位换算</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-cyan-50 min-h-screen flex items-center justify-center p-4 text-slate-700">
+
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+        <div class="bg-cyan-600 p-6 text-white text-center">
+            <h1 class="text-2xl font-bold">单位换算器</h1>
+            <p class="text-cyan-100 text-sm">简单快捷的转换工具</p>
+        </div>
+
+        <div class="p-8 space-y-6">
+
+            <!-- Type Selector -->
+            <div class="flex justify-center bg-slate-100 p-1 rounded-lg mb-6">
+                <button onclick="setCategory('length')" id="btn-length"
+                    class="flex-1 py-2 text-sm font-medium rounded-md transition bg-white shadow-sm text-cyan-600">长度</button>
+                <button onclick="setCategory('weight')" id="btn-weight"
+                    class="flex-1 py-2 text-sm font-medium rounded-md transition text-slate-500 hover:text-slate-700">重量</button>
+                <button onclick="setCategory('temp')" id="btn-temp"
+                    class="flex-1 py-2 text-sm font-medium rounded-md transition text-slate-500 hover:text-slate-700">温度</button>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4 items-center">
+
+                <!-- Input Group -->
+                <div class="w-full">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">输入</label>
+                    <input type="number" id="input-val"
+                        class="w-full text-2xl font-bold p-3 border-b-2 border-slate-200 focus:border-cyan-500 outline-none bg-transparent transition"
+                        value="1" oninput="convert()">
+                    <select id="input-unit" class="w-full mt-2 p-2 bg-slate-50 rounded border border-slate-200 text-sm"
+                        onchange="convert()">
+                        <!-- Options injected by JS -->
+                    </select>
+                </div>
+
+                <!-- Icon -->
+                <div class="text-cyan-400 rotate-90 sm:rotate-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                </div>
+
+                <!-- Output Group -->
+                <div class="w-full">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">结果</label>
+                    <div id="output-val"
+                        class="w-full text-2xl font-bold p-3 border-b-2 border-transparent text-cyan-600 break-all">
+                        --
+                    </div>
+                    <select id="output-unit" class="w-full mt-2 p-2 bg-slate-50 rounded border border-slate-200 text-sm"
+                        onchange="convert()">
+                        <!-- Options injected by JS -->
+                    </select>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="bg-slate-50 p-4 text-center border-t border-slate-100">
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-cyan-600 underline">返回导航</a>
+        </div>
+    </div>
+
+    <script>
+        const categories = {
+            length: {
+                units: {
+                    m: { name: '米 (Meters)', rate: 1 },
+                    km: { name: '千米 (Kilometers)', rate: 1000 },
+                    cm: { name: '厘米 (Centimeters)', rate: 0.01 },
+                    mm: { name: '毫米 (Millimeters)', rate: 0.001 },
+                    in: { name: '英寸 (Inches)', rate: 0.0254 },
+                    ft: { name: '英尺 (Feet)', rate: 0.3048 },
+                    yd: { name: '码 (Yards)', rate: 0.9144 },
+                    mi: { name: '英里 (Miles)', rate: 1609.34 }
+                }
+            },
+            weight: {
+                units: {
+                    kg: { name: '千克 (Kilograms)', rate: 1 },
+                    g: { name: '克 (Grams)', rate: 0.001 },
+                    mg: { name: '毫克 (Milligrams)', rate: 0.000001 },
+                    lb: { name: '磅 (Pounds)', rate: 0.453592 },
+                    oz: { name: '盎司 (Ounces)', rate: 0.0283495 }
+                }
+            },
+            temp: {
+                units: {
+                    c: { name: '摄氏度 (°C)', type: 'temp' },
+                    f: { name: '华氏度 (°F)', type: 'temp' },
+                    k: { name: '开尔文 (K)', type: 'temp' }
+                }
+            }
+        };
+
+        let currentCategory = 'length';
+
+        function setCategory(cat) {
+            currentCategory = cat;
+            // Update UI buttons
+            document.querySelectorAll('button[id^="btn-"]').forEach(btn => {
+                btn.className = 'flex-1 py-2 text-sm font-medium rounded-md transition text-slate-500 hover:text-slate-700';
+            });
+            const activeBtn = document.getElementById(`btn-${cat}`);
+            activeBtn.className = 'flex-1 py-2 text-sm font-medium rounded-md transition bg-white shadow-sm text-cyan-600';
+
+            // Populate selects
+            const unitKeys = Object.keys(categories[cat].units);
+            const inputSel = document.getElementById('input-unit');
+            const outputSel = document.getElementById('output-unit');
+
+            inputSel.innerHTML = '';
+            outputSel.innerHTML = '';
+
+            unitKeys.forEach(key => {
+                const opt1 = new Option(categories[cat].units[key].name, key);
+                const opt2 = new Option(categories[cat].units[key].name, key);
+                inputSel.add(opt1);
+                outputSel.add(opt2);
+            });
+
+            // Set defaults
+            inputSel.selectedIndex = 0;
+            outputSel.selectedIndex = 1;
+
+            convert();
+        }
+
+        function convert() {
+            const val = parseFloat(document.getElementById('input-val').value);
+            const from = document.getElementById('input-unit').value;
+            const to = document.getElementById('output-unit').value;
+            const outputEl = document.getElementById('output-val');
+
+            if (isNaN(val)) {
+                outputEl.innerText = '--';
+                return;
+            }
+
+            let result;
+
+            if (currentCategory === 'temp') {
+                // Temperature special logic
+                if (from === to) result = val;
+                else if (from === 'c' && to === 'f') result = (val * 9 / 5) + 32;
+                else if (from === 'c' && to === 'k') result = val + 273.15;
+                else if (from === 'f' && to === 'c') result = (val - 32) * 5 / 9;
+                else if (from === 'f' && to === 'k') result = (val - 32) * 5 / 9 + 273.15;
+                else if (from === 'k' && to === 'c') result = val - 273.15;
+                else if (from === 'k' && to === 'f') result = (val - 273.15) * 9 / 5 + 32;
+            } else {
+                // Standard linear conversion
+                const baseRate = categories[currentCategory].units[from].rate;
+                const targetRate = categories[currentCategory].units[to].rate;
+                const baseValue = val * baseRate; // convert to base unit (m or kg)
+                result = baseValue / targetRate; // convert to target
+            }
+
+            // Format result
+            outputEl.innerText = parseFloat(result.toFixed(4));
+        }
+
+        // Init
+        setCategory('length');
+    </script>
+</body>
+
+</html>

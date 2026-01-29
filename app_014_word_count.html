@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>字数统计器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex flex-col text-gray-800">
+
+    <!-- Navbar -->
+    <nav class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm">
+        <h1 class="font-bold text-xl flex items-center gap-2 text-indigo-600">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            WordCount
+        </h1>
+        <a href="./navigation.html" class="text-sm text-gray-400 hover:text-indigo-600">退出</a>
+    </nav>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col md:flex-row max-w-6xl mx-auto w-full p-4 md:p-8 gap-6">
+
+        <!-- Input Area -->
+        <div class="flex-1 flex flex-col">
+            <textarea id="text-input"
+                class="flex-1 w-full p-6 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none resize-none shadow-sm text-lg leading-relaxed transition"
+                placeholder="在此粘贴或输入文本..." oninput="analyzeText()"></textarea>
+            <div class="mt-4 flex gap-4">
+                <button onclick="clearText()"
+                    class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-medium transition text-gray-700">清空</button>
+                <button onclick="pasteText()"
+                    class="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 rounded-lg text-sm font-medium transition text-indigo-700">粘贴剪贴板</button>
+            </div>
+        </div>
+
+        <!-- Stats Panel -->
+        <div class="w-full md:w-80 space-y-4">
+
+            <!-- Key Stats -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 text-center">
+                    <div class="text-3xl font-bold text-indigo-600 mb-1" id="stat-words">0</div>
+                    <div class="text-xs text-gray-400 uppercase tracking-wide">词数 (Words)</div>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 text-center">
+                    <div class="text-3xl font-bold text-pink-600 mb-1" id="stat-chars">0</div>
+                    <div class="text-xs text-gray-400 uppercase tracking-wide">字符 (Chars)</div>
+                </div>
+            </div>
+
+            <!-- Detailed List -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="bg-gray-50 px-5 py-3 border-b border-gray-100 text-sm font-bold text-gray-500">详细统计</div>
+                <ul class="divide-y divide-gray-50 text-sm">
+                    <li class="px-5 py-3 flex justify-between">
+                        <span class="text-gray-600">不含空格字符</span>
+                        <span class="font-bold text-gray-800" id="stat-chars-no-space">0</span>
+                    </li>
+                    <li class="px-5 py-3 flex justify-between">
+                        <span class="text-gray-600">句子 (Sentences)</span>
+                        <span class="font-bold text-gray-800" id="stat-sentences">0</span>
+                    </li>
+                    <li class="px-5 py-3 flex justify-between">
+                        <span class="text-gray-600">段落 (Paragraphs)</span>
+                        <span class="font-bold text-gray-800" id="stat-paragraphs">0</span>
+                    </li>
+                    <li class="px-5 py-3 flex justify-between">
+                        <span class="text-gray-600">阅读时间 (预估)</span>
+                        <span class="font-bold text-gray-800" id="stat-time">0s</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="bg-indigo-600 rounded-xl p-5 text-white shadow-lg">
+                <h3 class="font-bold mb-2 text-indigo-100">Tips</h3>
+                <p class="text-xs leading-relaxed opacity-90">
+                    中文字符通常被计算为单个字符。英文单词由空格分隔。阅读时间按每分钟 200 字估算。
+                </p>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script>
+        function analyzeText() {
+            const text = document.getElementById('text-input').value;
+
+            // Chars
+            document.getElementById('stat-chars').innerText = text.length;
+            document.getElementById('stat-chars-no-space').innerText = text.replace(/\s/g, '').length;
+
+            // Words (Rough estimation for mixed CN/EN)
+            // Remove start/end spaces, split by spaces or newlines
+            // For simple implementation: match words or CJK characters
+            // A more robust regex might be needed for perfect mixed counting
+            const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+            // A better approach for CJK: count CJK chars + English words
+            // Let's stick to standard logic: split by whitespace for now, usually sufficient for basic needs
+            // Or better: (CJK characters) + (Non-CJK words)
+            const cjk = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+            const nonCjkText = text.replace(/[\u4e00-\u9fa5]/g, ' ');
+            const nonCjkWords = nonCjkText.trim() === '' ? 0 : nonCjkText.trim().split(/\s+/).length;
+            // Combined Count (Approximation)
+            const totalWords = cjk + (text.trim() === '' ? 0 : nonCjkWords);
+
+            document.getElementById('stat-words').innerText = totalWords;
+
+            // Paragraphs
+            const paragraphs = text.replace(/\n$/gm, '').split(/\n/).length;
+            document.getElementById('stat-paragraphs').innerText = text ? paragraphs : 0;
+
+            // Sentences (Simple split by . ! ?)
+            const sentences = text.split(/[.!?。！？]+/).length - 1;
+            document.getElementById('stat-sentences').innerText = sentences > 0 ? sentences : 0;
+
+            // Reading Time (200 wpm)
+            const seconds = Math.ceil(totalWords / 200 * 60);
+            document.getElementById('stat-time').innerText = seconds < 60 ? `${seconds}s` : `${Math.ceil(seconds / 60)}m`;
+        }
+
+        function clearText() {
+            document.getElementById('text-input').value = '';
+            analyzeText();
+        }
+
+        async function pasteText() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('text-input').value = text;
+                analyzeText();
+            } catch (err) {
+                alert('无法访问剪贴板，请尝试手动粘贴 (Ctrl+V)');
+            }
+        }
+    </script>
+</body>
+
+</html>

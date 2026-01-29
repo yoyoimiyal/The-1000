@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>世界时钟墙</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .clock-face {
+            background: conic-gradient(from 0deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+
+        .hand {
+            transform-origin: 50% 100%;
+            border-radius: 999px;
+            position: absolute;
+            left: 50%;
+            bottom: 50%;
+            transform: translateX(-50%) rotate(0deg);
+        }
+
+        .hand-hour {
+            width: 4px;
+            height: 25%;
+            background: #1e293b;
+            z-index: 2;
+        }
+
+        .hand-min {
+            width: 3px;
+            height: 35%;
+            background: #475569;
+            z-index: 1;
+        }
+
+        .hand-sec {
+            width: 1px;
+            height: 40%;
+            background: #ef4444;
+            z-index: 3;
+            transform-origin: 50% 80%;
+            bottom: 20%;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen p-8">
+
+    <header class="max-w-6xl mx-auto flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-light text-slate-800 tracking-tight">World Clock</h1>
+        <a href="./navigation.html" class="text-sm text-slate-400 hover:text-slate-600">退出</a>
+    </header>
+
+    <main class="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+        <!-- Card 1: Beijing -->
+        <div class="bg-white rounded-3xl p-6 shadow-sm flex flex-col items-center">
+            <div class="relative w-40 h-40 rounded-full border-4 border-slate-100 clock-face mb-6 shadow-inner"
+                id="clock-bj">
+                <div class="hand hand-hour" id="h-bj"></div>
+                <div class="hand hand-min" id="m-bj"></div>
+                <div class="hand hand-sec" id="s-bj"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="w-2 h-2 bg-slate-800 rounded-full z-10"></div>
+                </div>
+                <!-- Markers -->
+                <div class="absolute top-2 left-1/2 -translate-x-1/2 text-xs text-slate-400 font-bold">12</div>
+                <div class="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-slate-400 font-bold">6</div>
+                <div class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">9</div>
+                <div class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">3</div>
+            </div>
+            <h2 class="text-xl font-bold text-slate-800">北京</h2>
+            <p class="text-slate-400 text-sm mb-2">China Standard Time</p>
+            <p class="text-3xl font-mono text-slate-600 tracking-wide" id="time-bj">00:00</p>
+        </div>
+
+        <!-- Card 2: London -->
+        <div class="bg-white rounded-3xl p-6 shadow-sm flex flex-col items-center">
+            <div class="relative w-40 h-40 rounded-full border-4 border-slate-100 clock-face mb-6 shadow-inner"
+                id="clock-ld">
+                <div class="hand hand-hour" id="h-ld"></div>
+                <div class="hand hand-min" id="m-ld"></div>
+                <div class="hand hand-sec" id="s-ld"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="w-2 h-2 bg-slate-800 rounded-full z-10"></div>
+                </div>
+                <div class="absolute top-2 left-1/2 -translate-x-1/2 text-xs text-slate-400 font-bold">12</div>
+                <div class="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-slate-400 font-bold">6</div>
+                <div class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">9</div>
+                <div class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">3</div>
+            </div>
+            <h2 class="text-xl font-bold text-slate-800">London</h2>
+            <p class="text-slate-400 text-sm mb-2">BST / GMT</p>
+            <p class="text-3xl font-mono text-slate-600 tracking-wide" id="time-ld">00:00</p>
+        </div>
+
+        <!-- Card 3: New York -->
+        <div class="bg-white rounded-3xl p-6 shadow-sm flex flex-col items-center">
+            <div class="relative w-40 h-40 rounded-full border-4 border-slate-100 clock-face mb-6 shadow-inner"
+                id="clock-ny">
+                <div class="hand hand-hour" id="h-ny"></div>
+                <div class="hand hand-min" id="m-ny"></div>
+                <div class="hand hand-sec" id="s-ny"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="w-2 h-2 bg-slate-800 rounded-full z-10"></div>
+                </div>
+                <div class="absolute top-2 left-1/2 -translate-x-1/2 text-xs text-slate-400 font-bold">12</div>
+                <div class="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-slate-400 font-bold">6</div>
+                <div class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">9</div>
+                <div class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">3</div>
+            </div>
+            <h2 class="text-xl font-bold text-slate-800">New York</h2>
+            <p class="text-slate-400 text-sm mb-2">Eastern Time</p>
+            <p class="text-3xl font-mono text-slate-600 tracking-wide" id="time-ny">00:00</p>
+        </div>
+
+        <!-- Card 4: Tokyo -->
+        <div class="bg-white rounded-3xl p-6 shadow-sm flex flex-col items-center">
+            <div class="relative w-40 h-40 rounded-full border-4 border-slate-100 clock-face mb-6 shadow-inner"
+                id="clock-tk">
+                <div class="hand hand-hour" id="h-tk"></div>
+                <div class="hand hand-min" id="m-tk"></div>
+                <div class="hand hand-sec" id="s-tk"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="w-2 h-2 bg-slate-800 rounded-full z-10"></div>
+                </div>
+                <div class="absolute top-2 left-1/2 -translate-x-1/2 text-xs text-slate-400 font-bold">12</div>
+                <div class="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-slate-400 font-bold">6</div>
+                <div class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">9</div>
+                <div class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">3</div>
+            </div>
+            <h2 class="text-xl font-bold text-slate-800">Tokyo</h2>
+            <p class="text-slate-400 text-sm mb-2">Japan Standard Time</p>
+            <p class="text-3xl font-mono text-slate-600 tracking-wide" id="time-tk">00:00</p>
+        </div>
+
+    </main>
+
+    <script>
+        const clocks = [
+            { id: 'bj', offset: 8 },  // UTC+8
+            { id: 'ld', offset: 1 },  // UTC+1 (Simplification for BST, ideally needs proper TZ handling)
+            { id: 'ny', offset: -4 }, // UTC-4 (EDT)
+            { id: 'tk', offset: 9 }   // UTC+9
+        ];
+
+        function updateClocks() {
+            const now = new Date();
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+
+            clocks.forEach(clock => {
+                const cityTime = new Date(utc + (3600000 * clock.offset));
+                const h = cityTime.getHours();
+                const m = cityTime.getMinutes();
+                const s = cityTime.getSeconds();
+
+                // Analog rotations
+                const hDeg = (h % 12) * 30 + m * 0.5;
+                const mDeg = m * 6;
+                const sDeg = s * 6;
+
+                document.getElementById(`h-${clock.id}`).style.transform = `translateX(-50%) rotate(${hDeg}deg)`;
+                document.getElementById(`m-${clock.id}`).style.transform = `translateX(-50%) rotate(${mDeg}deg)`;
+                document.getElementById(`s-${clock.id}`).style.transform = `translateX(-50%) rotate(${sDeg}deg)`;
+
+                // Digital text
+                const hStr = h.toString().padStart(2, '0');
+                const mStr = m.toString().padStart(2, '0');
+                document.getElementById(`time-${clock.id}`).innerText = `${hStr}:${mStr}`;
+            });
+        }
+
+        setInterval(updateClocks, 1000);
+        updateClocks();
+    </script>
+</body>
+
+</html>

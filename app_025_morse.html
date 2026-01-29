@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>摩斯密码翻译器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #4b5563;
+            display: inline-block;
+        }
+
+        .dash {
+            width: 24px;
+            height: 10px;
+            border-radius: 4px;
+            background-color: #4b5563;
+            display: inline-block;
+        }
+
+        .active-signal {
+            background-color: #f59e0b !important;
+            box-shadow: 0 0 10px #f59e0b;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-800 min-h-screen text-gray-200 p-4 font-mono">
+
+    <div class="max-w-2xl mx-auto mt-10">
+
+        <header class="flex items-center justify-between mb-8 pb-4 border-b border-gray-700">
+            <h1 class="text-2xl font-bold text-yellow-500">Morse Translator</h1>
+            <a href="./navigation.html" class="text-sm text-gray-500 hover:text-white">退出</a>
+        </header>
+
+        <!-- Input -->
+        <div class="mb-6">
+            <label class="block text-xs font-bold uppercase text-gray-500 mb-2">输入文本 (A-Z, 0-9)</label>
+            <textarea id="input-text"
+                class="w-full bg-gray-900 border border-gray-700 rounded-lg p-4 text-white focus:border-yellow-500 focus:outline-none h-32 text-lg"
+                placeholder="SOS..." oninput="translateToMorse()"></textarea>
+        </div>
+
+        <!-- Output -->
+        <div class="mb-8">
+            <label class="block text-xs font-bold uppercase text-gray-500 mb-2">摩斯电码</label>
+            <div id="output-code"
+                class="w-full bg-gray-900 border border-gray-700 rounded-lg p-4 text-yellow-500 font-bold text-xl min-h-[5rem] break-words tracking-widest">
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex gap-4">
+            <button onclick="playMorse()" id="play-btn"
+                class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg flex items-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                        clip-rule="evenodd" />
+                </svg>
+                播放电报
+            </button>
+            <button onclick="clearAll()"
+                class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition">
+                清空
+            </button>
+        </div>
+
+        <!-- Cheat Sheet -->
+        <div class="mt-12 pt-8 border-t border-gray-700">
+            <h3 class="text-sm font-bold text-gray-500 mb-4">参考表</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 text-xs text-gray-400">
+                <div>A: .-</div>
+                <div>B: -...</div>
+                <div>C: -.-.</div>
+                <div>D: -..</div>
+                <div>E: .</div>
+                <div>F: ..-.</div>
+                <div>G: --.</div>
+                <div>H: ....</div>
+                <div>I: ..</div>
+                <div>J: .---</div>
+                <div>K: -.-</div>
+                <div>L: .-..</div>
+                <div>M: --</div>
+                <div>N: -.</div>
+                <div>O: ---</div>
+                <div>P: .--.</div>
+                <div>Q: --.-</div>
+                <div>R: .-.</div>
+                <div>S: ...</div>
+                <div>T: -</div>
+                <div>U: ..-</div>
+                <div>V: ...-</div>
+                <div>W: .--</div>
+                <div>X: -..-</div>
+                <div>Y: -.--</div>
+                <div>Z: --..</div>
+                <div>1: .----</div>
+                <div>2: ..---</div>
+                <div>3: ...--</div>
+                <div>4: ....-</div>
+                <div>5: .....</div>
+                <div>0: -----</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const morseCode = {
+            'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
+            'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
+            'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.',
+            'S': '...', 'T': '-', 'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-',
+            'Y': '-.--', 'Z': '--..',
+            '1': '.----', '2': '..---', '3': '...--', '4': '....-', '5': '.....',
+            '6': '-....', '7': '--...', '8': '---..', '9': '----.', '0': '-----',
+            ' ': '/'
+        };
+
+        const inputEl = document.getElementById('input-text');
+        const outputEl = document.getElementById('output-code');
+        const playBtn = document.getElementById('play-btn');
+
+        let audioCtx = null;
+        let isPlaying = false;
+
+        function translateToMorse() {
+            const text = inputEl.value.toUpperCase();
+            let morse = '';
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (morseCode[char]) {
+                    morse += morseCode[char] + ' ';
+                } else if (char === '\n') {
+                    morse += '/ ';
+                }
+            }
+            outputEl.innerText = morse.trim();
+        }
+
+        function clearAll() {
+            inputEl.value = '';
+            outputEl.innerText = '';
+        }
+
+        async function playMorse() {
+            if (isPlaying) return;
+            const code = outputEl.innerText;
+            if (!code) return;
+
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            isPlaying = true;
+            playBtn.disabled = true;
+            playBtn.innerHTML = '播放中...';
+
+            const dotDuration = 0.08; // speed
+            let currentTime = audioCtx.currentTime;
+
+            for (let i = 0; i < code.length; i++) {
+                const symbol = code[i];
+
+                if (symbol === '.') {
+                    playTone(currentTime, dotDuration);
+                    currentTime += dotDuration;
+                } else if (symbol === '-') {
+                    playTone(currentTime, dotDuration * 3);
+                    currentTime += dotDuration * 3;
+                } else if (symbol === ' ') {
+                    // Gap between characters (3 dots)
+                    // We already add 1 dot gap after each tone, so add 2 more
+                    currentTime += dotDuration * 2;
+                } else if (symbol === '/') {
+                    // Gap between words (7 dots)
+                    currentTime += dotDuration * 6;
+                }
+
+                // Gap after every symbol (1 dot)
+                currentTime += dotDuration;
+            }
+
+            // Reset button after playback
+            setTimeout(() => {
+                isPlaying = false;
+                playBtn.disabled = false;
+                playBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg>
+                播放电报`;
+            }, (currentTime - audioCtx.currentTime) * 1000);
+        }
+
+        function playTone(startTime, duration) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.value = 600; // Hz
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start(startTime);
+
+            // Avoid click sound with tiny ramp
+            gain.gain.setValueAtTime(0, startTime);
+            gain.gain.linearRampToValueAtTime(1, startTime + 0.005);
+            gain.gain.setValueAtTime(1, startTime + duration - 0.005);
+            gain.gain.linearRampToValueAtTime(0, startTime + duration);
+
+            osc.stop(startTime + duration);
+        }
+    </script>
+</body>
+
+</html>

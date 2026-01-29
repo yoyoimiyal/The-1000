@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>接金币挑战</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            touch-action: none;
+            cursor: none;
+        }
+    </style>
+</head>
+
+<body class="bg-amber-50 h-screen w-screen overflow-hidden flex flex-col">
+
+    <!-- Header Overlay -->
+    <div class="absolute top-0 left-0 w-full p-4 flex justify-between items-center pointer-events-none z-10">
+        <div>
+            <h1 class="font-bold text-amber-800 text-xl">Coin Catcher</h1>
+            <p class="text-amber-600 text-sm">Score: <span id="score" class="font-bold text-2xl">0</span></p>
+        </div>
+        <a href="./navigation.html"
+            class="pointer-events-auto bg-white/50 hover:bg-white text-amber-800 px-3 py-1 rounded text-xs font-bold transition">退出</a>
+    </div>
+
+    <!-- Start/Game Over Overlay -->
+    <div id="overlay" class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-20">
+        <h2 class="text-4xl font-bold text-white mb-4 text-shadow" id="title">准备开始</h2>
+        <p class="text-white/80 mb-8" id="subtitle">移动鼠标或拖动屏幕接住金币，避开炸弹！</p>
+        <button onclick="startGame()"
+            class="px-8 py-3 bg-amber-500 hover:bg-amber-400 text-white font-bold rounded-full shadow-lg transition transform hover:scale-105">
+            开始游戏
+        </button>
+    </div>
+
+    <canvas id="gameCanvas" class="w-full h-full"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const overlay = document.getElementById('overlay');
+        const titleEl = document.getElementById('title');
+        const subEl = document.getElementById('subtitle');
+
+        let width, height;
+        let isPlaying = false;
+        let score = 0;
+        let animationId;
+
+        // Game objects
+        let player = { x: 0, y: 0, width: 80, height: 20, color: '#f59e0b' };
+        let items = []; // { x, y, type: 'coin'|'bomb', speed }
+        let spawnRate = 60;
+        let frame = 0;
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            player.y = height - 50;
+            player.x = width / 2 - player.width / 2;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Input handling
+        function movePlayer(clientX) {
+            player.x = clientX - player.width / 2;
+            // Clamp
+            if (player.x < 0) player.x = 0;
+            if (player.x > width - player.width) player.x = width - player.width;
+        }
+
+        canvas.addEventListener('mousemove', e => {
+            if (isPlaying) movePlayer(e.clientX);
+        });
+        canvas.addEventListener('touchmove', e => {
+            if (isPlaying) {
+                e.preventDefault();
+                movePlayer(e.touches[0].clientX);
+            }
+        }, { passive: false });
+
+        function startGame() {
+            isPlaying = true;
+            score = 0;
+            items = [];
+            scoreEl.innerText = 0;
+            overlay.style.display = 'none';
+            frame = 0;
+            loop();
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            cancelAnimationFrame(animationId);
+            titleEl.innerText = "游戏结束!";
+            subEl.innerText = `最终得分: ${score}`;
+            overlay.style.display = 'flex';
+        }
+
+        function loop() {
+            if (!isPlaying) return;
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Spawn items
+            frame++;
+            if (frame % spawnRate === 0) {
+                const isBomb = Math.random() < 0.2; // 20% bomb
+                const size = 30;
+                items.push({
+                    x: Math.random() * (width - size),
+                    y: -size,
+                    size: size,
+                    type: isBomb ? 'bomb' : 'coin',
+                    speed: 3 + Math.random() * 3 + (score / 50) // Speed up over time
+                });
+                // Increase difficulty
+                if (spawnRate > 20 && frame % 500 === 0) spawnRate -= 5;
+            }
+
+            // Draw Player (Basket)
+            ctx.fillStyle = '#f59e0b'; // Amber-500
+            ctx.beginPath();
+            // Trapezoid shape
+            ctx.moveTo(player.x, player.y);
+            ctx.lineTo(player.x + player.width, player.y);
+            ctx.lineTo(player.x + player.width - 10, player.y + player.height);
+            ctx.lineTo(player.x + 10, player.y + player.height);
+            ctx.closePath();
+            ctx.fill();
+
+            // Update Items
+            for (let i = items.length - 1; i >= 0; i--) {
+                const item = items[i];
+                item.y += item.speed;
+
+                // Draw Item
+                if (item.type === 'coin') {
+                    ctx.fillStyle = '#fbbf24'; // Gold
+                    ctx.beginPath();
+                    ctx.arc(item.x + item.size / 2, item.y + item.size / 2, item.size / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#d97706';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.fillStyle = '#d97706';
+                    ctx.font = '20px Arial';
+                    ctx.fillText('¥', item.x + 10, item.y + 22);
+                } else {
+                    ctx.fillStyle = '#1f2937'; // Black
+                    ctx.beginPath();
+                    ctx.arc(item.x + item.size / 2, item.y + item.size / 2, item.size / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ef4444'; // Red fuse
+                    ctx.fillText('💣', item.x + 2, item.y + 24);
+                }
+
+                // Collision
+                if (
+                    item.y + item.size >= player.y &&
+                    item.y <= player.y + player.height &&
+                    item.x + item.size >= player.x &&
+                    item.x <= player.x + player.width
+                ) {
+                    if (item.type === 'coin') {
+                        score += 10;
+                        scoreEl.innerText = score;
+                        items.splice(i, 1);
+                    } else {
+                        gameOver();
+                        return;
+                    }
+                }
+                // Out of bounds
+                else if (item.y > height) {
+                    items.splice(i, 1);
+                }
+            }
+
+            animationId = requestAnimationFrame(loop);
+        }
+    </script>
+</body>
+
+</html>

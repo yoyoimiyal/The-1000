@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4-7-8 呼吸放松</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .circle-container {
+            position: relative;
+            height: 300px;
+            width: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gradient-circle {
+            background: conic-gradient(#55b9f3 0%, #205c7c 40%, #55b9f3 100%);
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            opacity: 0.3;
+        }
+
+        .pointer-container {
+            position: absolute;
+            top: -40px;
+            left: 140px;
+            width: 20px;
+            height: 190px;
+            transform-origin: bottom center;
+            animation: rotate 19s linear forwards infinite;
+            /* 4+7+8 = 19s per cycle */
+            animation-play-state: paused;
+        }
+
+        .pointer {
+            background-color: #fff;
+            border-radius: 50%;
+            height: 20px;
+            width: 20px;
+            display: block;
+        }
+
+        /* Inner expanding circle */
+        .inner-circle {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-color: #83c5be;
+            position: absolute;
+            z-index: -2;
+            transform: scale(0.3);
+        }
+
+        /* Animations */
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes grow {
+            from {
+                transform: scale(0.3);
+            }
+
+            to {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes shrink {
+            from {
+                transform: scale(1);
+            }
+
+            to {
+                transform: scale(0.3);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-teal-900 min-h-screen flex flex-col items-center justify-center text-white overflow-hidden font-sans">
+
+    <h1 class="text-3xl mb-8 tracking-wider font-light">呼吸放松</h1>
+
+    <div class="circle-container">
+        <div class="inner-circle" id="inner-circle"></div>
+        <div class="pointer-container" id="pointer-container">
+            <span class="pointer"></span>
+        </div>
+        <div class="gradient-circle"></div>
+
+        <p id="text" class="text-xl font-bold absolute pointer-events-none text-center">
+            点击开始
+        </p>
+    </div>
+
+    <p class="mt-12 text-teal-200 max-w-xs text-center text-sm leading-relaxed">
+        4秒吸气 · 7秒憋气 · 8秒呼气<br>
+        帮助您快速缓解焦虑，改善睡眠。
+    </p>
+
+    <div class="mt-8 flex gap-4">
+        <button onclick="toggleApp()" id="btn"
+            class="bg-white text-teal-900 px-8 py-2 rounded-full font-bold hover:bg-teal-100 transition shadow-lg">开始</button>
+        <a href="./navigation.html"
+            class="border border-teal-700 text-teal-300 px-6 py-2 rounded-full font-medium hover:bg-teal-800 transition">退出</a>
+    </div>
+
+    <script>
+        const container = document.getElementById('container');
+        const text = document.getElementById('text');
+        const innerCircle = document.getElementById('inner-circle');
+        const pointerContainer = document.getElementById('pointer-container');
+        const btn = document.getElementById('btn');
+
+        const totalTime = 19000; // 4s + 7s + 8s = 19s
+        const breatheTime = 4000;
+        const holdTime = 7000;
+
+        let isRunning = false;
+        let interval;
+        let timeout1, timeout2;
+
+        function breathAnimation() {
+            text.innerText = '吸气 (Inhale)';
+            innerCircle.style.animation = `grow ${breatheTime}ms linear forwards`;
+
+            timeout1 = setTimeout(() => {
+                text.innerText = '屏气 (Hold)';
+                innerCircle.style.animation = 'none'; // Stop growing
+                innerCircle.style.transform = 'scale(1)'; // Keep size
+
+                timeout2 = setTimeout(() => {
+                    text.innerText = '呼气 (Exhale)';
+                    innerCircle.style.animation = `shrink ${totalTime - breatheTime - holdTime}ms linear forwards`;
+                }, holdTime);
+            }, breatheTime);
+        }
+
+        function toggleApp() {
+            if (isRunning) {
+                // Stop
+                clearInterval(interval);
+                clearTimeout(timeout1);
+                clearTimeout(timeout2);
+
+                text.innerText = '已暂停';
+                btn.innerText = '继续';
+                pointerContainer.style.animationPlayState = 'paused';
+                innerCircle.style.animationPlayState = 'paused';
+                isRunning = false;
+            } else {
+                // Start
+                btn.innerText = '暂停';
+                pointerContainer.style.animationPlayState = 'running';
+                innerCircle.style.animationPlayState = 'running';
+
+                // If starting fresh
+                if (text.innerText === '点击开始' || text.innerText === '已暂停') {
+                    // Reset animations if needed logic could be complex for pause/resume precise timing
+                    // For simplicity, we restart cycle logic here, but visually it might jump if resumed.
+                    // A true pause/resume requires tracking elapsed time. 
+                    // Let's implement a simple "Restart Cycle" behavior for robustness in this mini app.
+
+                    pointerContainer.style.animation = 'none';
+                    pointerContainer.offsetHeight; /* trigger reflow */
+                    pointerContainer.style.animation = `rotate ${totalTime}ms linear forwards infinite`;
+
+                    breathAnimation();
+                    interval = setInterval(breathAnimation, totalTime);
+                }
+
+                isRunning = true;
+            }
+        }
+    </script>
+</body>
+
+</html>

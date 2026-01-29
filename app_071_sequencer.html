@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>808 节奏鼓机</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .step-btn {
+            width: 30px;
+            height: 40px;
+            border-radius: 4px;
+            background-color: #334155;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .step-btn.active {
+            background-color: #f59e0b;
+            box-shadow: 0 0 10px #f59e0b;
+        }
+
+        .step-btn.playing {
+            border: 2px solid white;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4 select-none">
+
+    <div class="bg-slate-800 p-6 rounded-2xl shadow-2xl border border-slate-700 w-full max-w-3xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold tracking-widest text-slate-100 flex items-center gap-2">
+                <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                BEAT MAKER 808
+            </h1>
+            <div class="flex gap-4 items-center">
+                <div class="flex flex-col items-end">
+                    <label class="text-[10px] uppercase font-bold text-slate-500">BPM</label>
+                    <input type="number" id="bpm" value="120"
+                        class="w-16 bg-slate-900 border border-slate-600 rounded px-2 text-center text-sm focus:border-orange-500 outline-none"
+                        onchange="updateBPM(this.value)">
+                </div>
+                <button onclick="togglePlay()" id="play-btn"
+                    class="bg-orange-600 hover:bg-orange-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Sequencer Grid -->
+        <div class="space-y-4 overflow-x-auto pb-4" id="sequencer">
+            <!-- Rows injected by JS -->
+        </div>
+
+        <div class="mt-6 flex justify-between items-center text-xs text-slate-500">
+            <button onclick="clearAll()" class="hover:text-red-400">Clear Pattern</button>
+            <a href="./navigation.html" class="hover:text-white">Exit</a>
+        </div>
+
+    </div>
+
+    <script>
+        const instruments = [
+            { name: 'Kick', color: 'bg-orange-500', freq: 150, type: 'sine', decay: 0.5 },
+            { name: 'Snare', color: 'bg-blue-500', freq: 250, type: 'triangle', decay: 0.2, noise: true },
+            { name: 'HiHat', color: 'bg-yellow-500', freq: 800, type: 'square', decay: 0.05, highpass: true },
+            { name: 'Clap', color: 'bg-pink-500', freq: 400, type: 'sawtooth', decay: 0.1, noise: true }
+        ];
+
+        let steps = 16;
+        let grid = instruments.map(() => Array(steps).fill(false));
+        let isPlaying = false;
+        let currentStep = 0;
+        let bpm = 120;
+        let timerId = null;
+        let audioCtx = null;
+
+        const sequencerEl = document.getElementById('sequencer');
+        const playBtn = document.getElementById('play-btn');
+
+        function init() {
+            sequencerEl.innerHTML = '';
+            instruments.forEach((inst, rowIdx) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-3 min-w-max';
+
+                // Label
+                const label = document.createElement('div');
+                label.className = 'w-16 text-xs font-bold text-slate-400 uppercase text-right';
+                label.innerText = inst.name;
+                row.appendChild(label);
+
+                // Steps
+                for (let i = 0; i < steps; i++) {
+                    const btn = document.createElement('div');
+                    btn.className = `step-btn step-${i}`;
+                    btn.onclick = () => toggleStep(rowIdx, i, btn);
+                    // Add markers for beats (every 4)
+                    if (i % 4 === 0) btn.style.marginLeft = '4px';
+                    row.appendChild(btn);
+                }
+                sequencerEl.appendChild(row);
+            });
+        }
+
+        function toggleStep(row, col, el) {
+            grid[row][col] = !grid[row][col];
+            el.classList.toggle('active');
+        }
+
+        function updateBPM(val) {
+            bpm = Math.max(40, Math.min(300, parseInt(val)));
+            if (isPlaying) {
+                clearInterval(timerId);
+                startLoop();
+            }
+        }
+
+        function togglePlay() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                playBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+                startLoop();
+            } else {
+                playBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg>`;
+                clearInterval(timerId);
+                // Clear visual playhead
+                document.querySelectorAll('.step-btn').forEach(b => b.classList.remove('playing'));
+            }
+        }
+
+        function startLoop() {
+            const interval = (60 / bpm) * 1000 / 4; // 16th notes
+            timerId = setInterval(() => {
+                // Visual Update
+                document.querySelectorAll(`.step-${(currentStep - 1 + steps) % steps}`).forEach(b => b.classList.remove('playing'));
+                document.querySelectorAll(`.step-${currentStep}`).forEach(b => b.classList.add('playing'));
+
+                // Play Sounds
+                grid.forEach((row, instIdx) => {
+                    if (row[currentStep]) {
+                        playSound(instruments[instIdx]);
+                    }
+                });
+
+                currentStep = (currentStep + 1) % steps;
+            }, interval);
+        }
+
+        function playSound(inst) {
+            const t = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (inst.noise) {
+                // Basic noise simulation for Snare/Clap
+                // Just use oscillator for simplicity in this demo to avoid complex buffer generation
+                // A very fast frequency sweep often sounds percussive
+                osc.type = inst.type;
+                osc.frequency.setValueAtTime(inst.freq, t);
+                osc.frequency.exponentialRampToValueAtTime(50, t + inst.decay);
+            } else {
+                osc.type = inst.type;
+                osc.frequency.setValueAtTime(inst.freq, t);
+                if (inst.name === 'Kick') {
+                    osc.frequency.exponentialRampToValueAtTime(50, t + inst.decay);
+                }
+            }
+
+            gain.gain.setValueAtTime(1, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + inst.decay);
+
+            osc.start(t);
+            osc.stop(t + inst.decay);
+        }
+
+        function clearAll() {
+            grid = grid.map(r => r.fill(false));
+            document.querySelectorAll('.step-btn').forEach(b => b.classList.remove('active'));
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

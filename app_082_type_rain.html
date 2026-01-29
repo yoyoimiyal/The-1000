@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雨滴打字</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .rain-drop {
+            position: absolute;
+            color: #bae6fd;
+            /* sky-200 */
+            font-weight: bold;
+            font-family: monospace;
+            text-shadow: 0 0 5px #0ea5e9;
+            transition: top 0.1s linear;
+            white-space: nowrap;
+        }
+
+        .rain-drop.highlight {
+            color: white;
+            text-shadow: 0 0 10px white;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 overflow-hidden h-screen w-screen flex flex-col font-sans">
+
+    <!-- Header -->
+    <div class="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-10 text-white">
+        <div>
+            <h1 class="font-bold text-xl">Type Rain</h1>
+            <p class="text-xs text-sky-400">Score: <span id="score" class="font-bold text-lg text-white">0</span> |
+                Lives: <span id="lives">❤️❤️❤️</span></p>
+        </div>
+        <a href="./navigation.html"
+            class="text-sm text-slate-500 hover:text-white border border-slate-700 px-3 py-1 rounded">退出</a>
+    </div>
+
+    <!-- Game Area -->
+    <div id="game-area" class="relative flex-1 border-b-4 border-sky-900">
+
+        <!-- Start Screen -->
+        <div id="start-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 z-20">
+            <h2 class="text-4xl font-bold text-white mb-2">准备好了吗？</h2>
+            <p class="text-slate-400 mb-8">单词将从空中落下，在触底前输入它们。</p>
+            <button onclick="startGame()"
+                class="px-8 py-3 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-full shadow-lg transition transform hover:scale-105">
+                开始游戏
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Input -->
+    <div class="h-16 bg-slate-800 flex items-center justify-center relative z-20">
+        <input type="text" id="input-field"
+            class="w-full h-full bg-transparent text-center text-2xl text-white outline-none font-mono uppercase tracking-widest"
+            placeholder="TYPE HERE" autofocus onblur="this.focus()">
+    </div>
+
+    <script>
+        const words = ["CODE", "JAVA", "HTML", "CSS", "NODE", "REACT", "VUE", "WEB", "APP", "DATA", "API", "GIT", "LINUX", "CLOUD", "BYTE", "PIXEL", "LOOP", "IF", "ELSE", "VOID", "NULL", "TRUE", "FALSE", "ARRAY", "LIST", "MAP", "SET", "TREE", "GRAPH", "HEAP", "STACK", "QUEUE"];
+
+        const gameArea = document.getElementById('game-area');
+        const inputField = document.getElementById('input-field');
+        const scoreEl = document.getElementById('score');
+        const livesEl = document.getElementById('lives');
+        const startOverlay = document.getElementById('start-overlay');
+
+        let activeDrops = []; // { el, word, x, y, speed }
+        let score = 0;
+        let lives = 3;
+        let isPlaying = false;
+        let spawnRate = 2000; // ms
+        let spawnTimer;
+        let gameLoop;
+        let speedMultiplier = 1;
+
+        function startGame() {
+            score = 0;
+            lives = 3;
+            speedMultiplier = 1;
+            spawnRate = 2000;
+            activeDrops = [];
+            gameArea.innerHTML = ''; // Clear old
+
+            scoreEl.innerText = 0;
+            updateLives();
+
+            startOverlay.classList.add('hidden');
+            isPlaying = true;
+            inputField.value = '';
+            inputField.focus();
+
+            spawnDrop();
+            gameLoop = requestAnimationFrame(update);
+        }
+
+        function spawnDrop() {
+            if (!isPlaying) return;
+
+            const word = words[Math.floor(Math.random() * words.length)];
+            const el = document.createElement('div');
+            el.className = 'rain-drop';
+            el.innerText = word;
+
+            const maxX = gameArea.clientWidth - 100;
+            const x = Math.random() * maxX + 20;
+
+            el.style.left = x + 'px';
+            el.style.top = '-30px';
+
+            gameArea.appendChild(el);
+
+            activeDrops.push({
+                el: el,
+                word: word,
+                x: x,
+                y: -30,
+                speed: (1 + Math.random()) * speedMultiplier
+            });
+
+            // Schedule next spawn
+            spawnTimer = setTimeout(spawnDrop, spawnRate);
+
+            // Increase difficulty
+            if (spawnRate > 500) spawnRate -= 20;
+            speedMultiplier += 0.05;
+        }
+
+        function update() {
+            if (!isPlaying) return;
+
+            // Move drops
+            for (let i = activeDrops.length - 1; i >= 0; i--) {
+                const drop = activeDrops[i];
+                drop.y += drop.speed;
+                drop.el.style.top = drop.y + 'px';
+
+                // Hit Bottom
+                if (drop.y > gameArea.clientHeight - 20) {
+                    drop.el.remove();
+                    activeDrops.splice(i, 1);
+                    lives--;
+                    updateLives();
+                    if (lives <= 0) {
+                        gameOver();
+                        return;
+                    }
+                }
+            }
+
+            gameLoop = requestAnimationFrame(update);
+        }
+
+        inputField.addEventListener('input', () => {
+            const val = inputField.value.toUpperCase();
+
+            // Check matches
+            // We prioritize the lowest matching drop? Or just any match?
+            // Let's find index of match
+            const matchIndex = activeDrops.findIndex(d => d.word === val);
+
+            if (matchIndex !== -1) {
+                // Hit!
+                const drop = activeDrops[matchIndex];
+
+                // Visual FX
+                drop.el.classList.add('highlight');
+                drop.el.style.transform = 'scale(1.5)';
+                drop.el.style.opacity = '0';
+
+                setTimeout(() => drop.el.remove(), 200);
+                activeDrops.splice(matchIndex, 1);
+
+                score += 10;
+                scoreEl.innerText = score;
+                inputField.value = '';
+            }
+        });
+
+        function updateLives() {
+            let hearts = "";
+            for (let i = 0; i < lives; i++) hearts += "❤️";
+            livesEl.innerText = hearts;
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            clearTimeout(spawnTimer);
+            cancelAnimationFrame(gameLoop);
+
+            startOverlay.classList.remove('hidden');
+            startOverlay.innerHTML = `
+                <h2 class="text-4xl font-bold text-red-500 mb-2">游戏结束</h2>
+                <p class="text-white mb-8">最终得分: ${score}</p>
+                <button onclick="startGame()" class="px-8 py-3 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-full shadow-lg transition">再来一次</button>
+            `;
+        }
+    </script>
+</body>
+
+</html>

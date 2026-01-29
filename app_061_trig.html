@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交互式单位圆</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .math-font {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-4 select-none">
+
+    <div class="bg-white p-6 rounded-3xl shadow-xl w-full max-w-4xl flex flex-col md:flex-row gap-8 items-center">
+
+        <!-- Left: Visualization -->
+        <div class="relative w-[300px] h-[300px] sm:w-[400px] sm:h-[400px] bg-slate-50 rounded-full border border-slate-200 shadow-inner flex items-center justify-center cursor-crosshair"
+            id="circle-container" onmousemove="handleMove(event)" ontouchmove="handleMove(event)">
+
+            <!-- Axis -->
+            <div class="absolute w-full h-px bg-slate-300"></div>
+            <div class="absolute h-full w-px bg-slate-300"></div>
+
+            <!-- Circle SVG Layer -->
+            <svg class="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+                <!-- Unit Circle -->
+                <circle cx="50%" cy="50%" r="40%" fill="none" stroke="#94a3b8" stroke-width="2" />
+
+                <!-- Triangle Lines -->
+                <line id="line-hyp" x1="50%" y1="50%" x2="50%" y2="50%" stroke="#1e293b" stroke-width="2" />
+                <!-- Radius -->
+                <line id="line-cos" x1="50%" y1="50%" x2="50%" y2="50%" stroke="#3b82f6" stroke-width="3" />
+                <!-- Cos (Blue) -->
+                <line id="line-sin" x1="50%" y1="50%" x2="50%" y2="50%" stroke="#ef4444" stroke-width="3" />
+                <!-- Sin (Red) -->
+
+                <!-- Angle Arc -->
+                <path id="angle-arc" d="" fill="rgba(99, 102, 241, 0.2)" stroke="#6366f1" />
+
+                <!-- Point -->
+                <circle id="point" cx="50%" cy="50%" r="6" fill="#1e293b" />
+            </svg>
+
+            <!-- Labels -->
+            <div class="absolute top-1/2 right-2 text-xs text-slate-400">0°</div>
+            <div class="absolute top-2 left-1/2 text-xs text-slate-400">90°</div>
+            <div class="absolute bottom-1/2 left-2 text-xs text-slate-400">180°</div>
+            <div class="absolute bottom-2 left-1/2 text-xs text-slate-400">270°</div>
+
+        </div>
+
+        <!-- Right: Data -->
+        <div class="w-full md:w-64 space-y-6">
+
+            <div class="text-center md:text-left">
+                <h1 class="text-2xl font-bold text-slate-800">Trigonometry</h1>
+                <p class="text-slate-500 text-sm">Unit Circle Visualization</p>
+            </div>
+
+            <!-- Values -->
+            <div class="bg-slate-100 p-4 rounded-xl space-y-3 font-mono">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-500 text-sm">θ (Deg)</span>
+                    <span class="text-xl font-bold text-slate-800" id="val-deg">0°</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-500 text-sm">θ (Rad)</span>
+                    <span class="text-sm font-bold text-slate-600" id="val-rad">0π</span>
+                </div>
+                <div class="h-px bg-slate-200 my-2"></div>
+                <div class="flex justify-between items-center text-red-500">
+                    <span class="math-font">sin(θ)</span>
+                    <span class="font-bold" id="val-sin">0.000</span>
+                </div>
+                <div class="flex justify-between items-center text-blue-500">
+                    <span class="math-font">cos(θ)</span>
+                    <span class="font-bold" id="val-cos">1.000</span>
+                </div>
+                <div class="flex justify-between items-center text-emerald-600">
+                    <span class="math-font">tan(θ)</span>
+                    <span class="font-bold" id="val-tan">0.000</span>
+                </div>
+            </div>
+
+            <div class="text-xs text-slate-400 leading-relaxed">
+                <p>提示：在圆上移动鼠标或手指以改变角度。</p>
+            </div>
+
+            <a href="./navigation.html"
+                class="block text-center text-sm text-slate-400 hover:text-indigo-600 underline">返回导航</a>
+
+        </div>
+
+    </div>
+
+    <script>
+        const container = document.getElementById('circle-container');
+        const point = document.getElementById('point');
+        const lineHyp = document.getElementById('line-hyp'); // Radius
+        const lineCos = document.getElementById('line-cos'); // X
+        const lineSin = document.getElementById('line-sin'); // Y
+        const angleArc = document.getElementById('angle-arc');
+
+        // Data Display
+        const valDeg = document.getElementById('val-deg');
+        const valRad = document.getElementById('val-rad');
+        const valSin = document.getElementById('val-sin');
+        const valCos = document.getElementById('val-cos');
+        const valTan = document.getElementById('val-tan');
+
+        const radius = 40; // in % (match svg r=40%)
+
+        function update(angleRad) {
+            // Normalize angle 0 to 2PI
+            if (angleRad < 0) angleRad += 2 * Math.PI;
+
+            const sin = Math.sin(angleRad);
+            const cos = Math.cos(angleRad);
+            const tan = Math.tan(angleRad);
+            const deg = angleRad * (180 / Math.PI);
+
+            // Update Text
+            valDeg.innerText = deg.toFixed(0) + "°";
+            valRad.innerText = (angleRad / Math.PI).toFixed(2) + "π";
+            valSin.innerText = sin.toFixed(3);
+            valCos.innerText = cos.toFixed(3);
+            valTan.innerText = Math.abs(tan) > 100 ? "∞" : tan.toFixed(3);
+
+            // Update Graphics (50% is center)
+            const cx = 50;
+            const cy = 50;
+            const px = cx + cos * radius; // x pos in %
+            const py = cy - sin * radius; // y pos in % (svg y is down)
+
+            // Point
+            point.setAttribute('cx', px + '%');
+            point.setAttribute('cy', py + '%');
+
+            // Radius Line
+            lineHyp.setAttribute('x2', px + '%');
+            lineHyp.setAttribute('y2', py + '%');
+
+            // Cosine Line (Blue, Horizontal) projection on x axis
+            // From center (50, 50) to (px, 50)
+            lineCos.setAttribute('x1', '50%');
+            lineCos.setAttribute('y1', '50%');
+            lineCos.setAttribute('x2', px + '%');
+            lineCos.setAttribute('y2', '50%');
+
+            // Sine Line (Red, Vertical) projection from point down to x axis
+            // From (px, py) to (px, 50)
+            lineSin.setAttribute('x1', px + '%');
+            lineSin.setAttribute('y1', py + '%');
+            lineSin.setAttribute('x2', px + '%');
+            lineSin.setAttribute('y2', '50%');
+
+            // Arc (Simplified)
+            // Need to convert to cartesian for SVG path A command
+            // Or simpler: just use a small circle if we don't want complex arc drawing logic
+            // Let's omit complex arc path for brevity in this mini app, or keep it static?
+            // Actually simple arc logic:
+            // Move to start (r, 0), Arc to (x, y)
+            // But need absolute coordinates for path. 
+            // Let's skip drawing the arc path dynamically to keep code clean and robust.
+        }
+
+        function handleMove(e) {
+            e.preventDefault(); // Stop scroll on touch
+            const rect = container.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+
+            const dx = clientX - centerX;
+            const dy = centerY - clientY; // Invert Y because screen coords y is down
+
+            const angle = Math.atan2(dy, dx); // -PI to PI
+            update(angle);
+        }
+
+        // Init at 45 deg
+        update(Math.PI / 4);
+
+    </script>
+</body>
+
+</html>

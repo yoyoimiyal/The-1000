@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>合成器架子鼓</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .drum-pad {
+            transition: all 0.1s;
+            user-select: none;
+        }
+
+        .drum-pad:active,
+        .drum-pad.active {
+            transform: scale(0.95);
+            box-shadow: 0 0 15px currentColor;
+        }
+
+        .glow-text {
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 min-h-screen flex flex-col items-center justify-center text-white">
+
+    <div class="mb-8 text-center">
+        <h1 class="text-4xl font-bold mb-2 glow-text tracking-wider">DRUM SYNTH</h1>
+        <p class="text-slate-400 text-sm">键盘 (A, S, D, F) 或 点击打击垫</p>
+    </div>
+
+    <!-- Drum Pads -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 p-6 bg-slate-800 rounded-3xl border border-slate-700 shadow-2xl">
+
+        <!-- Kick -->
+        <div class="drum-pad w-32 h-32 bg-gradient-to-br from-rose-500 to-red-700 rounded-2xl flex flex-col items-center justify-center cursor-pointer shadow-lg text-rose-200"
+            onclick="playKick()" id="pad-a">
+            <span class="text-3xl font-bold">A</span>
+            <span class="text-xs uppercase mt-1">Kick</span>
+        </div>
+
+        <!-- Snare -->
+        <div class="drum-pad w-32 h-32 bg-gradient-to-br from-amber-400 to-orange-600 rounded-2xl flex flex-col items-center justify-center cursor-pointer shadow-lg text-amber-100"
+            onclick="playSnare()" id="pad-s">
+            <span class="text-3xl font-bold">S</span>
+            <span class="text-xs uppercase mt-1">Snare</span>
+        </div>
+
+        <!-- Hi-Hat Closed -->
+        <div class="drum-pad w-32 h-32 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-2xl flex flex-col items-center justify-center cursor-pointer shadow-lg text-cyan-100"
+            onclick="playHiHat()" id="pad-d">
+            <span class="text-3xl font-bold">D</span>
+            <span class="text-xs uppercase mt-1">Hi-Hat</span>
+        </div>
+
+        <!-- Tom -->
+        <div class="drum-pad w-32 h-32 bg-gradient-to-br from-purple-400 to-indigo-600 rounded-2xl flex flex-col items-center justify-center cursor-pointer shadow-lg text-purple-100"
+            onclick="playTom()" id="pad-f">
+            <span class="text-3xl font-bold">F</span>
+            <span class="text-xs uppercase mt-1">Tom</span>
+        </div>
+
+    </div>
+
+    <div class="mt-8 text-center">
+        <button onclick="startAudioContext()"
+            class="mb-4 text-xs bg-slate-700 px-3 py-1 rounded text-slate-300 hover:bg-slate-600">如果没声音，请先点击这里激活音频</button>
+        <br>
+        <a href="./navigation.html" class="text-slate-500 hover:text-white text-sm underline">返回导航</a>
+    </div>
+
+    <script>
+        // Web Audio API Context
+        let audioCtx;
+
+        function startAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            } else if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // --- Synthesizers ---
+
+        function playKick() {
+            startAudioContext();
+            highlight('pad-a');
+
+            const t = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.frequency.setValueAtTime(150, t);
+            osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.5);
+
+            gain.gain.setValueAtTime(1, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+
+            osc.start(t);
+            osc.stop(t + 0.5);
+        }
+
+        function playSnare() {
+            startAudioContext();
+            highlight('pad-s');
+            const t = audioCtx.currentTime;
+
+            // Noise for snare rattle
+            const bufferSize = audioCtx.sampleRate * 0.2; // 0.2 seconds
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const noiseFilter = audioCtx.createBiquadFilter();
+            noiseFilter.type = 'highpass';
+            noiseFilter.frequency.value = 1000;
+            const noiseGain = audioCtx.createGain();
+
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(audioCtx.destination);
+
+            noiseGain.gain.setValueAtTime(1, t);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+            noise.start(t);
+
+            // Oscillator for snare body
+            const osc = audioCtx.createOscillator();
+            const oscGain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.connect(oscGain);
+            oscGain.connect(audioCtx.destination);
+
+            osc.frequency.setValueAtTime(100, t);
+            oscGain.gain.setValueAtTime(0.5, t); // Lower volume than kick
+            oscGain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+
+            osc.start(t);
+            osc.stop(t + 0.2);
+        }
+
+        function playHiHat() {
+            startAudioContext();
+            highlight('pad-d');
+            const t = audioCtx.currentTime;
+
+            // High freq noise
+            const bufferSize = audioCtx.sampleRate * 0.1;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+
+            const bandpass = audioCtx.createBiquadFilter();
+            bandpass.type = 'bandpass';
+            bandpass.frequency.value = 10000;
+
+            const highpass = audioCtx.createBiquadFilter();
+            highpass.type = 'highpass';
+            highpass.frequency.value = 7000;
+
+            const gain = audioCtx.createGain();
+
+            noise.connect(bandpass);
+            bandpass.connect(highpass);
+            highpass.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            gain.gain.setValueAtTime(0.6, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+
+            noise.start(t);
+        }
+
+        function playTom() {
+            startAudioContext();
+            highlight('pad-f');
+            const t = audioCtx.currentTime;
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.frequency.setValueAtTime(200, t);
+            osc.frequency.exponentialRampToValueAtTime(50, t + 0.5);
+
+            gain.gain.setValueAtTime(0.8, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+
+            osc.start(t);
+            osc.stop(t + 0.5);
+        }
+
+        // --- Interaction ---
+
+        function highlight(id) {
+            const el = document.getElementById(id);
+            el.classList.add('active');
+            setTimeout(() => el.classList.remove('active'), 100);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            if (key === 'a') playKick();
+            if (key === 's') playSnare();
+            if (key === 'd') playHiHat();
+            if (key === 'f') playTom();
+        });
+    </script>
+</body>
+
+</html>

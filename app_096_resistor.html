@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电阻色环计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .band-selector {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.1s;
+        }
+
+        .band-selector:hover {
+            transform: scale(1.1);
+        }
+
+        .band-selector.selected {
+            border-color: white;
+            box-shadow: 0 0 0 2px #3b82f6;
+        }
+
+        .resistor-body {
+            background: linear-gradient(to bottom, #feca57, #eec046, #feca57);
+            border-radius: 50px;
+            position: relative;
+            box-shadow: inset 0 -5px 10px rgba(0, 0, 0, 0.1), 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .wire {
+            height: 8px;
+            background: #9ca3af;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: -1;
+        }
+
+        .band {
+            height: 100%;
+            width: 15px;
+            position: absolute;
+            top: 0;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex flex-col items-center justify-center p-4 select-none">
+
+    <div class="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
+
+        <header class="flex justify-between items-center mb-10">
+            <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <span class="text-3xl">🔌</span> Resistor Calc
+            </h1>
+            <div class="flex gap-2 bg-slate-100 p-1 rounded-lg">
+                <button onclick="setMode(4)" id="mode-4"
+                    class="px-4 py-1 rounded-md text-sm font-bold bg-white shadow text-slate-800 transition">4
+                    环</button>
+                <button onclick="setMode(5)" id="mode-5"
+                    class="px-4 py-1 rounded-md text-sm font-bold text-slate-500 hover:bg-white transition">5 环</button>
+            </div>
+        </header>
+
+        <!-- Visual Representation -->
+        <div class="relative h-32 flex items-center justify-center mb-10">
+            <div class="wire w-full"></div>
+            <div class="resistor-body w-64 h-24 relative overflow-hidden flex justify-between px-8 py-0">
+                <!-- Bands -->
+                <div id="band-1" class="band" style="background-color: brown; left: 40px;"></div>
+                <div id="band-2" class="band" style="background-color: black; left: 80px;"></div>
+                <div id="band-3" class="band hidden" style="background-color: black; left: 110px;"></div>
+                <!-- 5-band only -->
+                <div id="band-mul" class="band" style="background-color: red; left: 140px;"></div>
+                <div id="band-tol" class="band" style="background-color: gold; right: 40px;"></div>
+            </div>
+        </div>
+
+        <!-- Result -->
+        <div class="text-center mb-10">
+            <div class="text-5xl font-bold text-slate-800 mb-2">
+                <span id="result-val">1000</span> <span id="result-unit">Ω</span>
+            </div>
+            <div class="text-slate-500 font-medium">
+                误差 ±<span id="result-tol">5%</span>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="grid grid-cols-4 gap-4" id="controls-grid">
+            <!-- Injected by JS -->
+        </div>
+
+        <div class="mt-8 text-center">
+            <a href="./navigation.html" class="text-xs text-slate-400 hover:text-indigo-600">退出</a>
+        </div>
+
+    </div>
+
+    <script>
+        const colors = [
+            { name: 'Black', hex: '#000000', val: 0, mul: 1 },
+            { name: 'Brown', hex: '#8B4513', val: 1, mul: 10, tol: 1 },
+            { name: 'Red', hex: '#FF0000', val: 2, mul: 100, tol: 2 },
+            { name: 'Orange', hex: '#FFA500', val: 3, mul: 1000 },
+            { name: 'Yellow', hex: '#FFFF00', val: 4, mul: 10000 },
+            { name: 'Green', hex: '#008000', val: 5, mul: 100000, tol: 0.5 },
+            { name: 'Blue', hex: '#0000FF', val: 6, mul: 1000000, tol: 0.25 },
+            { name: 'Violet', hex: '#EE82EE', val: 7, mul: 10000000, tol: 0.1 },
+            { name: 'Gray', hex: '#808080', val: 8, tol: 0.05 },
+            { name: 'White', hex: '#FFFFFF', val: 9 },
+            { name: 'Gold', hex: '#FFD700', mul: 0.1, tol: 5 },
+            { name: 'Silver', hex: '#C0C0C0', mul: 0.01, tol: 10 }
+        ];
+
+        let mode = 4;
+        let bands = [1, 0, 0, 2, 10]; // Indices in colors array. [Band1, Band2, Band3, Multiplier, Tolerance]
+        // Default 4-band: Brown(1), Black(0), x100(Red,2), 5%(Gold,10) -> 10 * 100 = 1k
+
+        function setMode(m) {
+            mode = m;
+            document.getElementById('mode-4').className = m === 4 ? "px-4 py-1 rounded-md text-sm font-bold bg-white shadow text-slate-800 transition" : "px-4 py-1 rounded-md text-sm font-bold text-slate-500 hover:bg-white transition";
+            document.getElementById('mode-5').className = m === 5 ? "px-4 py-1 rounded-md text-sm font-bold bg-white shadow text-slate-800 transition" : "px-4 py-1 rounded-md text-sm font-bold text-slate-500 hover:bg-white transition";
+
+            const b3 = document.getElementById('band-3');
+            const mul = document.getElementById('band-mul');
+
+            if (m === 5) {
+                b3.classList.remove('hidden');
+                mul.style.left = '160px'; // Shift multiplier
+            } else {
+                b3.classList.add('hidden');
+                mul.style.left = '140px';
+            }
+            renderControls();
+            calculate();
+        }
+
+        function calculate() {
+            const c1 = colors[bands[0]];
+            const c2 = colors[bands[1]];
+            const c3 = colors[bands[2]]; // Only for 5-band
+            const cm = colors[bands[3]];
+            const ct = colors[bands[4]];
+
+            // Update visual bands
+            document.getElementById('band-1').style.backgroundColor = c1.hex;
+            document.getElementById('band-2').style.backgroundColor = c2.hex;
+            document.getElementById('band-3').style.backgroundColor = c3.hex;
+            document.getElementById('band-mul').style.backgroundColor = cm.hex;
+            document.getElementById('band-tol').style.backgroundColor = ct.hex;
+
+            let ohms = 0;
+            if (mode === 4) {
+                ohms = ((c1.val * 10) + c2.val) * cm.mul;
+            } else {
+                ohms = ((c1.val * 100) + (c2.val * 10) + c3.val) * cm.mul;
+            }
+
+            // Format output
+            let unit = 'Ω';
+            let val = ohms;
+            if (ohms >= 1000000) {
+                val = ohms / 1000000;
+                unit = 'MΩ';
+            } else if (ohms >= 1000) {
+                val = ohms / 1000;
+                unit = 'kΩ';
+            }
+
+            // Fix float precision issues (e.g. 4.70000000000000001)
+            val = parseFloat(val.toPrecision(4));
+
+            document.getElementById('result-val').innerText = val;
+            document.getElementById('result-unit').innerText = unit;
+            document.getElementById('result-tol').innerText = (ct.tol || 20) + '%';
+        }
+
+        function selectColor(bandIndex, colorIndex) {
+            bands[bandIndex] = colorIndex;
+            calculate();
+            renderControls(); // To update selection ring
+        }
+
+        function renderControls() {
+            const grid = document.getElementById('controls-grid');
+            grid.innerHTML = '';
+
+            // Define columns
+            const cols = mode === 4
+                ? ['Band 1', 'Band 2', 'Multiplier', 'Tolerance']
+                : ['Band 1', 'Band 2', 'Band 3', 'Multiplier', 'Tolerance'];
+
+            grid.style.gridTemplateColumns = `repeat(${cols.length}, 1fr)`;
+
+            // Render headers
+            cols.forEach(title => {
+                const h = document.createElement('div');
+                h.className = 'text-xs font-bold text-slate-400 uppercase text-center mb-2';
+                h.innerText = title;
+                grid.appendChild(h);
+            });
+
+            // Render columns
+            cols.forEach((_, colIdx) => {
+                const colDiv = document.createElement('div');
+                colDiv.className = 'flex flex-col gap-2 items-center';
+
+                // Map logical colIdx to bands array index
+                // 4-band: 0, 1, 3, 4 (skip 2)
+                // 5-band: 0, 1, 2, 3, 4
+                let bandIdx = colIdx;
+                if (mode === 4 && colIdx >= 2) bandIdx = colIdx + 1;
+
+                colors.forEach((c, cIdx) => {
+                    // Filter valid colors for this position
+                    let isValid = true;
+                    if (colIdx === cols.length - 1) { // Tolerance
+                        if (c.tol === undefined) isValid = false;
+                    } else if (colIdx === cols.length - 2) { // Multiplier
+                        if (c.mul === undefined) isValid = false;
+                    } else { // Digit bands
+                        if (c.val === undefined) isValid = false;
+                    }
+
+                    if (isValid) {
+                        const btn = document.createElement('div');
+                        btn.className = `band-selector ${bands[bandIdx] === cIdx ? 'selected' : ''}`;
+                        btn.style.backgroundColor = c.hex;
+                        btn.title = c.name;
+                        btn.onclick = () => selectColor(bandIdx, cIdx);
+                        colDiv.appendChild(btn);
+                    } else {
+                        // Spacer
+                        const spacer = document.createElement('div');
+                        spacer.className = "w-10 h-10";
+                        colDiv.appendChild(spacer);
+                    }
+                });
+                grid.appendChild(colDiv);
+            });
+        }
+
+        // Init
+        setMode(4);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片滤镜工坊</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #4f46e5;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #e2e8f0;
+            border-radius: 2px;
+        }
+
+        #preview-container {
+            background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col md:flex-row">
+
+    <!-- Sidebar Controls -->
+    <div
+        class="w-full md:w-80 bg-white border-r border-slate-200 p-6 flex flex-col h-auto md:h-screen overflow-y-auto shrink-0 z-10">
+        <h1 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Filter Lab
+        </h1>
+
+        <!-- File Input -->
+        <div class="mb-8">
+            <label
+                class="block w-full text-center px-4 py-3 bg-indigo-50 text-indigo-600 rounded-lg cursor-pointer hover:bg-indigo-100 transition font-medium border border-indigo-100">
+                <span>📁 选择图片</span>
+                <input type="file" class="hidden" accept="image/*" onchange="loadImage(event)">
+            </label>
+        </div>
+
+        <!-- Sliders -->
+        <div class="space-y-6 flex-1">
+
+            <div class="filter-group">
+                <div class="flex justify-between text-xs font-bold text-slate-500 uppercase mb-1">
+                    <span>亮度 (Brightness)</span>
+                    <span id="val-brightness">100%</span>
+                </div>
+                <input type="range" min="0" max="200" value="100" class="w-full"
+                    oninput="updateFilter('brightness', this.value, '%')">
+            </div>
+
+            <div class="filter-group">
+                <div class="flex justify-between text-xs font-bold text-slate-500 uppercase mb-1">
+                    <span>对比度 (Contrast)</span>
+                    <span id="val-contrast">100%</span>
+                </div>
+                <input type="range" min="0" max="200" value="100" class="w-full"
+                    oninput="updateFilter('contrast', this.value, '%')">
+            </div>
+
+            <div class="filter-group">
+                <div class="flex justify-between text-xs font-bold text-slate-500 uppercase mb-1">
+                    <span>灰度 (Grayscale)</span>
+                    <span id="val-grayscale">0%</span>
+                </div>
+                <input type="range" min="0" max="100" value="0" class="w-full"
+                    oninput="updateFilter('grayscale', this.value, '%')">
+            </div>
+
+            <div class="filter-group">
+                <div class="flex justify-between text-xs font-bold text-slate-500 uppercase mb-1">
+                    <span>褐色 (Sepia)</span>
+                    <span id="val-sepia">0%</span>
+                </div>
+                <input type="range" min="0" max="100" value="0" class="w-full"
+                    oninput="updateFilter('sepia', this.value, '%')">
+            </div>
+
+            <div class="filter-group">
+                <div class="flex justify-between text-xs font-bold text-slate-500 uppercase mb-1">
+                    <span>模糊 (Blur)</span>
+                    <span id="val-blur">0px</span>
+                </div>
+                <input type="range" min="0" max="10" value="0" step="0.5" class="w-full"
+                    oninput="updateFilter('blur', this.value, 'px')">
+            </div>
+
+            <div class="filter-group">
+                <div class="flex justify-between text-xs font-bold text-slate-500 uppercase mb-1">
+                    <span>色相 (Hue)</span>
+                    <span id="val-hue-rotate">0deg</span>
+                </div>
+                <input type="range" min="0" max="360" value="0" class="w-full"
+                    oninput="updateFilter('hue-rotate', this.value, 'deg')">
+            </div>
+
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-8 pt-6 border-t border-slate-100 flex gap-2">
+            <button onclick="resetFilters()"
+                class="flex-1 px-4 py-2 border border-slate-200 rounded text-slate-600 text-sm font-medium hover:bg-slate-50">重置</button>
+            <button onclick="downloadImage()"
+                class="flex-1 px-4 py-2 bg-indigo-600 rounded text-white text-sm font-medium hover:bg-indigo-700 shadow-sm">下载</button>
+        </div>
+
+        <a href="./navigation.html" class="block text-center mt-4 text-xs text-slate-400 hover:text-indigo-500">返回导航</a>
+    </div>
+
+    <!-- Main Preview -->
+    <div id="preview-container"
+        class="flex-1 bg-slate-100 flex items-center justify-center p-8 overflow-hidden relative">
+        <div class="relative shadow-2xl">
+            <img id="preview"
+                src="https://images.unsplash.com/photo-1517849845537-4d257902454a?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+                alt="Preview" class="max-w-full max-h-[80vh] object-contain block transition-all duration-200">
+            <!-- Canvas for export -->
+            <canvas id="canvas" class="hidden"></canvas>
+        </div>
+        <div id="placeholder-text" class="absolute inset-0 flex items-center justify-center pointer-events-none hidden">
+            <span class="text-slate-400 font-bold text-xl">请先上传图片</span>
+        </div>
+    </div>
+
+    <script>
+        const filters = {
+            brightness: { val: 100, unit: '%' },
+            contrast: { val: 100, unit: '%' },
+            grayscale: { val: 0, unit: '%' },
+            sepia: { val: 0, unit: '%' },
+            blur: { val: 0, unit: 'px' },
+            'hue-rotate': { val: 0, unit: 'deg' }
+        };
+
+        const img = document.getElementById('preview');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updateFilter(name, value, unit) {
+            filters[name].val = value;
+            document.getElementById(`val-${name}`).innerText = value + unit;
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const filterString = Object.entries(filters)
+                .map(([key, data]) => `${key}(${data.val}${data.unit})`)
+                .join(' ');
+            img.style.filter = filterString;
+        }
+
+        function resetFilters() {
+            // Reset state
+            filters.brightness.val = 100;
+            filters.contrast.val = 100;
+            filters.grayscale.val = 0;
+            filters.sepia.val = 0;
+            filters.blur.val = 0;
+            filters['hue-rotate'].val = 0;
+
+            // Reset Inputs
+            document.querySelectorAll('input[type=range]').forEach(input => {
+                const name = input.getAttribute('oninput').match(/'(.*?)'/)[1];
+                input.value = filters[name].val;
+                document.getElementById(`val-${name}`).innerText = filters[name].val + filters[name].unit;
+            });
+
+            applyFilters();
+        }
+
+        function downloadImage() {
+            // Setup canvas
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+
+            // Apply filters to context
+            const filterString = Object.entries(filters)
+                .map(([key, data]) => `${key}(${data.val}${data.unit})`)
+                .join(' ');
+
+            ctx.filter = filterString;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            // Download
+            const link = document.createElement('a');
+            link.download = 'edited-image.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+
+</html>

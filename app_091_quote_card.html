@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>名言卡片生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@700&display=swap"
+        rel="stylesheet">
+    <style>
+        .font-art {
+            font-family: 'Ma Shan Zheng', cursive;
+        }
+
+        .font-serif-sc {
+            font-family: 'Noto Serif SC', serif;
+        }
+
+        .gradient-bg-1 {
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+        }
+
+        .gradient-bg-2 {
+            background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+        }
+
+        .gradient-bg-3 {
+            background: linear-gradient(120deg, #fccb90 0%, #d57eeb 100%);
+        }
+
+        .gradient-bg-4 {
+            background: linear-gradient(to top, #30cfd0 0%, #330867 100%);
+            color: white;
+        }
+
+        .gradient-bg-5 {
+            background: linear-gradient(to right, #434343 0%, black 100%);
+            color: white;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6">
+
+    <header class="w-full max-w-2xl flex justify-between items-center mb-8">
+        <h1 class="text-2xl font-bold text-gray-800">Quote Card</h1>
+        <a href="./navigation.html" class="text-sm text-gray-400 hover:text-gray-600">退出</a>
+    </header>
+
+    <div class="flex flex-col md:flex-row gap-8 w-full max-w-4xl items-start">
+
+        <!-- Preview Area -->
+        <div class="flex-1 w-full flex justify-center">
+            <div id="card-preview"
+                class="w-80 h-[480px] shadow-2xl p-8 flex flex-col justify-between relative overflow-hidden transition-all duration-300 gradient-bg-1 text-gray-800">
+                <!-- Watermark -->
+                <div class="absolute top-4 right-4 opacity-20 text-4xl">❝</div>
+
+                <div class="flex-1 flex items-center justify-center">
+                    <p id="quote-text" class="text-2xl font-serif-sc leading-relaxed text-center">
+                        生活不是等待风暴过去，而是学会在雨中翩翩起舞。
+                    </p>
+                </div>
+
+                <div class="text-right mt-6">
+                    <div class="w-8 h-1 bg-current mb-2 ml-auto opacity-50"></div>
+                    <p id="quote-author" class="text-sm font-bold opacity-80">—— 佚名</p>
+                </div>
+
+                <div
+                    class="absolute bottom-2 left-0 w-full text-center text-[10px] opacity-40 font-mono tracking-widest">
+                    DAILY QUOTE
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="w-full md:w-80 bg-white p-6 rounded-2xl shadow-sm space-y-6">
+
+            <div>
+                <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">内容</label>
+                <div class="flex gap-2">
+                    <button onclick="randomQuote()"
+                        class="flex-1 bg-indigo-50 text-indigo-600 py-2 rounded-lg text-sm font-bold hover:bg-indigo-100 transition">随机名言</button>
+                    <button onclick="editMode()"
+                        class="flex-1 bg-gray-50 text-gray-600 py-2 rounded-lg text-sm font-bold hover:bg-gray-100 transition">自定义</button>
+                </div>
+                <div id="custom-inputs" class="hidden mt-3 space-y-2">
+                    <textarea id="input-text" class="w-full p-2 border rounded text-sm" placeholder="输入名言..."
+                        oninput="updateText()"></textarea>
+                    <input type="text" id="input-author" class="w-full p-2 border rounded text-sm" placeholder="输入作者..."
+                        oninput="updateText()">
+                </div>
+            </div>
+
+            <div>
+                <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">风格</label>
+                <div class="grid grid-cols-5 gap-2">
+                    <button onclick="setStyle('gradient-bg-1', 'text-gray-800')"
+                        class="w-10 h-10 rounded-full border border-gray-200 gradient-bg-1 hover:scale-110 transition"></button>
+                    <button onclick="setStyle('gradient-bg-2', 'text-blue-900')"
+                        class="w-10 h-10 rounded-full border border-gray-200 gradient-bg-2 hover:scale-110 transition"></button>
+                    <button onclick="setStyle('gradient-bg-3', 'text-purple-900')"
+                        class="w-10 h-10 rounded-full border border-gray-200 gradient-bg-3 hover:scale-110 transition"></button>
+                    <button onclick="setStyle('gradient-bg-4', 'text-white')"
+                        class="w-10 h-10 rounded-full border border-gray-200 gradient-bg-4 hover:scale-110 transition"></button>
+                    <button onclick="setStyle('gradient-bg-5', 'text-white')"
+                        class="w-10 h-10 rounded-full border border-gray-200 gradient-bg-5 hover:scale-110 transition"></button>
+                </div>
+            </div>
+
+            <button onclick="downloadCard()"
+                class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition">
+                下载图片
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- Hidden canvas for export -->
+    <div style="position: absolute; left: -9999px;">
+        <canvas id="export-canvas"></canvas>
+    </div>
+
+    <!-- html2canvas library for screenshot -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <script>
+        const quotes = [
+            { t: "生活不是等待风暴过去，而是学会在雨中翩翩起舞。", a: "佚名" },
+            { t: "未经过审视的人生是不值得过的。", a: "苏格拉底" },
+            { t: "世界上只有一种英雄主义，就是看清生活的真相之后依然热爱生活。", a: "罗曼·罗兰" },
+            { t: "种一棵树最好的时间是十年前，其次是现在。", a: "Dambisa Moyo" },
+            { t: "我们终此一生，就是要摆脱他人的期待，找到真正的自己。", a: "伍绮诗" },
+            { t: "Stay hungry, stay foolish.", a: "Steve Jobs" },
+            { t: "Simplicity is the ultimate sophistication.", a: "Leonardo da Vinci" }
+        ];
+
+        const card = document.getElementById('card-preview');
+        const qText = document.getElementById('quote-text');
+        const qAuthor = document.getElementById('quote-author');
+        const inputs = document.getElementById('custom-inputs');
+        const inText = document.getElementById('input-text');
+        const inAuthor = document.getElementById('input-author');
+
+        function randomQuote() {
+            const q = quotes[Math.floor(Math.random() * quotes.length)];
+            qText.innerText = q.t;
+            qAuthor.innerText = "—— " + q.a;
+            inputs.classList.add('hidden');
+        }
+
+        function editMode() {
+            inputs.classList.remove('hidden');
+            inText.value = qText.innerText;
+            inAuthor.value = qAuthor.innerText.replace('—— ', '');
+        }
+
+        function updateText() {
+            qText.innerText = inText.value || "请输入文本";
+            qAuthor.innerText = "—— " + (inAuthor.value || "佚名");
+        }
+
+        function setStyle(bgClass, textClass) {
+            // Reset classes
+            card.className = `w-80 h-[480px] shadow-2xl p-8 flex flex-col justify-between relative overflow-hidden transition-all duration-300 ${bgClass} ${textClass}`;
+        }
+
+        function downloadCard() {
+            html2canvas(card, { scale: 2 }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'quote-card.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+    </script>
+</body>
+
+</html>

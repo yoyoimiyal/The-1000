@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>元素周期表快查</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .element-grid {
+            display: grid;
+            grid-template-columns: repeat(18, minmax(0, 1fr));
+            gap: 2px;
+            width: 100%;
+            min-width: 800px;
+            /* Ensure horizontal scroll on small screens */
+            padding-bottom: 10px;
+        }
+
+        .element {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            transition: transform 0.1s, z-index 0.1s;
+            font-size: 0.75rem;
+            position: relative;
+            user-select: none;
+        }
+
+        .element:hover {
+            transform: scale(1.5);
+            z-index: 50;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-color: rgba(0, 0, 0, 0.2);
+        }
+
+        .element .symbol {
+            font-weight: 800;
+            font-size: 0.9rem;
+            color: #1e293b;
+        }
+
+        .element .number {
+            font-size: 0.5rem;
+            position: absolute;
+            top: 1px;
+            left: 2px;
+            opacity: 0.6;
+            font-weight: 500;
+        }
+
+        .element .name-cn {
+            font-size: 0.5rem;
+            opacity: 0.8;
+            margin-top: -2px;
+        }
+
+        /* Categories Colors - Soft Palette */
+        .cat-alkali {
+            background-color: #ffb3ba;
+        }
+
+        /* 碱金属 - Redish */
+        .cat-alkaline {
+            background-color: #ffdfba;
+        }
+
+        /* 碱土金属 - Orangeish */
+        .cat-transition {
+            background-color: #ffffba;
+        }
+
+        /* 过渡金属 - Yellowish */
+        .cat-basic {
+            background-color: #baffc9;
+        }
+
+        /* 贫金属 - Greenish */
+        .cat-semimetal {
+            background-color: #bae1ff;
+        }
+
+        /* 类金属 - Blueish */
+        .cat-nonmetal {
+            background-color: #a0c4ff;
+        }
+
+        /* 非金属 - Dark Blueish */
+        .cat-halogen {
+            background-color: #bdb2ff;
+        }
+
+        /* 卤素 - Purplish */
+        .cat-noble {
+            background-color: #ffc6ff;
+        }
+
+        /* 稀有气体 - Pinkish */
+        .empty {
+            border: none;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen p-4 flex flex-col items-center font-sans">
+
+    <div class="w-full max-w-6xl">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Periodic Table</h1>
+                <p class="text-xs text-slate-400 mt-1">点击元素查看详细属性 (Data for 1-36)</p>
+            </div>
+            <a href="./navigation.html"
+                class="text-sm px-4 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition">退出</a>
+        </header>
+
+        <!-- Main Table Container -->
+        <div class="bg-white p-2 md:p-4 rounded-xl shadow-lg mb-6 overflow-x-auto border border-slate-100">
+            <div class="element-grid" id="grid">
+                <!-- Elements injected via JS -->
+            </div>
+        </div>
+
+        <!-- Detail Panel -->
+        <div id="detail-panel"
+            class="bg-white p-6 rounded-xl shadow-xl border border-slate-100 flex flex-col md:flex-row gap-8 items-start min-h-[220px] transition-all duration-300 opacity-0 translate-y-4">
+
+            <!-- Big Element Card -->
+            <div class="shrink-0 mx-auto md:mx-0">
+                <div class="w-36 h-40 flex flex-col items-center justify-center border-4 border-slate-800 p-4 bg-slate-50 relative shadow-inner rounded-lg transition-colors duration-300"
+                    id="detail-card">
+                    <span class="absolute top-2 left-3 font-mono text-slate-500 font-bold" id="detail-number">1</span>
+                    <span class="text-5xl font-black text-slate-800 mb-1 tracking-tighter" id="detail-symbol">H</span>
+                    <span class="text-sm font-bold text-slate-700 w-full text-center" id="detail-name">氢</span>
+                    <span class="text-xs text-slate-500 mt-1 font-mono" id="detail-mass">1.008</span>
+                </div>
+            </div>
+
+            <!-- Info List -->
+            <div class="flex-1 w-full">
+                <div class="flex items-baseline gap-3 mb-4 border-b border-slate-100 pb-2">
+                    <h2 class="text-2xl font-bold text-slate-800" id="detail-name-en">Hydrogen</h2>
+                    <span
+                        class="px-2 py-1 rounded text-xs font-bold uppercase tracking-wider bg-slate-100 text-slate-500"
+                        id="detail-category">Nonmetal</span>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-8 text-sm w-full mb-4">
+                    <div>
+                        <span
+                            class="block text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-0.5">发现年份</span>
+                        <span class="font-medium text-slate-700" id="detail-year">1766</span>
+                    </div>
+                    <div>
+                        <span
+                            class="block text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-0.5">电子排布</span>
+                        <span class="font-medium text-slate-700 font-mono" id="detail-electron">1s1</span>
+                    </div>
+                    <div>
+                        <span class="block text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-0.5">状态
+                            (20°C)</span>
+                        <span class="font-medium text-slate-700" id="detail-phase">Gas</span>
+                    </div>
+                </div>
+
+                <div>
+                    <span class="block text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1">简介</span>
+                    <p class="text-slate-600 leading-relaxed text-sm" id="detail-desc">氢是一种化学元素，原子序数为1。它是宇宙中最丰富的元素。</p>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Layout logic for first 4 periods (18 columns)
+        // 0 = empty space
+        const layout = [
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+            3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 6, 7, 8, 9, 10,
+            11, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 14, 15, 16, 17, 18,
+            19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36
+        ];
+
+        // Full data for 1-36
+        const elements = {
+            1: { s: 'H', n: '氢', en: 'Hydrogen', m: '1.008', c: 'cat-nonmetal', cat: '非金属', y: '1766', e: '1s1', p: '气态', d: '宇宙中最丰富的元素，恒星的主要成分。' },
+            2: { s: 'He', n: '氦', en: 'Helium', m: '4.0026', c: 'cat-noble', cat: '稀有气体', y: '1868', e: '1s2', p: '气态', d: '惰性气体，用于气球、深海潜水和超导磁体冷却。' },
+            3: { s: 'Li', n: '锂', en: 'Lithium', m: '6.94', c: 'cat-alkali', cat: '碱金属', y: '1817', e: '[He] 2s1', p: '固态', d: '最轻的金属，反应性强，广泛用于锂离子电池。' },
+            4: { s: 'Be', n: '铍', en: 'Beryllium', m: '9.0122', c: 'cat-alkaline', cat: '碱土金属', y: '1798', e: '[He] 2s2', p: '固态', d: '有毒，透过X射线能力强，用于制造窗户和合金。' },
+            5: { s: 'B', n: '硼', en: 'Boron', m: '10.81', c: 'cat-semimetal', cat: '类金属', y: '1808', e: '[He] 2s2 2p1', p: '固态', d: '用于制造耐热玻璃（硼硅酸盐玻璃）和清洁剂。' },
+            6: { s: 'C', n: '碳', en: 'Carbon', m: '12.011', c: 'cat-nonmetal', cat: '非金属', y: 'Ancient', e: '[He] 2s2 2p2', p: '固态', d: '有机化学的基础，存在形式包括钻石、石墨和富勒烯。' },
+            7: { s: 'N', n: '氮', en: 'Nitrogen', m: '14.007', c: 'cat-nonmetal', cat: '非金属', y: '1772', e: '[He] 2s2 2p3', p: '气态', d: '占地球大气的78%，是蛋白质和DNA的关键组成部分。' },
+            8: { s: 'O', n: '氧', en: 'Oxygen', m: '15.999', c: 'cat-nonmetal', cat: '非金属', y: '1774', e: '[He] 2s2 2p4', p: '气态', d: '支持燃烧和呼吸，地壳中含量最丰富的元素。' },
+            9: { s: 'F', n: '氟', en: 'Fluorine', m: '18.998', c: 'cat-halogen', cat: '卤素', y: '1886', e: '[He] 2s2 2p5', p: '气态', d: '电负性最强的元素，反应性极强，用于牙膏。' },
+            10: { s: 'Ne', n: '氖', en: 'Neon', m: '20.180', c: 'cat-noble', cat: '稀有气体', y: '1898', e: '[He] 2s2 2p6', p: '气态', d: '通电时发出明亮的红橙色光，用于霓虹灯。' },
+            11: { s: 'Na', n: '钠', en: 'Sodium', m: '22.990', c: 'cat-alkali', cat: '碱金属', y: '1807', e: '[Ne] 3s1', p: '固态', d: '质软，反应性强，是食盐（氯化钠）的主要成分。' },
+            12: { s: 'Mg', n: '镁', en: 'Magnesium', m: '24.305', c: 'cat-alkaline', cat: '碱土金属', y: '1808', e: '[Ne] 3s2', p: '固态', d: '轻质金属，燃烧时发出耀眼白光，用于合金和烟火。' },
+            13: { s: 'Al', n: '铝', en: 'Aluminium', m: '26.982', c: 'cat-basic', cat: '贫金属', y: '1825', e: '[Ne] 3s2 3p1', p: '固态', d: '地壳中含量最丰富的金属，轻便耐腐蚀，用于包装和建筑。' },
+            14: { s: 'Si', n: '硅', en: 'Silicon', m: '28.085', c: 'cat-semimetal', cat: '类金属', y: '1824', e: '[Ne] 3s2 3p2', p: '固态', d: '半导体工业的基础，也是沙子和岩石的主要成分。' },
+            15: { s: 'P', n: '磷', en: 'Phosphorus', m: '30.974', c: 'cat-nonmetal', cat: '非金属', y: '1669', e: '[Ne] 3s2 3p3', p: '固态', d: '存在于骨骼和DNA中，高度易燃（白磷），用于火柴和化肥。' },
+            16: { s: 'S', n: '硫', en: 'Sulfur', m: '32.06', c: 'cat-nonmetal', cat: '非金属', y: 'Ancient', e: '[Ne] 3s2 3p4', p: '固态', d: '黄色固体，有特殊臭味，用于制造硫酸、橡胶硫化和火药。' },
+            17: { s: 'Cl', n: '氯', en: 'Chlorine', m: '35.45', c: 'cat-halogen', cat: '卤素', y: '1774', e: '[Ne] 3s2 3p5', p: '气态', d: '黄绿色有毒气体，用于消毒（游泳池）和制造PVC塑料。' },
+            18: { s: 'Ar', n: '氩', en: 'Argon', m: '39.948', c: 'cat-noble', cat: '稀有气体', y: '1894', e: '[Ne] 3s2 3p6', p: '气态', d: '大气中含量第三高的气体，用于焊接保护气和灯泡。' },
+            19: { s: 'K', n: '钾', en: 'Potassium', m: '39.098', c: 'cat-alkali', cat: '碱金属', y: '1807', e: '[Ar] 4s1', p: '固态', d: '对植物生长和人体神经功能至关重要，反应性极强。' },
+            20: { s: 'Ca', n: '钙', en: 'Calcium', m: '40.078', c: 'cat-alkaline', cat: '碱土金属', y: '1808', e: '[Ar] 4s2', p: '固态', d: '骨骼和牙齿的主要成分，也是水泥和石灰的原料。' },
+            21: { s: 'Sc', n: '钪', en: 'Scandium', m: '44.956', c: 'cat-transition', cat: '过渡金属', y: '1879', e: '[Ar] 3d1 4s2', p: '固态', d: '稀土元素之一，用于高强度铝合金（如棒球棒）。' },
+            22: { s: 'Ti', n: '钛', en: 'Titanium', m: '47.867', c: 'cat-transition', cat: '过渡金属', y: '1791', e: '[Ar] 3d2 4s2', p: '固态', d: '强度高、密度低、耐腐蚀，广泛用于航空航天和医疗植入物。' },
+            23: { s: 'V', n: '钒', en: 'Vanadium', m: '50.942', c: 'cat-transition', cat: '过渡金属', y: '1801', e: '[Ar] 3d3 4s2', p: '固态', d: '用于强化钢材，五氧化二钒是重要的工业催化剂。' },
+            24: { s: 'Cr', n: '铬', en: 'Chromium', m: '51.996', c: 'cat-transition', cat: '过渡金属', y: '1797', e: '[Ar] 3d5 4s1', p: '固态', d: '坚硬且有光泽，用于镀铬防锈和制造不锈钢。' },
+            25: { s: 'Mn', n: '锰', en: 'Manganese', m: '54.938', c: 'cat-transition', cat: '过渡金属', y: '1774', e: '[Ar] 3d5 4s2', p: '固态', d: '对钢铁生产至关重要，能去除硫和氧并增加硬度。' },
+            26: { s: 'Fe', n: '铁', en: 'Iron', m: '55.845', c: 'cat-transition', cat: '过渡金属', y: 'Ancient', e: '[Ar] 3d6 4s2', p: '固态', d: '使用最广泛的金属，钢的主要成分，也是血液输送氧气的关键。' },
+            27: { s: 'Co', n: '钴', en: 'Cobalt', m: '58.933', c: 'cat-transition', cat: '过渡金属', y: '1735', e: '[Ar] 3d7 4s2', p: '固态', d: '用于制造超合金、磁体和锂离子电池的阴极材料。' },
+            28: { s: 'Ni', n: '镍', en: 'Nickel', m: '58.693', c: 'cat-transition', cat: '过渡金属', y: '1751', e: '[Ar] 3d8 4s2', p: '固态', d: '抗腐蚀性强，用于不锈钢、硬币和充电电池。' },
+            29: { s: 'Cu', n: '铜', en: 'Copper', m: '63.546', c: 'cat-transition', cat: '过渡金属', y: 'Ancient', e: '[Ar] 3d10 4s1', p: '固态', d: '优良的导电体和导热体，广泛用于电线和电子产品。' },
+            30: { s: 'Zn', n: '锌', en: 'Zinc', m: '65.38', c: 'cat-transition', cat: '过渡金属', y: 'Ancient', e: '[Ar] 3d10 4s2', p: '固态', d: '主要用于镀锌防锈，也是黄铜（铜锌合金）的成分。' },
+            31: { s: 'Ga', n: '镓', en: 'Gallium', m: '69.723', c: 'cat-basic', cat: '贫金属', y: '1875', e: '[Ar] 3d10 4s2 4p1', p: '固态', d: '熔点极低（29.8°C），在手中会熔化，用于半导体LED。' },
+            32: { s: 'Ge', n: '锗', en: 'Germanium', m: '72.630', c: 'cat-semimetal', cat: '类金属', y: '1886', e: '[Ar] 3d10 4s2 4p2', p: '固态', d: '早期晶体管材料，现用于光纤和红外光学器件。' },
+            33: { s: 'As', n: '砷', en: 'Arsenic', m: '74.922', c: 'cat-semimetal', cat: '类金属', y: 'Ancient', e: '[Ar] 3d10 4s2 4p3', p: '固态', d: '著名的毒药，但也用于半导体（砷化镓）和木材防腐。' },
+            34: { s: 'Se', n: '硒', en: 'Selenium', m: '78.96', c: 'cat-nonmetal', cat: '非金属', y: '1817', e: '[Ar] 3d10 4s2 4p4', p: '固态', d: '光敏材料，用于复印机，也是人体必需的微量元素。' },
+            35: { s: 'Br', n: '溴', en: 'Bromine', m: '79.904', c: 'cat-halogen', cat: '卤素', y: '1826', e: '[Ar] 3d10 4s2 4p5', p: '液态', d: '常温下为红棕色液体，有强刺激性，用于阻燃剂。' },
+            36: { s: 'Kr', n: '氪', en: 'Krypton', m: '83.798', c: 'cat-noble', cat: '稀有气体', y: '1898', e: '[Ar] 3d10 4s2 4p6', p: '气态', d: '用于高性能灯泡、闪光灯和激光器。' }
+        };
+
+        const grid = document.getElementById('grid');
+        const detailPanel = document.getElementById('detail-panel');
+        let currentActive = null;
+
+        function init() {
+            layout.forEach(num => {
+                const div = document.createElement('div');
+                if (num === 0) {
+                    div.className = 'empty';
+                } else {
+                    const data = elements[num] || { s: '?', n: '', c: 'bg-gray-100' };
+                    div.className = `element ${data.c}`;
+                    div.id = `el-${num}`;
+                    div.innerHTML = `
+                        <span class="number">${num}</span>
+                        <span class="symbol">${data.s}</span>
+                        <span class="name-cn">${data.n}</span>
+                    `;
+                    div.onclick = () => showDetail(num);
+                }
+                grid.appendChild(div);
+            });
+        }
+
+        function showDetail(num) {
+            const data = elements[num];
+            if (!data) return;
+
+            // Highlight Active in Grid
+            if (currentActive) {
+                document.getElementById(`el-${currentActive}`).style.transform = 'scale(1)';
+                document.getElementById(`el-${currentActive}`).style.zIndex = '1';
+                document.getElementById(`el-${currentActive}`).style.boxShadow = 'none';
+                document.getElementById(`el-${currentActive}`).style.borderColor = 'rgba(0,0,0,0.05)';
+            }
+            currentActive = num;
+            const activeEl = document.getElementById(`el-${num}`);
+            // Note: hover effect handles scaling, but for permanent highlight we could add a class. 
+            // For now, let's just show the detail panel.
+
+            // Update UI
+            document.getElementById('detail-number').innerText = num;
+            document.getElementById('detail-symbol').innerText = data.s;
+            document.getElementById('detail-name').innerText = data.n;
+            document.getElementById('detail-name-en').innerText = data.en;
+            document.getElementById('detail-mass').innerText = data.m;
+            document.getElementById('detail-category').innerText = data.cat;
+            document.getElementById('detail-year').innerText = data.y;
+            document.getElementById('detail-electron').innerText = data.e;
+            document.getElementById('detail-phase').innerText = data.p;
+            document.getElementById('detail-desc').innerText = data.d;
+
+            const card = document.getElementById('detail-card');
+            // Reset classes and add new
+            card.className = `w-36 h-40 flex flex-col items-center justify-center border-4 border-slate-800 p-4 relative shadow-inner rounded-lg transition-colors duration-300 ${data.c}`;
+
+            // Show panel with animation
+            detailPanel.classList.remove('opacity-0', 'translate-y-4');
+            // detailPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        init();
+
+        // Show Hydrogen by default
+        setTimeout(() => showDetail(1), 500);
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角度估算大师</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .origin {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            background: black;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        .line-base {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 150px;
+            height: 4px;
+            background: #94a3b8;
+            transform-origin: 0 50%;
+            transform: rotate(0deg);
+        }
+
+        .line-target {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 150px;
+            height: 4px;
+            background: #e2e8f0;
+            transform-origin: 0 50%;
+            opacity: 0;
+        }
+
+        /* We hide target line, show arc only? Or show target line briefly? 
+           Game logic: "Match this angle". We show target line in grey. User moves blue line.
+        */
+        .line-user {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 150px;
+            height: 4px;
+            background: #3b82f6;
+            transform-origin: 0 50%;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-4 select-none">
+
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 text-center">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-slate-800">Angle Master</h1>
+            <div class="text-sm font-bold text-slate-500">Score: <span id="score" class="text-blue-600">0</span></div>
+        </header>
+
+        <p class="text-slate-500 mb-6">拖动滑块，使其匹配 <span class="font-bold text-slate-800 text-lg"
+                id="target-val">45°</span></p>
+
+        <!-- Circle Area -->
+        <div
+            class="relative w-[320px] h-[320px] mx-auto bg-slate-100 rounded-full border border-slate-200 mb-8 overflow-hidden shadow-inner">
+            <div class="origin"></div>
+            <!-- Base Line (0 deg) -->
+            <div class="line-base"></div>
+
+            <!-- Target Line (Hidden in this mode, user guesses number?) 
+                 Wait, "Match the angle". Usually means: A target angle is drawn, user must match it number wise? 
+                 OR: A number is given, user must match it visually.
+                 Let's do: Number is given (e.g. 45deg), User drags line.
+            -->
+            <div class="line-user" id="line-user"></div>
+
+            <!-- Result Overlay -->
+            <div class="line-target bg-green-400 z-0" id="line-target" style="opacity: 0; transition: opacity 0.5s;">
+            </div>
+        </div>
+
+        <!-- Slider -->
+        <div class="mb-8 px-4">
+            <input type="range" min="0" max="360" value="0"
+                class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" id="slider"
+                oninput="updateUserLine(this.value)">
+            <div class="mt-2 font-mono font-bold text-blue-600 text-xl" id="current-val">0°</div>
+        </div>
+
+        <button onclick="submit()" id="btn-submit"
+            class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg transition">提交</button>
+        <button onclick="nextRound()" id="btn-next"
+            class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl shadow-lg transition hidden">下一题</button>
+
+        <div id="feedback" class="mt-4 h-6 font-bold text-sm"></div>
+
+    </div>
+
+    <div class="mt-8">
+        <a href="./navigation.html" class="text-slate-400 hover:text-slate-600 text-sm">退出</a>
+    </div>
+
+    <script>
+        let targetAngle = 0;
+        let userAngle = 0;
+        let score = 0;
+        let round = 0;
+
+        const lineUser = document.getElementById('line-user');
+        const lineTarget = document.getElementById('line-target');
+        const targetValEl = document.getElementById('target-val');
+        const currentValEl = document.getElementById('current-val');
+        const slider = document.getElementById('slider');
+        const btnSubmit = document.getElementById('btn-submit');
+        const btnNext = document.getElementById('btn-next');
+        const feedback = document.getElementById('feedback');
+        const scoreEl = document.getElementById('score');
+
+        function nextRound() {
+            targetAngle = Math.floor(Math.random() * 360);
+            targetValEl.innerText = targetAngle + "°";
+
+            // Reset
+            userAngle = 0;
+            slider.value = 0;
+            updateUserLine(0);
+
+            lineTarget.style.opacity = '0';
+            lineTarget.style.transform = `translate(0, -50%) rotate(${targetAngle}deg)`; // Centering transform logic
+            // Note: CSS transform origin is 0 50%.
+            // The lines are centered via top 50% left 50%.
+            // But width is 150px.
+            // If origin is left-center (0 50%), rotate works from center of circle outward.
+
+            // Fix transform: translate needed to keep it centered?
+            // CSS: top 50% left 50%. Origin 0 50%.
+            // Rotation rotates around the left edge of the line, which is at the center of the circle. Correct.
+            // But we need to handle rotation.
+
+            lineTarget.style.transform = `translateY(-50%) rotate(${targetAngle}deg)`;
+
+            btnSubmit.classList.remove('hidden');
+            btnNext.classList.add('hidden');
+            feedback.innerText = "";
+            slider.disabled = false;
+        }
+
+        function updateUserLine(val) {
+            userAngle = parseInt(val);
+            currentValEl.innerText = userAngle + "°";
+            lineUser.style.transform = `translateY(-50%) rotate(${userAngle}deg)`;
+        }
+
+        function submit() {
+            const diff = Math.abs(targetAngle - userAngle);
+            const accuracy = Math.max(0, 100 - diff); // Simple score
+
+            // Visual feedback
+            lineTarget.style.opacity = '0.5'; // Show real answer
+
+            let msg = "";
+            let color = "";
+
+            if (diff <= 5) {
+                msg = "完美! (Perfect)";
+                color = "text-green-500";
+                score += 10;
+            } else if (diff <= 15) {
+                msg = "很接近了 (Great)";
+                color = "text-blue-500";
+                score += 5;
+            } else {
+                msg = `差了 ${diff}° (Off)`;
+                color = "text-red-500";
+                // score += 0
+            }
+
+            feedback.innerText = `${msg} | 目标: ${targetAngle}°`;
+            feedback.className = `mt-4 h-6 font-bold text-sm ${color}`;
+            scoreEl.innerText = score;
+
+            btnSubmit.classList.add('hidden');
+            btnNext.classList.remove('hidden');
+            slider.disabled = true;
+        }
+
+        // Init
+        nextRound();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全屏补光灯</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .control-panel {
+            transition: opacity 0.5s;
+        }
+
+        body.hide-controls .control-panel {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Custom range slider styling */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+
+<body id="screen"
+    class="h-screen w-screen bg-white transition-colors duration-300 flex flex-col justify-end relative overflow-hidden">
+
+    <!-- Controls -->
+    <div class="control-panel absolute bottom-0 left-0 w-full p-6 bg-black/50 backdrop-blur-md text-white pb-10">
+
+        <div class="max-w-md mx-auto space-y-6">
+
+            <div class="flex justify-between items-center">
+                <h1 class="font-bold text-lg flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Screen Light
+                </h1>
+                <a href="./navigation.html" class="text-sm opacity-70 hover:opacity-100">退出</a>
+            </div>
+
+            <!-- Color Presets -->
+            <div class="flex justify-between gap-2">
+                <button onclick="setColor('#ffffff')"
+                    class="w-10 h-10 rounded-full bg-white border-2 border-transparent hover:scale-110 transition shadow"></button>
+                <button onclick="setColor('#ffedd5')"
+                    class="w-10 h-10 rounded-full bg-orange-100 border-2 border-transparent hover:scale-110 transition shadow"></button>
+                <button onclick="setColor('#fcd34d')"
+                    class="w-10 h-10 rounded-full bg-amber-300 border-2 border-transparent hover:scale-110 transition shadow"></button>
+                <button onclick="setColor('#f472b6')"
+                    class="w-10 h-10 rounded-full bg-pink-400 border-2 border-transparent hover:scale-110 transition shadow"></button>
+                <button onclick="setColor('#60a5fa')"
+                    class="w-10 h-10 rounded-full bg-blue-400 border-2 border-transparent hover:scale-110 transition shadow"></button>
+                <input type="color" onchange="setColor(this.value)"
+                    class="w-10 h-10 rounded-full p-0 border-0 overflow-hidden cursor-pointer opacity-80 hover:opacity-100 transition">
+            </div>
+
+            <!-- Brightness (Opacity simulation) -->
+            <div>
+                <label class="block text-xs uppercase opacity-70 mb-2">亮度 (模拟)</label>
+                <input type="range" min="0.1" max="1" step="0.05" value="1" oninput="setBrightness(this.value)"
+                    class="w-full appearance-none bg-transparent">
+            </div>
+
+            <div class="text-center text-xs opacity-50 mt-2">
+                点击屏幕空白处隐藏/显示控制栏
+            </div>
+        </div>
+    </div>
+
+    <!-- Toggle Area -->
+    <div class="absolute inset-0 z-[-1]" onclick="toggleControls()"></div>
+
+    <script>
+        const screen = document.getElementById('screen');
+        const body = document.body;
+
+        function setColor(color) {
+            screen.style.backgroundColor = color;
+        }
+
+        function setBrightness(val) {
+            // Since we can't control hardware brightness, we use opacity overlay or just color brightness.
+            // A simple way is to use filter brightness, but that affects the UI too.
+            // Better: change the background color's lightness/opacity. 
+            // Here we use filter on the body background, but we need to exclude controls.
+            // Actually, CSS filter: brightness() on the background element works best.
+
+            // To keep it simple, we will adjust the opacity of a black overlay if we wanted to dim it, 
+            // OR just use CSS filter on the background style directly.
+            // Let's use filter on the 'screen' element but ensure controls are not inside it? 
+            // Currently body is screen. Let's use filter on body but invert it for controls? No.
+
+            // Simpler approach: Change opacity of the color layer.
+            // Since body background is set, let's just use filter.
+            screen.style.filter = `brightness(${val})`;
+        }
+
+        function toggleControls() {
+            body.classList.toggle('hide-controls');
+        }
+    </script>
+</body>
+
+</html>

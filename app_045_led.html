@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LED 手持弹幕</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @font-face {
+            font-family: 'DotMatrix';
+            src: url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        }
+
+        /* VT323 is pixel-like */
+        .led-font {
+            font-family: 'VT323', monospace;
+        }
+
+        .marquee-container {
+            width: 100vw;
+            height: 100vh;
+            background-color: black;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            /* LED Grid Texture */
+            background-image: radial-gradient(#222 15%, black 16%), radial-gradient(#222 15%, black 16%);
+            background-size: 10px 10px;
+            background-position: 0 0, 5px 5px;
+        }
+
+        /* Overlay to make it look like lighted dots */
+        .led-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .marquee-content {
+            white-space: nowrap;
+            font-size: 45vh;
+            /* Increased size */
+            line-height: 1;
+            font-weight: bold;
+            text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+            /* Stronger Glow */
+            position: absolute;
+            left: 100%;
+            /* Animation is handled by JS for dynamic speed */
+            will-change: transform;
+        }
+
+        /* Controls UI overlay */
+        .controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(20, 20, 20, 0.9);
+            padding: 20px;
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+            transform: translateY(0);
+            transition: transform 0.3s;
+            z-index: 50;
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .controls.hidden-panel {
+            transform: translateY(100%);
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+</head>
+
+<body class="bg-black overflow-hidden m-0">
+
+    <!-- Marquee Area -->
+    <div class="marquee-container" id="container" onclick="toggleControls()">
+        <div class="led-overlay"></div>
+        <div class="marquee-content led-font text-red-500" id="text-el">
+            HELLO WORLD
+        </div>
+    </div>
+
+    <!-- Toggle Hint -->
+    <div id="hint"
+        class="fixed top-4 left-0 w-full text-center text-white/30 text-sm pointer-events-none animate-pulse z-40">
+        点击屏幕设置内容 / 退出全屏
+    </div>
+
+    <!-- Controls Panel -->
+    <div class="controls" id="controls">
+        <div class="max-w-md mx-auto space-y-4">
+
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-white font-bold flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    设置弹幕
+                </h2>
+                <a href="./navigation.html" class="text-xs text-gray-500 hover:text-white">退出</a>
+            </div>
+
+            <!-- Text Input -->
+            <input type="text" id="input-text" value="HELLO WORLD"
+                class="w-full bg-gray-800 text-white p-3 rounded border border-gray-700 focus:border-blue-500 outline-none uppercase font-bold tracking-widest"
+                placeholder="输入文字..." oninput="updateContent()">
+
+            <!-- Settings Grid -->
+            <div class="grid grid-cols-2 gap-4">
+
+                <!-- Color -->
+                <div>
+                    <label class="block text-xs text-gray-400 mb-2">LED 颜色</label>
+                    <div class="flex gap-2">
+                        <button onclick="setColor('text-red-500')"
+                            class="w-8 h-8 rounded-full bg-red-500 ring-2 ring-transparent focus:ring-white transition hover:scale-110"></button>
+                        <button onclick="setColor('text-green-500')"
+                            class="w-8 h-8 rounded-full bg-green-500 ring-2 ring-transparent focus:ring-white transition hover:scale-110"></button>
+                        <button onclick="setColor('text-blue-500')"
+                            class="w-8 h-8 rounded-full bg-blue-500 ring-2 ring-transparent focus:ring-white transition hover:scale-110"></button>
+                        <button onclick="setColor('text-yellow-400')"
+                            class="w-8 h-8 rounded-full bg-yellow-400 ring-2 ring-transparent focus:ring-white transition hover:scale-110"></button>
+                        <button onclick="setColor('text-pink-500')"
+                            class="w-8 h-8 rounded-full bg-pink-500 ring-2 ring-transparent focus:ring-white transition hover:scale-110"></button>
+                        <button onclick="setColor('text-white')"
+                            class="w-8 h-8 rounded-full bg-white ring-2 ring-transparent focus:ring-white transition hover:scale-110"></button>
+                    </div>
+                </div>
+
+                <!-- Speed -->
+                <div>
+                    <label class="block text-xs text-gray-400 mb-2">滚动速度</label>
+                    <input type="range" min="1" max="50" value="20"
+                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                        oninput="updateSpeed(this.value)">
+                </div>
+
+            </div>
+
+            <button onclick="enterFullScreen()"
+                class="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-lg mt-2 shadow-lg active:scale-95 transition">
+                全屏展示 (Full Screen)
+            </button>
+
+        </div>
+    </div>
+
+    <script>
+        const textEl = document.getElementById('text-el');
+        const controls = document.getElementById('controls');
+        const hint = document.getElementById('hint');
+        const input = document.getElementById('input-text');
+
+        let isControlsVisible = true;
+        let speedFactor = 20; // Pixels per frame roughly, used for calculating duration
+        let animationId = null;
+
+        function updateContent() {
+            textEl.innerText = input.value || " ";
+            resetAnimation();
+        }
+
+        function setColor(cls) {
+            // Remove existing text-color classes
+            textEl.className = textEl.className.replace(/text-\w+-\d+/g, '').replace('text-white', '');
+            textEl.classList.add(cls);
+        }
+
+        function updateSpeed(val) {
+            speedFactor = parseInt(val);
+            resetAnimation();
+        }
+
+        function resetAnimation() {
+            // Cancel current animation
+            if (animationId) cancelAnimationFrame(animationId);
+            textEl.style.animation = 'none';
+            textEl.offsetHeight; /* trigger reflow */
+
+            // Calculate duration based on width to maintain constant visual speed
+            // Distance = Screen Width + Text Width
+            const distance = window.innerWidth + textEl.offsetWidth;
+            // Base speed calculation: higher speedFactor = lower duration
+            // Let's say speed 20 is "normal".
+            const baseVelocity = window.innerWidth / 5; // pixels per second
+            const velocity = baseVelocity * (speedFactor / 10);
+
+            const duration = distance / velocity;
+
+            textEl.style.animation = `scroll-left ${duration}s linear infinite`;
+        }
+
+        function toggleControls() {
+            isControlsVisible = !isControlsVisible;
+            if (isControlsVisible) {
+                controls.classList.remove('hidden-panel');
+                hint.style.opacity = '1';
+            } else {
+                controls.classList.add('hidden-panel');
+                hint.style.opacity = '0';
+            }
+        }
+
+        function enterFullScreen() {
+            const docEl = document.documentElement;
+
+            // 尝试进入全屏，使用 Promise catch 处理权限拒绝错误
+            const requestFS = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.msRequestFullscreen;
+
+            if (requestFS) {
+                Promise.resolve(requestFS.call(docEl)).catch(err => {
+                    console.log("Full screen mode denied by browser policy, using maximized view instead.");
+                    // 这里静默失败，因为下面的 toggleControls 会隐藏 UI，达到类似全屏的视觉效果
+                });
+            }
+
+            // 无论全屏是否成功，都隐藏控制面板
+            if (isControlsVisible) {
+                toggleControls();
+            }
+        }
+
+        // Handle Resize to adjust animation duration
+        window.addEventListener('resize', () => {
+            resetAnimation();
+        });
+
+        // Init
+        // We delay slightly to ensure fonts are loaded and widths are correct
+        window.onload = () => {
+            updateContent();
+        };
+    </script>
+</body>
+
+</html>

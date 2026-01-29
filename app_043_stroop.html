@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>颜色文字大作战</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .shake {
+            animation: shake 0.4s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
+        @keyframes shake {
+
+            10%,
+            90% {
+                transform: translate3d(-1px, 0, 0);
+            }
+
+            20%,
+            80% {
+                transform: translate3d(2px, 0, 0);
+            }
+
+            30%,
+            50%,
+            70% {
+                transform: translate3d(-4px, 0, 0);
+            }
+
+            40%,
+            60% {
+                transform: translate3d(4px, 0, 0);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl relative min-h-[500px] flex flex-col">
+
+        <!-- Header -->
+        <div class="bg-indigo-600 p-4 text-white flex justify-between items-center z-10">
+            <h1 class="font-bold text-lg">Stroop Test</h1>
+            <div class="text-sm opacity-80">Score: <span id="score" class="font-bold text-xl ml-1">0</span></div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen"
+            class="absolute inset-0 bg-white z-20 flex flex-col items-center justify-center p-8 text-center">
+            <div class="text-6xl mb-6">🎨</div>
+            <h2 class="text-2xl font-bold text-slate-800 mb-4">判断字体颜色</h2>
+            <p class="text-slate-500 mb-8 leading-relaxed">
+                请根据文字的 <span class="text-red-500 font-bold">字体颜色</span> 做出选择。<br>
+                忽略文字本身的内容！<br>
+                <span class="text-xs text-slate-400 mt-2 block">例如：看到 <span class="text-blue-500 font-bold">红色</span>
+                    时，应点击 "蓝色" 按钮。</span>
+            </p>
+            <button onclick="startGame()"
+                class="bg-indigo-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-indigo-700 transition transform hover:scale-105">开始挑战</button>
+            <a href="./navigation.html" class="mt-8 text-slate-400 text-sm hover:underline">退出</a>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen"
+            class="absolute inset-0 bg-white z-20 flex flex-col items-center justify-center p-8 text-center hidden">
+            <h2 class="text-3xl font-bold text-slate-800 mb-2">时间到!</h2>
+            <p class="text-slate-500 mb-6">最终得分: <span class="text-indigo-600 font-bold text-3xl"
+                    id="final-score">0</span></p>
+            <button onclick="startGame()"
+                class="bg-indigo-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-indigo-700 transition">再来一次</button>
+        </div>
+
+        <!-- Game Area -->
+        <div class="flex-1 flex flex-col items-center justify-center bg-slate-50 p-6 relative">
+
+            <!-- Timer Bar -->
+            <div class="absolute top-0 left-0 w-full h-2 bg-slate-200">
+                <div id="timer-bar" class="h-full bg-red-500 w-full"></div>
+            </div>
+
+            <!-- The Word -->
+            <div id="word-display" class="text-6xl md:text-8xl font-black mb-12 tracking-wider transition-all">
+                准备
+            </div>
+
+            <!-- Options -->
+            <div class="grid grid-cols-2 gap-4 w-full">
+                <button onclick="checkAnswer('red')"
+                    class="btn-opt bg-red-100 hover:bg-red-200 text-red-600 font-bold py-4 rounded-xl text-xl transition shadow-sm border-2 border-transparent hover:border-red-300">红色</button>
+                <button onclick="checkAnswer('blue')"
+                    class="btn-opt bg-blue-100 hover:bg-blue-200 text-blue-600 font-bold py-4 rounded-xl text-xl transition shadow-sm border-2 border-transparent hover:border-blue-300">蓝色</button>
+                <button onclick="checkAnswer('green')"
+                    class="btn-opt bg-green-100 hover:bg-green-200 text-green-600 font-bold py-4 rounded-xl text-xl transition shadow-sm border-2 border-transparent hover:border-green-300">绿色</button>
+                <button onclick="checkAnswer('yellow')"
+                    class="btn-opt bg-yellow-100 hover:bg-yellow-200 text-yellow-600 font-bold py-4 rounded-xl text-xl transition shadow-sm border-2 border-transparent hover:border-yellow-300">黄色</button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const colors = [
+            { id: 'red', text: '红色', hex: '#ef4444' },
+            { id: 'blue', text: '蓝色', hex: '#3b82f6' },
+            { id: 'green', text: '绿色', hex: '#22c55e' },
+            { id: 'yellow', text: '黄色', hex: '#eab308' }
+        ];
+
+        let score = 0;
+        let timeLeft = 0;
+        let totalTime = 60000; // 60s
+        let gameInterval;
+        let currentColorId = ''; // The correct answer (ink color)
+
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const scoreEl = document.getElementById('score');
+        const wordDisplay = document.getElementById('word-display');
+        const timerBar = document.getElementById('timer-bar');
+        const finalScore = document.getElementById('final-score');
+
+        function startGame() {
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            score = 0;
+            scoreEl.innerText = 0;
+            timeLeft = 3000; // 3s per round? No, let's do total time limit or per round limit.
+            // Let's do: You have 60 seconds total to get as many right as possible.
+            // Wrong answers deduct time.
+            timeLeft = 30000; // 30s game
+            totalTime = 30000;
+
+            clearInterval(gameInterval);
+            gameInterval = setInterval(gameLoop, 100);
+
+            nextRound();
+        }
+
+        function gameLoop() {
+            timeLeft -= 100;
+            const pct = (timeLeft / totalTime) * 100;
+            timerBar.style.width = `${pct}%`;
+
+            if (timeLeft <= 0) {
+                endGame();
+            }
+        }
+
+        function nextRound() {
+            // Pick a word text (random)
+            const textObj = colors[Math.floor(Math.random() * colors.length)];
+
+            // Pick an ink color (random, can be same or different)
+            // To make it harder, ensure mostly conflicting? Or purely random. Pure random is fine.
+            const colorObj = colors[Math.floor(Math.random() * colors.length)];
+
+            // Logic: User must identify ink color
+            currentColorId = colorObj.id;
+
+            wordDisplay.innerText = textObj.text;
+            wordDisplay.style.color = colorObj.hex;
+
+            // Randomly shuffle buttons positions? (Optional, kept fixed for muscle memory confusion which is good for stroop)
+        }
+
+        function checkAnswer(selectedId) {
+            if (selectedId === currentColorId) {
+                // Correct
+                score += 10;
+                scoreEl.innerText = score;
+                // Bonus time?
+                // timeLeft += 500; 
+                nextRound();
+            } else {
+                // Wrong
+                timeLeft -= 2000; // Penalty
+                wordDisplay.classList.add('shake');
+                setTimeout(() => wordDisplay.classList.remove('shake'), 400);
+                nextRound();
+            }
+        }
+
+        function endGame() {
+            clearInterval(gameInterval);
+            finalScore.innerText = score;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>凯撒密码轮</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .wheel-container {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            position: relative;
+            margin: 0 auto;
+            border: 2px solid #cbd5e1;
+            background: white;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        .inner-wheel {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            position: absolute;
+            top: 50px;
+            left: 50px;
+            background: #f1f5f9;
+            border: 2px solid #94a3b8;
+            transition: transform 0.3s ease-out;
+            cursor: grab;
+        }
+
+        .inner-wheel:active {
+            cursor: grabbing;
+        }
+
+        .char {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-origin: 0 0;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .outer-char {
+            color: #334155;
+        }
+
+        .inner-char {
+            color: #dc2626;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center py-8 text-slate-700">
+
+    <header class="mb-8 w-full max-w-lg px-4 flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-slate-800">Caesar Cipher</h1>
+        <a href="./navigation.html" class="text-sm text-slate-400 hover:text-slate-600">退出</a>
+    </header>
+
+    <!-- Interactive Wheel -->
+    <div class="mb-8 relative">
+        <div
+            class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+            Shift: <span id="shift-val" class="text-slate-800 text-lg">0</span></div>
+        <div class="wheel-container" id="outer-wheel">
+            <!-- Outer Chars injected -->
+        </div>
+        <div class="inner-wheel" id="inner-wheel">
+            <!-- Inner Chars injected -->
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-slate-300 rounded-full">
+            </div>
+        </div>
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-0 h-4 border-l-2 border-red-500 z-10"></div>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex gap-4 mb-8">
+        <button onclick="rotate(-1)"
+            class="w-12 h-12 bg-white rounded-full shadow border border-slate-200 hover:bg-slate-50 font-bold text-xl text-slate-600">-</button>
+        <button onclick="rotate(1)"
+            class="w-12 h-12 bg-white rounded-full shadow border border-slate-200 hover:bg-slate-50 font-bold text-xl text-slate-600">+</button>
+    </div>
+
+    <!-- Translator -->
+    <div class="w-full max-w-lg bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mx-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">明文 (Plain)</label>
+                <textarea id="input"
+                    class="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 outline-none focus:border-blue-500 h-32 resize-none uppercase"
+                    placeholder="HELLO WORLD" oninput="encrypt()"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">密文 (Cipher)</label>
+                <div id="output"
+                    class="w-full p-3 bg-slate-100 rounded-lg border border-slate-200 h-32 break-words text-red-600 font-mono font-bold">
+                    HELLO WORLD
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const outerWheel = document.getElementById('outer-wheel');
+        const innerWheel = document.getElementById('inner-wheel');
+        const shiftVal = document.getElementById('shift-val');
+        const input = document.getElementById('input');
+        const output = document.getElementById('output');
+
+        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        let shift = 0;
+
+        function initWheel() {
+            // Create chars
+            for (let i = 0; i < 26; i++) {
+                const angle = (i * 360 / 26) - 90; // -90 to start at top
+
+                // Outer
+                const oChar = document.createElement('div');
+                oChar.className = 'char outer-char';
+                oChar.innerText = alphabet[i];
+                // Radius approx 135
+                const radO = 135;
+                oChar.style.transform = `rotate(${angle}deg) translate(${radO}px) rotate(-${angle}deg)`; // Keep text upright? No, standard wheel rotates text
+                // Actually standard cipher wheel text rotates with wheel.
+                oChar.style.transform = `rotate(${angle}deg) translate(${radO}px) rotate(90deg)`;
+                outerWheel.appendChild(oChar);
+
+                // Inner
+                const iChar = document.createElement('div');
+                iChar.className = 'char inner-char';
+                iChar.innerText = alphabet[i];
+                const radI = 85;
+                iChar.style.transform = `rotate(${angle}deg) translate(${radI}px) rotate(90deg)`;
+                innerWheel.appendChild(iChar);
+            }
+        }
+
+        function rotate(dir) {
+            shift = (shift + dir + 26) % 26;
+            updateUI();
+        }
+
+        function updateUI() {
+            shiftVal.innerText = shift;
+            // Rotate inner wheel
+            // Each step is 360/26 deg
+            const deg = shift * (360 / 26);
+            // Encryption: Plain (Outer) -> Cipher (Inner). 
+            // If shift is 1 (A->B), Inner A is at Outer B? No.
+            // Caesar shift 1 usually means A becomes B.
+            // So Inner A should align with Outer B? No, Plain (Outer) A -> Cipher (Inner) B.
+            // So Inner B aligns with Outer A.
+            // Inner wheel rotates counter-clockwise by 1 step.
+            innerWheel.style.transform = `rotate(-${deg}deg)`;
+            encrypt();
+        }
+
+        function encrypt() {
+            const text = input.value.toUpperCase();
+            let result = "";
+            for (let i = 0; i < text.length; i++) {
+                const c = text[i];
+                const idx = alphabet.indexOf(c);
+                if (idx !== -1) {
+                    const newIdx = (idx + shift) % 26;
+                    result += alphabet[newIdx];
+                } else {
+                    result += c;
+                }
+            }
+            output.innerText = result;
+        }
+
+        initWheel();
+    </script>
+</body>
+
+</html>

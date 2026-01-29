@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极速打字挑战</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .correct {
+            color: #22c55e;
+        }
+
+        .incorrect {
+            color: #ef4444;
+            text-decoration: underline;
+        }
+
+        .current {
+            background-color: #e2e8f0;
+            border-radius: 2px;
+        }
+
+        .blur-layer {
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="max-w-3xl w-full bg-white p-8 rounded-2xl shadow-lg relative overflow-hidden">
+
+        <!-- Header -->
+        <div class="flex justify-between items-end mb-6 border-b border-slate-100 pb-4">
+            <h1 class="text-2xl font-bold text-slate-800">Typing Test</h1>
+            <div class="flex gap-6 text-sm">
+                <div class="text-center">
+                    <p class="text-slate-400 text-xs uppercase">时间</p>
+                    <p class="text-xl font-bold text-slate-700"><span id="timer">60</span>s</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-slate-400 text-xs uppercase">WPM</p>
+                    <p class="text-xl font-bold text-indigo-600" id="wpm">0</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-slate-400 text-xs uppercase">准确率</p>
+                    <p class="text-xl font-bold text-emerald-600" id="accuracy">100%</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Text Display -->
+        <div class="relative mb-6 min-h-[150px]" onclick="document.getElementById('input-field').focus()">
+            <div id="quote-display" class="text-xl leading-relaxed text-slate-400 select-none break-words">
+                <!-- Text injected here -->
+            </div>
+            <div id="focus-overlay"
+                class="absolute inset-0 flex items-center justify-center bg-white/80 blur-layer cursor-pointer z-10">
+                <span class="text-slate-500 font-bold text-lg animate-pulse">点击此处开始打字</span>
+            </div>
+        </div>
+
+        <!-- Hidden Input -->
+        <input type="text" id="input-field" class="absolute opacity-0 top-0 left-0 h-full w-full cursor-default"
+            autocomplete="off">
+
+        <!-- Controls -->
+        <div class="flex justify-between items-center mt-8">
+            <button onclick="resetGame()"
+                class="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-bold transition flex items-center gap-2 text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                重置
+            </button>
+            <a href="./navigation.html" class="text-slate-400 hover:text-slate-600 text-sm">返回导航</a>
+        </div>
+    </div>
+
+    <script>
+        const quotes = [
+            "the quick brown fox jumps over the lazy dog",
+            "technology is best when it brings people together",
+            "it does not matter how slowly you go as long as you do not stop",
+            "life is what happens when you are busy making other plans",
+            "success is not final failure is not fatal it is the courage to continue that counts",
+            "simplicity is the ultimate sophistication",
+            "change your thoughts and you change your world",
+            "happiness depends upon ourselves",
+            "turn your wounds into wisdom"
+        ];
+
+        const displayEl = document.getElementById('quote-display');
+        const inputEl = document.getElementById('input-field');
+        const timerEl = document.getElementById('timer');
+        const wpmEl = document.getElementById('wpm');
+        const accEl = document.getElementById('accuracy');
+        const focusOverlay = document.getElementById('focus-overlay');
+
+        let timeLeft = 60;
+        let timeElapsed = 0;
+        let timer = null;
+        let isRunning = false;
+        let currentQuote = "";
+        let charIndex = 0;
+        let mistakes = 0;
+
+        function loadQuote() {
+            // Pick random quote and repeat it enough times to fill space
+            const baseQuote = quotes[Math.floor(Math.random() * quotes.length)];
+            currentQuote = (baseQuote + " ").repeat(10).trim();
+
+            displayEl.innerHTML = '';
+            currentQuote.split('').forEach(char => {
+                const span = document.createElement('span');
+                span.innerText = char;
+                displayEl.appendChild(span);
+            });
+            displayEl.firstChild.classList.add('current');
+        }
+
+        function startGame() {
+            if (isRunning) return;
+            isRunning = true;
+            timer = setInterval(updateTimer, 1000);
+            focusOverlay.classList.add('hidden');
+        }
+
+        function updateTimer() {
+            if (timeLeft > 0) {
+                timeLeft--;
+                timeElapsed++;
+                timerEl.innerText = timeLeft;
+                calculateStats();
+            } else {
+                finishGame();
+            }
+        }
+
+        function calculateStats() {
+            const wpm = Math.round(((charIndex - mistakes) / 5) / (timeElapsed / 60));
+            const wpmVal = wpm < 0 || !isFinite(wpm) ? 0 : wpm;
+            wpmEl.innerText = wpmVal;
+
+            const accuracy = Math.round(((charIndex - mistakes) / charIndex) * 100);
+            accEl.innerText = (isNaN(accuracy) ? 100 : accuracy) + "%";
+        }
+
+        function finishGame() {
+            clearInterval(timer);
+            isRunning = false;
+            inputEl.disabled = true;
+            focusOverlay.classList.remove('hidden');
+            focusOverlay.innerHTML = `<div class="text-center"><p class="text-2xl font-bold text-indigo-600 mb-2">时间到!</p><p class="text-slate-600">最终 WPM: ${wpmEl.innerText}</p></div>`;
+        }
+
+        function resetGame() {
+            clearInterval(timer);
+            timeLeft = 60;
+            timeElapsed = 0;
+            charIndex = 0;
+            mistakes = 0;
+            isRunning = false;
+
+            timerEl.innerText = timeLeft;
+            wpmEl.innerText = 0;
+            accEl.innerText = "100%";
+
+            inputEl.value = "";
+            inputEl.disabled = false;
+
+            focusOverlay.innerHTML = '<span class="text-slate-500 font-bold text-lg animate-pulse">点击此处开始打字</span>';
+            focusOverlay.classList.remove('hidden');
+
+            loadQuote();
+        }
+
+        inputEl.addEventListener('input', (e) => {
+            if (!isRunning && !inputEl.disabled) startGame();
+
+            const typedChar = e.data; // Note: this logic is simplified for basic input
+            const val = inputEl.value;
+            const spans = displayEl.querySelectorAll('span');
+
+            // Handle backspace or other edits simply by re-evaluating full string vs current index
+            // But standard typing test logic usually tracks cursor forward.
+            // Let's rely on inputEl.value length.
+
+            if (val.length > currentQuote.length) {
+                inputEl.value = val.slice(0, currentQuote.length);
+                return;
+            }
+
+            charIndex = val.length;
+
+            // Update UI based on current input value
+            spans.forEach((span, index) => {
+                const char = val[index];
+
+                if (index < charIndex) {
+                    span.classList.remove('current');
+                    if (char === span.innerText) {
+                        span.classList.add('correct');
+                        span.classList.remove('incorrect');
+                    } else {
+                        span.classList.add('incorrect');
+                        span.classList.remove('correct');
+                    }
+                } else {
+                    span.classList.remove('correct', 'incorrect', 'current');
+                }
+
+                if (index === charIndex) {
+                    span.classList.add('current');
+                }
+            });
+
+            // Count mistakes strictly based on current state (simplified)
+            let currentMistakes = 0;
+            for (let i = 0; i < charIndex; i++) {
+                if (val[i] !== currentQuote[i]) currentMistakes++;
+            }
+            mistakes = currentMistakes;
+
+            calculateStats();
+        });
+
+        // Init
+        loadQuote();
+    </script>
+</body>
+
+</html>

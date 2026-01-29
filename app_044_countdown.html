@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>倒数日</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .event-card {
+            transition: all 0.3s;
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+    </style>
+</head>
+
+<body class="bg-blue-50 min-h-screen flex flex-col items-center p-4 text-slate-700">
+
+    <div class="w-full max-w-lg">
+
+        <header class="flex justify-between items-center mb-8 mt-4">
+            <h1 class="text-2xl font-bold text-blue-900 flex items-center gap-2">
+                <span class="text-3xl">📅</span> Days Matter
+            </h1>
+            <button onclick="openModal()"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition">
+                + 新建
+            </button>
+        </header>
+
+        <!-- Top Pinned Event -->
+        <div id="hero-event"
+            class="hidden bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl mb-8 text-center relative overflow-hidden">
+            <div
+                class="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full transform translate-x-10 -translate-y-10">
+            </div>
+            <p class="text-blue-200 text-sm uppercase tracking-widest mb-2" id="hero-date">2026-01-01</p>
+            <h2 class="text-3xl font-bold mb-6" id="hero-title">New Year</h2>
+            <div class="inline-block bg-white/20 rounded-2xl px-8 py-4 backdrop-blur-sm">
+                <span class="text-6xl font-bold" id="hero-days">100</span>
+                <span class="text-sm ml-1 opacity-80">天</span>
+            </div>
+            <p class="mt-4 text-sm opacity-80" id="hero-msg">目标日</p>
+        </div>
+
+        <!-- List -->
+        <div class="space-y-4" id="event-list">
+            <!-- Items injected here -->
+        </div>
+
+        <div class="mt-8 text-center">
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-blue-600">退出</a>
+        </div>
+
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl transform scale-100 transition-all">
+            <h3 class="text-xl font-bold mb-4 text-slate-800">添加倒数日</h3>
+
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">标题</label>
+                    <input type="text" id="input-title"
+                        class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="例如: 妈妈生日">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">日期</label>
+                    <input type="date" id="input-date"
+                        class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeModal()"
+                    class="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-lg transition">取消</button>
+                <button onclick="addEvent()"
+                    class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('modal');
+        const listEl = document.getElementById('event-list');
+        const heroEl = document.getElementById('hero-event');
+
+        let events = JSON.parse(localStorage.getItem('my_countdowns') || '[]');
+
+        function openModal() {
+            document.getElementById('input-date').valueAsDate = new Date();
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function addEvent() {
+            const title = document.getElementById('input-title').value;
+            const dateStr = document.getElementById('input-date').value;
+
+            if (title && dateStr) {
+                events.push({
+                    id: Date.now(),
+                    title: title,
+                    date: dateStr,
+                    pinned: false
+                });
+                events.sort((a, b) => new Date(a.date) - new Date(b.date));
+                saveEvents();
+                closeModal();
+            }
+        }
+
+        function deleteEvent(id) {
+            if (confirm("删除此倒数日？")) {
+                events = events.filter(e => e.id !== id);
+                saveEvents();
+            }
+        }
+
+        function togglePin(id) {
+            events.forEach(e => {
+                if (e.id === id) e.pinned = !e.pinned;
+                else if (e.pinned && id === e.id) e.pinned = false; // Only one pin usually? Let's allow one pin.
+            });
+
+            // Ensure only one pinned for simplicity in this UI
+            const target = events.find(e => e.id === id);
+            if (target && target.pinned) {
+                events.forEach(e => { if (e.id !== id) e.pinned = false; });
+            }
+
+            saveEvents();
+        }
+
+        function saveEvents() {
+            localStorage.setItem('my_countdowns', JSON.stringify(events));
+            render();
+        }
+
+        function getDaysDiff(targetDate) {
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            const target = new Date(targetDate);
+            target.setHours(0, 0, 0, 0);
+            const diffTime = target - now;
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        function render() {
+            listEl.innerHTML = '';
+            const pinnedEvent = events.find(e => e.pinned);
+
+            // Render Hero
+            if (pinnedEvent) {
+                heroEl.classList.remove('hidden');
+                document.getElementById('hero-title').innerText = pinnedEvent.title;
+                document.getElementById('hero-date').innerText = pinnedEvent.date;
+                const days = getDaysDiff(pinnedEvent.date);
+
+                if (days >= 0) {
+                    document.getElementById('hero-days').innerText = days;
+                    document.getElementById('hero-msg').innerText = days === 0 ? "就是今天!" : "目标日";
+                    heroEl.classList.remove('from-gray-700', 'to-gray-800');
+                    heroEl.classList.add('from-blue-600', 'to-indigo-700');
+                } else {
+                    document.getElementById('hero-days').innerText = Math.abs(days);
+                    document.getElementById('hero-msg').innerText = "已过去";
+                    heroEl.classList.remove('from-blue-600', 'to-indigo-700');
+                    heroEl.classList.add('from-gray-700', 'to-gray-800'); // Gray for past
+                }
+            } else {
+                heroEl.classList.add('hidden');
+            }
+
+            // Render List
+            const unpinned = events.filter(e => !e.pinned);
+
+            if (unpinned.length === 0 && !pinnedEvent) {
+                listEl.innerHTML = '<div class="text-center text-slate-400 py-10">暂无倒数日，点击右上角添加</div>';
+                return;
+            }
+
+            unpinned.forEach(e => {
+                const days = getDaysDiff(e.date);
+                const isPast = days < 0;
+                const displayDays = Math.abs(days);
+
+                const item = document.createElement('div');
+                item.className = 'event-card bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex justify-between items-center group';
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full ${isPast ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-600'} flex items-center justify-center font-bold text-xs flex-col">
+                            <span>${new Date(e.date).getMonth() + 1}月</span>
+                            <span>${new Date(e.date).getDate()}</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-700">${e.title}</h4>
+                            <p class="text-xs text-slate-400">${e.date}</p>
+                        </div>
+                    </div>
+                    <div class="text-right flex items-center gap-4">
+                         <div>
+                            <span class="text-2xl font-bold ${isPast ? 'text-gray-400' : 'text-blue-600'}">${displayDays}</span>
+                            <span class="text-xs text-slate-400">天${isPast ? '前' : ''}</span>
+                        </div>
+                        <div class="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition">
+                            <button onclick="togglePin(${e.id})" class="text-xs text-slate-400 hover:text-yellow-500" title="置顶">📌</button>
+                            <button onclick="deleteEvent(${e.id})" class="text-xs text-slate-400 hover:text-red-500" title="删除">🗑️</button>
+                        </div>
+                    </div>
+                `;
+                listEl.appendChild(item);
+            });
+        }
+
+        // Init
+        if (events.length === 0) {
+            // Default sample
+            events.push({ id: 1, title: '2026 新年', date: '2026-01-01', pinned: true });
+        }
+        render();
+    </script>
+</body>
+
+</html>

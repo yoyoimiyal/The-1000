@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown 表格助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .table-cell-input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            background: transparent;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .table-grid {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .table-grid td,
+        .table-grid th {
+            border: 1px solid #e2e8f0;
+        }
+
+        .table-grid th {
+            background-color: #f8fafc;
+            font-weight: bold;
+        }
+
+        textarea {
+            font-family: monospace;
+            white-space: pre;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen p-6 flex flex-col items-center text-slate-700">
+
+    <div class="w-full max-w-5xl h-[85vh] flex flex-col">
+
+        <header class="flex justify-between items-center mb-6 shrink-0">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <span class="bg-black text-white px-2 py-1 rounded text-xs font-mono">MD</span> Table Generator
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-slate-600">退出</a>
+        </header>
+
+        <!-- Toolbar -->
+        <div class="bg-white p-3 border border-slate-200 rounded-t-xl flex gap-2 items-center flex-wrap shrink-0">
+            <button onclick="addRow()"
+                class="bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded text-xs font-bold transition">+ 行
+                (Row)</button>
+            <button onclick="addCol()"
+                class="bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded text-xs font-bold transition">+ 列
+                (Col)</button>
+            <div class="w-px h-6 bg-slate-200 mx-2"></div>
+            <button onclick="removeRow()" class="text-red-400 hover:text-red-600 px-2 text-xs">删行</button>
+            <button onclick="removeCol()" class="text-red-400 hover:text-red-600 px-2 text-xs">删列</button>
+            <div class="flex-1 text-right">
+                <button onclick="generate()"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded text-sm font-bold shadow">生成代码
+                    &rarr;</button>
+            </div>
+        </div>
+
+        <div
+            class="flex-1 flex flex-col md:flex-row gap-6 bg-white border-x border-b border-slate-200 rounded-b-xl p-6 shadow-sm overflow-hidden">
+
+            <!-- Visual Editor -->
+            <div class="flex-1 overflow-auto border border-slate-200 rounded bg-slate-50">
+                <table class="table-grid" id="editor-table">
+                    <!-- JS Grid -->
+                </table>
+            </div>
+
+            <!-- Code Output -->
+            <div class="w-full md:w-1/3 flex flex-col">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="text-xs font-bold uppercase text-slate-400">Markdown Code</label>
+                    <button onclick="copyCode()" class="text-xs text-indigo-500 font-bold hover:underline">复制</button>
+                </div>
+                <textarea id="output"
+                    class="flex-1 w-full bg-slate-900 text-green-400 p-4 rounded-lg text-xs leading-relaxed resize-none focus:outline-none"
+                    readonly></textarea>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const table = document.getElementById('editor-table');
+        const output = document.getElementById('output');
+
+        let rows = 3;
+        let cols = 3;
+
+        function init() {
+            renderTable();
+            generate(); // Initial render
+        }
+
+        function renderTable() {
+            // Preserve data if possible? For simplicity, we might lose data on restructure or simple re-render.
+            // Better: Manipulate DOM directly to keep inputs.
+
+            // Simple approach: Rebuild from data array?
+            // Let's store data in 2D array.
+            const data = getData();
+
+            table.innerHTML = '';
+
+            // Header Row
+            const thead = document.createElement('tr');
+            for (let j = 0; j < cols; j++) {
+                const th = document.createElement('th');
+                const input = createInput(data[0] ? data[0][j] : `Header ${j + 1}`);
+                th.appendChild(input);
+                thead.appendChild(th);
+            }
+            table.appendChild(thead);
+
+            // Body Rows
+            for (let i = 1; i < rows; i++) {
+                const tr = document.createElement('tr');
+                for (let j = 0; j < cols; j++) {
+                    const td = document.createElement('td');
+                    const input = createInput(data[i] ? data[i][j] : '');
+                    td.appendChild(input);
+                    tr.appendChild(td);
+                }
+                table.appendChild(tr);
+            }
+        }
+
+        function createInput(val) {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'table-cell-input';
+            input.value = val || '';
+            input.oninput = generate; // Live preview
+            return input;
+        }
+
+        function getData() {
+            const res = [];
+            const trs = table.querySelectorAll('tr');
+            trs.forEach(tr => {
+                const rowData = [];
+                tr.querySelectorAll('input').forEach(input => rowData.push(input.value));
+                if (rowData.length > 0) res.push(rowData);
+            });
+            return res;
+        }
+
+        function addRow() {
+            rows++;
+            renderTable();
+            generate();
+        }
+        function addCol() {
+            cols++;
+            renderTable();
+            generate();
+        }
+        function removeRow() {
+            if (rows > 1) {
+                rows--;
+                renderTable();
+                generate();
+            }
+        }
+        function removeCol() {
+            if (cols > 1) {
+                cols--;
+                renderTable();
+                generate();
+            }
+        }
+
+        function generate() {
+            const data = getData();
+            if (data.length === 0) return;
+
+            let md = "";
+
+            // Header
+            md += "| " + data[0].join(" | ") + " |\n";
+            // Separator
+            md += "| " + data[0].map(() => "---").join(" | ") + " |\n";
+            // Body
+            for (let i = 1; i < data.length; i++) {
+                md += "| " + data[i].join(" | ") + " |\n";
+            }
+
+            output.value = md;
+        }
+
+        function copyCode() {
+            output.select();
+            document.execCommand('copy');
+            // Toast logic omitted
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

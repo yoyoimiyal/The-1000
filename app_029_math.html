@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>速算训练营</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .numpad-btn {
+            background-color: white;
+            border-bottom: 4px solid #e2e8f0;
+            transition: all 0.1s;
+        }
+
+        .numpad-btn:active {
+            transform: translateY(2px);
+            border-bottom-width: 0;
+            margin-bottom: 2px;
+        }
+    </style>
+</head>
+
+<body class="bg-indigo-50 min-h-screen flex items-center justify-center p-4 select-none">
+
+    <div class="w-full max-w-sm bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col h-[600px]">
+
+        <!-- Header / Stats -->
+        <div class="bg-indigo-600 p-6 flex justify-between text-white">
+            <div class="text-center">
+                <p class="text-xs uppercase opacity-75">得分</p>
+                <p class="text-2xl font-bold" id="score">0</p>
+            </div>
+            <div class="text-center">
+                <p class="text-xs uppercase opacity-75">时间</p>
+                <p class="text-2xl font-bold" id="time">60</p>
+            </div>
+            <div class="text-center">
+                <a href="./navigation.html"
+                    class="text-xs uppercase opacity-75 hover:opacity-100 hover:underline">退出</a>
+            </div>
+        </div>
+
+        <!-- Question Area -->
+        <div class="flex-1 flex flex-col items-center justify-center bg-slate-50 relative">
+            <div id="game-over"
+                class="absolute inset-0 bg-white/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center hidden">
+                <h2 class="text-3xl font-bold text-slate-800 mb-2">时间到!</h2>
+                <p class="text-slate-500 mb-6">最终得分: <span class="text-indigo-600 font-bold text-xl"
+                        id="final-score">0</span></p>
+                <button onclick="startGame()"
+                    class="bg-indigo-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-indigo-700 transition">再来一次</button>
+            </div>
+
+            <div class="text-5xl font-bold text-slate-700 mb-6 tracking-wider" id="problem">
+                12 + 5
+            </div>
+            <div class="h-16 w-32 border-b-4 border-indigo-200 text-4xl text-center font-bold text-indigo-600 outline-none"
+                id="input-display"></div>
+            <div class="text-sm text-slate-400 mt-4 h-6" id="feedback"></div>
+        </div>
+
+        <!-- Numpad -->
+        <div class="bg-slate-100 p-4 grid grid-cols-3 gap-3">
+            <button class="numpad-btn h-16 rounded-xl text-2xl font-bold text-slate-600" onclick="input(1)">1</button>
+            <button class="numpad-btn h-16 rounded-xl text-2xl font-bold text-slate-600" onclick="input(2)">2</button>
+            <button class="numpad-btn h-16 rounded-xl text-2xl font-bold text-slate-600" onclick="input(3)">3</button>
+            <button class="numpad-btn h-16 rounded-xl text-2xl font-bold text-slate-600" onclick="input(4)">4</button>
+            <button class="numpad-btn h-16 rounded-xl text-2xl font-bold text-slate-600" onclick="input(5)">5</button>
+            <button class="numpad-btn h-16 rounded-xl text-2xl font-bold text-slate-600" onclick="input(6)">6</button>
+            <button class="numpad-btn h-16 rounded-xl text-2xl font-bold text-slate-600" onclick="input(7)">7</button>
+            <button class="numpad-btn h-16 rounded-xl text-2xl font-bold text-slate-600" onclick="input(8)">8</button>
+            <button class="numpad-btn h-16 rounded-xl text-2xl font-bold text-slate-600" onclick="input(9)">9</button>
+            <button
+                class="numpad-btn h-16 rounded-xl text-lg font-bold text-slate-500 bg-red-100 border-red-200 text-red-500"
+                onclick="clearInput()">C</button>
+            <button class="numpad-btn h-16 rounded-xl text-2xl font-bold text-slate-600" onclick="input(0)">0</button>
+            <button
+                class="numpad-btn h-16 rounded-xl text-xl font-bold text-white bg-indigo-500 border-indigo-700 hover:bg-indigo-600"
+                onclick="submit()">OK</button>
+        </div>
+
+    </div>
+
+    <script>
+        let score = 0;
+        let timeLeft = 60;
+        let timerInterval;
+        let currentResult = 0;
+        let currentInput = "";
+
+        const scoreEl = document.getElementById('score');
+        const timeEl = document.getElementById('time');
+        const problemEl = document.getElementById('problem');
+        const inputDisplay = document.getElementById('input-display');
+        const feedbackEl = document.getElementById('feedback');
+        const gameOverScreen = document.getElementById('game-over');
+        const finalScoreEl = document.getElementById('final-score');
+
+        function startGame() {
+            score = 0;
+            timeLeft = 60;
+            scoreEl.innerText = score;
+            timeEl.innerText = timeLeft;
+            gameOverScreen.classList.add('hidden');
+
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timeEl.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            nextProblem();
+        }
+
+        function nextProblem() {
+            currentInput = "";
+            inputDisplay.innerText = "";
+            feedbackEl.innerText = "";
+
+            const ops = ['+', '-', '*'];
+            const op = ops[Math.floor(Math.random() * 3)];
+            let a = Math.floor(Math.random() * 20) + 1;
+            let b = Math.floor(Math.random() * 20) + 1;
+
+            // Simplify difficulty
+            if (op === '*') {
+                a = Math.floor(Math.random() * 10) + 1;
+                b = Math.floor(Math.random() * 9) + 1;
+            }
+            if (op === '-') {
+                if (a < b) [a, b] = [b, a]; // Ensure positive result
+            }
+
+            // Calculate result
+            if (op === '+') currentResult = a + b;
+            if (op === '-') currentResult = a - b;
+            if (op === '*') currentResult = a * b;
+
+            // Display format
+            const opDisplay = op === '*' ? '×' : op;
+            problemEl.innerText = `${a} ${opDisplay} ${b}`;
+        }
+
+        function input(num) {
+            if (currentInput.length < 4) {
+                currentInput += num;
+                inputDisplay.innerText = currentInput;
+            }
+        }
+
+        function clearInput() {
+            currentInput = "";
+            inputDisplay.innerText = "";
+        }
+
+        function submit() {
+            if (!currentInput) return;
+
+            const val = parseInt(currentInput);
+            if (val === currentResult) {
+                score += 10;
+                feedbackEl.innerText = "正确! +10";
+                feedbackEl.className = "text-sm mt-4 h-6 text-green-500 font-bold";
+                setTimeout(nextProblem, 200);
+            } else {
+                score = Math.max(0, score - 5);
+                feedbackEl.innerText = "错误! -5";
+                feedbackEl.className = "text-sm mt-4 h-6 text-red-500 font-bold";
+                currentInput = "";
+                inputDisplay.innerText = "";
+                // Don't skip, retry
+            }
+            scoreEl.innerText = score;
+        }
+
+        function endGame() {
+            clearInterval(timerInterval);
+            finalScoreEl.innerText = score;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        // Init
+        startGame();
+    </script>
+</body>
+
+</html>

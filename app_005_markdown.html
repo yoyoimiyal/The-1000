@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown 实时预览</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        .markdown-body {
+            font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+        }
+
+        .markdown-body h1 {
+            font-size: 2em;
+            font-weight: bold;
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+            margin-bottom: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .markdown-body h2 {
+            font-size: 1.5em;
+            font-weight: bold;
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+            margin-bottom: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .markdown-body p {
+            margin-bottom: 1rem;
+        }
+
+        .markdown-body ul {
+            list-style-type: disc;
+            padding-left: 2em;
+            margin-bottom: 1rem;
+        }
+
+        .markdown-body blockquote {
+            border-left: 4px solid #dfe2e5;
+            color: #6a737d;
+            padding-left: 1rem;
+            margin-left: 0;
+            margin-bottom: 1rem;
+        }
+
+        .markdown-body code {
+            background-color: #f6f8fa;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 85%;
+        }
+
+        .markdown-body pre {
+            background-color: #f6f8fa;
+            padding: 16px;
+            overflow: auto;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+
+        textarea {
+            font-family: 'JetBrains Mono', monospace;
+        }
+    </style>
+</head>
+
+<body class="h-screen flex flex-col bg-gray-50">
+
+    <!-- Header -->
+    <header class="bg-gray-800 text-white px-6 py-3 flex justify-between items-center shadow-md shrink-0">
+        <h1 class="font-bold text-lg flex items-center gap-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                </path>
+            </svg>
+            MD Editor
+        </h1>
+        <a href="./navigation.html" class="text-sm text-gray-400 hover:text-white transition">退出</a>
+    </header>
+
+    <!-- Main Editor Area -->
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+
+        <!-- Input -->
+        <div class="w-full md:w-1/2 flex flex-col border-r border-gray-300">
+            <div class="bg-gray-200 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">Markdown 输入
+            </div>
+            <textarea id="editor"
+                class="flex-1 w-full p-6 resize-none focus:outline-none bg-white text-gray-800 leading-relaxed text-sm"
+                placeholder="# 标题&#10;&#10;开始在这里输入 Markdown...&#10;&#10;- 列表项 1&#10;- 列表项 2&#10;&#10;**加粗文本**"></textarea>
+        </div>
+
+        <!-- Preview -->
+        <div class="w-full md:w-1/2 flex flex-col bg-white">
+            <div class="bg-gray-200 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">实时预览</div>
+            <div id="preview" class="markdown-body flex-1 w-full p-8 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <script>
+        const editor = document.getElementById('editor');
+        const preview = document.getElementById('preview');
+
+        // Initial default text
+        const defaultText = `# 欢迎使用 Markdown 预览
+
+这是一个 **实时预览** 的编辑器。
+
+## 功能演示
+
+1. 极简设计
+2. 支持标准 Markdown 语法
+3. 响应式布局
+
+> "千里之行，始于足下。"
+
+\`\`\`javascript
+console.log("Hello, World!");
+\`\`\`
+`;
+
+        editor.value = defaultText;
+
+        function updatePreview() {
+            const rawText = editor.value;
+            // Using marked.js to parse
+            preview.innerHTML = marked.parse(rawText);
+        }
+
+        editor.addEventListener('input', updatePreview);
+
+        // Init
+        updatePreview();
+    </script>
+</body>
+
+</html>

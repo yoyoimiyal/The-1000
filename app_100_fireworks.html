@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>百日庆典烟花</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: black;
+            overflow: hidden;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .text-overlay {
+            pointer-events: none;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+            animation: fadeIn 2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="absolute inset-0 flex flex-col items-center justify-center text-overlay z-10">
+        <h1
+            class="text-6xl md:text-9xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500 animate-pulse">
+            100
+        </h1>
+        <p class="text-white text-xl md:text-2xl mt-4 font-light tracking-[0.5em] uppercase">Apps Milestone</p>
+        <p class="text-white/50 text-xs mt-8">点击屏幕燃放更多烟花</p>
+    </div>
+
+    <div class="absolute bottom-8 w-full text-center z-20">
+        <a href="./navigation.html"
+            class="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full backdrop-blur-sm transition border border-white/20 pointer-events-auto">返回导航站</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                // Explosion velocity
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 5 + 2;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.02 + 0.01;
+                this.gravity = 0.1;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += this.gravity; // Gravity
+                this.vx *= 0.95; // Friction
+                this.vy *= 0.95;
+                this.alpha -= this.decay;
+            }
+
+            draw() {
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function createFirework(x, y) {
+            const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#ffffff'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            for (let i = 0; i < 50; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function loop() {
+            // Trail effect
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.update();
+                p.draw();
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            // Auto firework random
+            if (Math.random() < 0.03) {
+                createFirework(Math.random() * width, Math.random() * height * 0.6);
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        // Interaction
+        window.addEventListener('mousedown', e => createFirework(e.clientX, e.clientY));
+        window.addEventListener('touchstart', e => {
+            e.preventDefault();
+            createFirework(e.touches[0].clientX, e.touches[0].clientY);
+        });
+
+        // Start
+        loop();
+        // Initial blast
+        setTimeout(() => createFirework(width / 2, height / 2), 500);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>指尖节奏</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .lane {
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .lane:last-child {
+            border-right: none;
+        }
+
+        .note {
+            position: absolute;
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(to bottom, #60a5fa, #3b82f6);
+            border-radius: 4px;
+            opacity: 0.9;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+
+        .hit-effect {
+            animation: flash 0.1s ease-out;
+        }
+
+        @keyframes flash {
+            0% {
+                background-color: rgba(255, 255, 255, 0.8);
+            }
+
+            100% {
+                background-color: transparent;
+            }
+        }
+
+        .key-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 50px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .key-hint.active {
+            border-color: #3b82f6;
+            background-color: rgba(59, 130, 246, 0.2);
+            color: white;
+            transform: translateX(-50%) scale(0.95);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-gray-900 text-white min-h-screen flex flex-col items-center justify-center overflow-hidden font-sans select-none">
+
+    <div class="absolute top-4 left-4 text-sm text-gray-500">
+        <a href="./navigation.html" class="hover:text-white">← 退出</a>
+    </div>
+
+    <div class="text-center mb-4">
+        <h1 class="text-3xl font-bold italic tracking-wider text-blue-500">RHYTHM <span class="text-white">RUSH</span>
+        </h1>
+        <p class="text-sm text-gray-400">得分: <span id="score" class="text-xl font-bold text-white">0</span> | Miss:
+            <span id="miss" class="text-red-400">0</span></p>
+    </div>
+
+    <!-- Game Container -->
+    <div class="w-full max-w-md h-[500px] bg-gray-800 rounded-xl border border-gray-700 relative flex shadow-2xl overflow-hidden"
+        id="game-area">
+
+        <!-- Lane D -->
+        <div class="lane flex-1" id="lane-d">
+            <div class="key-hint" id="key-d">D</div>
+        </div>
+        <!-- Lane F -->
+        <div class="lane flex-1" id="lane-f">
+            <div class="key-hint" id="key-f">F</div>
+        </div>
+        <!-- Lane J -->
+        <div class="lane flex-1" id="lane-j">
+            <div class="key-hint" id="key-j">J</div>
+        </div>
+        <!-- Lane K -->
+        <div class="lane flex-1" id="lane-k">
+            <div class="key-hint" id="key-k">K</div>
+        </div>
+
+        <!-- Hit Line -->
+        <div class="absolute bottom-[45px] w-full h-[2px] bg-blue-500/50 pointer-events-none"></div>
+
+        <!-- Overlay for Start -->
+        <div id="start-overlay" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-10">
+            <p class="mb-6 text-gray-300 text-center">使用键盘 <span class="text-white font-bold">D F J K</span>
+                操作<br>当音符到达底部判定线时按下</p>
+            <button onclick="startGame()"
+                class="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-full font-bold transition transform hover:scale-105">开始游戏</button>
+        </div>
+    </div>
+
+    <script>
+        const lanes = {
+            'd': document.getElementById('lane-d'),
+            'f': document.getElementById('lane-f'),
+            'j': document.getElementById('lane-j'),
+            'k': document.getElementById('lane-k')
+        };
+        const keys = { 'd': 'key-d', 'f': 'key-f', 'j': 'key-j', 'k': 'key-k' };
+
+        let score = 0;
+        let miss = 0;
+        let isPlaying = false;
+        let notes = [];
+        let speed = 4; // px per frame
+        let spawnRate = 60; // frames
+        let frameCount = 0;
+        let animationId;
+
+        const scoreEl = document.getElementById('score');
+        const missEl = document.getElementById('miss');
+        const startOverlay = document.getElementById('start-overlay');
+        const HIT_Y = 430; // 500(h) - 20(bottom) - 50(height) = ~430 top pos of hit area
+        const HIT_ZONE = 40; // tolerance
+
+        function startGame() {
+            isPlaying = true;
+            score = 0;
+            miss = 0;
+            notes = [];
+            scoreEl.innerText = 0;
+            missEl.innerText = 0;
+            startOverlay.classList.add('hidden');
+
+            // Clear existing notes
+            document.querySelectorAll('.note').forEach(n => n.remove());
+
+            loop();
+        }
+
+        function spawnNote() {
+            const keysArr = ['d', 'f', 'j', 'k'];
+            const key = keysArr[Math.floor(Math.random() * keysArr.length)];
+            const lane = lanes[key];
+
+            const noteEl = document.createElement('div');
+            noteEl.className = 'note';
+            noteEl.style.top = '-60px'; // Start above
+            lane.appendChild(noteEl);
+
+            notes.push({
+                el: noteEl,
+                y: -60,
+                key: key,
+                hit: false
+            });
+        }
+
+        function loop() {
+            if (!isPlaying) return;
+
+            frameCount++;
+            if (frameCount % spawnRate === 0) {
+                spawnNote();
+                // Slowly increase difficulty
+                if (spawnRate > 20 && frameCount % 600 === 0) spawnRate -= 5;
+            }
+
+            // Move notes
+            for (let i = notes.length - 1; i >= 0; i--) {
+                const note = notes[i];
+                note.y += speed;
+                note.el.style.top = note.y + 'px';
+
+                // Miss check
+                if (note.y > 500) {
+                    if (!note.hit) {
+                        miss++;
+                        missEl.innerText = miss;
+                        // flash red logic could go here
+                    }
+                    note.el.remove();
+                    notes.splice(i, 1);
+                }
+            }
+
+            animationId = requestAnimationFrame(loop);
+        }
+
+        function handleInput(key) {
+            if (!isPlaying) return;
+
+            // Visual feedback
+            const keyEl = document.getElementById(keys[key]);
+            if (keyEl) {
+                keyEl.classList.add('active');
+                setTimeout(() => keyEl.classList.remove('active'), 100);
+            }
+
+            // Hit detection
+            // Find lowest unhit note in this lane
+            const targetNote = notes.find(n => n.key === key && !n.hit && Math.abs(n.y - (HIT_Y - 60)) < 150); // broad search first
+
+            if (targetNote) {
+                // Note height is 60. Bottom of note is y+60.
+                // Hit line is around 455 from top (500 - 45).
+                // Let's refine simple math:
+                // Best hit is when note.top is around 400? 
+                // Let's say perfect is when note center aligns with hit area center.
+                // Hit area center approx 450. Note center y + 30.
+                // So perfect y = 420.
+
+                const diff = Math.abs(targetNote.y - 395); // Tuned by feel
+
+                if (diff < HIT_ZONE) {
+                    // Hit!
+                    score += 100 - Math.floor(diff);
+                    scoreEl.innerText = score;
+                    targetNote.hit = true;
+                    targetNote.el.style.backgroundColor = '#fff';
+                    targetNote.el.style.opacity = '0';
+                    targetNote.el.style.transform = 'scale(1.5)';
+                    setTimeout(() => {
+                        if (targetNote.el.parentNode) targetNote.el.remove();
+                    }, 100);
+
+                    // Remove from array logic handled by cleanup or just ignore flag
+                }
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase();
+            if (['d', 'f', 'j', 'k'].includes(k)) {
+                handleInput(k);
+            }
+        });
+    </script>
+</body>
+
+</html>

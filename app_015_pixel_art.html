@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>像素画工坊</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .pixel-grid {
+            display: grid;
+            grid-template-columns: repeat(16, 1fr);
+            gap: 1px;
+            background-color: #e2e8f0;
+            border: 1px solid #cbd5e1;
+        }
+
+        .pixel {
+            background-color: white;
+            aspect-ratio: 1;
+            cursor: pointer;
+        }
+
+        .pixel:hover {
+            filter: brightness(0.95);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex flex-col items-center py-8 select-none">
+
+    <h1 class="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+        <div class="w-8 h-8 bg-red-500 rounded-sm shadow-sm"></div>
+        <div class="w-8 h-8 bg-blue-500 rounded-sm shadow-sm -ml-4 transform rotate-12"></div>
+        <span class="ml-2">Pixel Studio</span>
+    </h1>
+
+    <div class="flex flex-col md:flex-row gap-8 bg-white p-6 rounded-2xl shadow-xl">
+
+        <!-- Canvas Area -->
+        <div class="flex flex-col items-center">
+            <div id="grid" class="pixel-grid w-80 h-80 sm:w-96 sm:h-96">
+                <!-- Cells injected by JS -->
+            </div>
+            <div class="mt-4 flex gap-4 text-sm text-slate-500">
+                <span>16 x 16 Grid</span>
+                <span>|</span>
+                <span>鼠标点击或拖动绘图</span>
+            </div>
+        </div>
+
+        <!-- Tools Area -->
+        <div class="w-full md:w-48 flex flex-col gap-6">
+
+            <!-- Color Picker -->
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">当前颜色</label>
+                <input type="color" id="color-picker" value="#000000" class="w-full h-12 rounded cursor-pointer">
+            </div>
+
+            <!-- Palette -->
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">常用色板</label>
+                <div class="grid grid-cols-4 gap-2">
+                    <div class="w-8 h-8 rounded cursor-pointer border border-slate-200" style="background: #000000"
+                        onclick="setColor('#000000')"></div>
+                    <div class="w-8 h-8 rounded cursor-pointer border border-slate-200" style="background: #ffffff"
+                        onclick="setColor('#ffffff')"></div>
+                    <div class="w-8 h-8 rounded cursor-pointer border border-slate-200" style="background: #ef4444"
+                        onclick="setColor('#ef4444')"></div>
+                    <div class="w-8 h-8 rounded cursor-pointer border border-slate-200" style="background: #f97316"
+                        onclick="setColor('#f97316')"></div>
+                    <div class="w-8 h-8 rounded cursor-pointer border border-slate-200" style="background: #eab308"
+                        onclick="setColor('#eab308')"></div>
+                    <div class="w-8 h-8 rounded cursor-pointer border border-slate-200" style="background: #22c55e"
+                        onclick="setColor('#22c55e')"></div>
+                    <div class="w-8 h-8 rounded cursor-pointer border border-slate-200" style="background: #3b82f6"
+                        onclick="setColor('#3b82f6')"></div>
+                    <div class="w-8 h-8 rounded cursor-pointer border border-slate-200" style="background: #a855f7"
+                        onclick="setColor('#a855f7')"></div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex flex-col gap-2 mt-auto">
+                <button onclick="clearGrid()"
+                    class="px-4 py-2 border border-slate-300 rounded hover:bg-slate-50 text-slate-600 text-sm font-medium transition">
+                    清空画布
+                </button>
+                <button onclick="downloadArt()"
+                    class="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-700 text-white text-sm font-bold transition shadow-md">
+                    下载图片 (.png)
+                </button>
+            </div>
+
+            <a href="./navigation.html"
+                class="text-center text-slate-400 text-xs hover:text-indigo-600 underline mt-2">返回导航</a>
+        </div>
+    </div>
+
+    <script>
+        const grid = document.getElementById('grid');
+        const colorPicker = document.getElementById('color-picker');
+        let isDrawing = false;
+        const size = 16;
+
+        function initGrid() {
+            grid.innerHTML = '';
+            for (let i = 0; i < size * size; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('pixel');
+                cell.addEventListener('mousedown', startDraw);
+                cell.addEventListener('mouseenter', draw);
+                cell.addEventListener('mouseup', stopDraw);
+                grid.appendChild(cell);
+            }
+        }
+
+        function setColor(color) {
+            colorPicker.value = color;
+        }
+
+        function startDraw(e) {
+            isDrawing = true;
+            draw(e);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.target.style.backgroundColor = colorPicker.value;
+        }
+
+        function stopDraw() {
+            isDrawing = false;
+        }
+
+        // Global mouseup to stop drawing even if mouse leaves grid
+        document.body.addEventListener('mouseup', stopDraw);
+
+        function clearGrid() {
+            const pixels = document.querySelectorAll('.pixel');
+            pixels.forEach(p => p.style.backgroundColor = 'white');
+        }
+
+        function downloadArt() {
+            // Draw to a hidden canvas
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const scale = 20; // Scale up for visibility
+            canvas.width = size * scale;
+            canvas.height = size * scale;
+
+            const pixels = document.querySelectorAll('.pixel');
+            pixels.forEach((p, i) => {
+                const x = (i % size) * scale;
+                const y = Math.floor(i / size) * scale;
+                ctx.fillStyle = p.style.backgroundColor || 'white';
+                ctx.fillRect(x, y, scale, scale);
+            });
+
+            const link = document.createElement('a');
+            link.download = 'pixel-art.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        initGrid();
+    </script>
+</body>
+
+</html>

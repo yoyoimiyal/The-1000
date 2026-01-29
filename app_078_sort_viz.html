@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排序算法演示</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .bar {
+            transition: height 0.1s, background-color 0.1s;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6">
+
+    <div class="w-full max-w-4xl bg-white p-6 rounded-2xl shadow-xl flex flex-col h-[80vh]">
+
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Sorting Visualizer</h1>
+            <div class="flex gap-4 items-center">
+                <select id="algo-select"
+                    class="bg-gray-50 border border-gray-200 rounded px-3 py-1 text-sm outline-none">
+                    <option value="bubble">Bubble Sort (冒泡)</option>
+                    <option value="selection">Selection Sort (选择)</option>
+                    <option value="insertion">Insertion Sort (插入)</option>
+                </select>
+                <a href="./navigation.html" class="text-sm text-gray-400 hover:text-gray-600">退出</a>
+            </div>
+        </header>
+
+        <!-- Visualization Area -->
+        <div class="flex-1 bg-gray-50 rounded-xl border border-gray-200 relative flex items-end justify-center px-4 pb-0 overflow-hidden"
+            id="viz-container">
+            <!-- Bars -->
+        </div>
+
+        <!-- Controls -->
+        <div class="mt-6 flex justify-between items-center">
+            <button onclick="resetArray()" class="text-gray-500 hover:text-gray-700 font-bold text-sm">重置数组</button>
+
+            <div class="flex gap-4">
+                <button onclick="startSort()" id="start-btn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-lg font-bold shadow transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    开始排序
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const container = document.getElementById('viz-container');
+        const startBtn = document.getElementById('start-btn');
+        let array = [];
+        let isSorting = false;
+        const size = 30; // Number of bars
+        const speed = 30; // Delay ms
+
+        function resetArray() {
+            if (isSorting) return;
+            array = [];
+            container.innerHTML = '';
+            for (let i = 0; i < size; i++) {
+                const val = Math.floor(Math.random() * 90) + 10; // 10-100% height
+                array.push(val);
+
+                const bar = document.createElement('div');
+                bar.className = 'bar bg-blue-400 mx-px flex-1 rounded-t-sm';
+                bar.style.height = `${val}%`;
+                bar.id = `bar-${i}`;
+                container.appendChild(bar);
+            }
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function startSort() {
+            if (isSorting) return;
+            isSorting = true;
+            startBtn.disabled = true;
+
+            const algo = document.getElementById('algo-select').value;
+
+            if (algo === 'bubble') await bubbleSort();
+            else if (algo === 'selection') await selectionSort();
+            else if (algo === 'insertion') await insertionSort();
+
+            isSorting = false;
+            startBtn.disabled = false;
+        }
+
+        function swapDisplay(i, j) {
+            const bar1 = document.getElementById(`bar-${i}`);
+            const bar2 = document.getElementById(`bar-${j}`);
+
+            // Visual swap
+            const h1 = bar1.style.height;
+            bar1.style.height = bar2.style.height;
+            bar2.style.height = h1;
+        }
+
+        function setColor(idx, color) {
+            const bar = document.getElementById(`bar-${idx}`);
+            if (bar) bar.style.backgroundColor = color;
+        }
+
+        // --- Algos ---
+
+        async function bubbleSort() {
+            for (let i = 0; i < array.length; i++) {
+                for (let j = 0; j < array.length - i - 1; j++) {
+                    setColor(j, '#ef4444'); // Red: Compare
+                    setColor(j + 1, '#ef4444');
+
+                    await sleep(speed);
+
+                    if (array[j] > array[j + 1]) {
+                        // Swap data
+                        let temp = array[j];
+                        array[j] = array[j + 1];
+                        array[j + 1] = temp;
+                        // Swap visual
+                        swapDisplay(j, j + 1);
+                    }
+
+                    setColor(j, '#60a5fa'); // Blue: Reset
+                    setColor(j + 1, '#60a5fa');
+                }
+                setColor(array.length - i - 1, '#10b981'); // Green: Locked
+            }
+        }
+
+        async function selectionSort() {
+            for (let i = 0; i < array.length; i++) {
+                let minIdx = i;
+                setColor(i, '#ef4444'); // Current min candidate
+
+                for (let j = i + 1; j < array.length; j++) {
+                    setColor(j, '#f59e0b'); // Yellow: Scanning
+                    await sleep(speed);
+
+                    if (array[j] < array[minIdx]) {
+                        if (minIdx !== i) setColor(minIdx, '#60a5fa'); // Reset old min
+                        minIdx = j;
+                        setColor(minIdx, '#ef4444'); // New min
+                    } else {
+                        setColor(j, '#60a5fa');
+                    }
+                }
+
+                if (minIdx !== i) {
+                    let temp = array[i];
+                    array[i] = array[minIdx];
+                    array[minIdx] = temp;
+                    swapDisplay(i, minIdx);
+                    setColor(minIdx, '#60a5fa');
+                }
+                setColor(i, '#10b981'); // Locked
+            }
+        }
+
+        async function insertionSort() {
+            setColor(0, '#10b981'); // First element sorted
+            for (let i = 1; i < array.length; i++) {
+                let key = array[i];
+                let j = i - 1;
+
+                // Highlight current key
+                // Since this is insertion, we need to shift bars visually which is harder to animate simply via swap.
+                // Simplified: we will just set heights directly for this viz
+
+                setColor(i, '#f59e0b'); // Key
+                await sleep(speed);
+
+                while (j >= 0 && array[j] > key) {
+                    setColor(j, '#ef4444'); // Compare
+                    await sleep(speed);
+
+                    array[j + 1] = array[j];
+
+                    // Visual update for shift
+                    const barNext = document.getElementById(`bar-${j + 1}`);
+                    const barCurr = document.getElementById(`bar-${j}`);
+                    barNext.style.height = barCurr.style.height;
+
+                    setColor(j, '#10b981'); // Was already sorted part
+                    j = j - 1;
+                }
+                array[j + 1] = key;
+
+                const barKeyPos = document.getElementById(`bar-${j + 1}`);
+                barKeyPos.style.height = `${key}%`;
+                setColor(j + 1, '#10b981');
+            }
+        }
+
+        // Init
+        resetArray();
+    </script>
+</body>
+
+</html>

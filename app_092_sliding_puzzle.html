@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字华容道</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .grid-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .grid-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .tile {
+            transition: transform 0.2s, background-color 0.2s;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 4px 0 #1e293b;
+            /* slate-800 shadow */
+        }
+
+        .tile:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        .tile.empty {
+            background: transparent;
+            cursor: default;
+            box-shadow: none;
+            border: none;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body class="bg-amber-50 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-sm">
+
+        <header class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-amber-900">Sliding Puzzle</h1>
+                <p class="text-xs text-amber-700">Moves: <span id="moves" class="font-bold">0</span></p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="initGame(3)"
+                    class="text-xs bg-amber-200 px-3 py-1 rounded text-amber-900 font-bold hover:bg-amber-300">3x3</button>
+                <button onclick="initGame(4)"
+                    class="text-xs bg-amber-200 px-3 py-1 rounded text-amber-900 font-bold hover:bg-amber-300">4x4</button>
+                <a href="./navigation.html"
+                    class="text-xs bg-white px-3 py-1 rounded text-amber-900 hover:bg-amber-100">退出</a>
+            </div>
+        </header>
+
+        <!-- Board -->
+        <div id="board" class="bg-amber-900 p-2 rounded-xl grid gap-2 shadow-2xl mb-8">
+            <!-- Tiles injected here -->
+        </div>
+
+        <!-- Success Msg -->
+        <div id="success-msg" class="hidden text-center">
+            <h2 class="text-xl font-bold text-green-600 mb-2">🎉 挑战成功!</h2>
+            <button onclick="initGame(currSize)"
+                class="px-6 py-2 bg-amber-600 text-white rounded-full font-bold shadow-lg hover:bg-amber-700">再玩一次</button>
+        </div>
+
+    </div>
+
+    <script>
+        const board = document.getElementById('board');
+        const movesEl = document.getElementById('moves');
+        const successMsg = document.getElementById('success-msg');
+
+        let tiles = [];
+        let currSize = 3;
+        let emptyIndex = 8;
+        let moves = 0;
+
+        function initGame(size) {
+            currSize = size;
+            moves = 0;
+            movesEl.innerText = 0;
+            successMsg.classList.add('hidden');
+
+            // Set Grid Style
+            board.className = `bg-amber-900 p-2 rounded-xl grid gap-2 shadow-2xl mb-8 ${size === 3 ? 'grid-3' : 'grid-4'}`;
+
+            // Generate solved state
+            tiles = Array.from({ length: size * size }, (_, i) => i + 1);
+            tiles[size * size - 1] = null; // Last one is empty
+
+            // Random shuffle (simulate random moves to ensure solvability)
+            // Pure random shuffle might result in unsolvable states. 
+            // Better to simulate random valid moves.
+            simulateShuffle(size * size * 20);
+
+            render();
+        }
+
+        function simulateShuffle(steps) {
+            let currentIndex = tiles.indexOf(null); // empty position
+            let lastIndex = -1;
+
+            for (let k = 0; k < steps; k++) {
+                const neighbors = getNeighbors(currentIndex);
+                // Don't undo last move immediately to ensure mixing
+                const valid = neighbors.filter(n => n !== lastIndex);
+                const next = valid[Math.floor(Math.random() * valid.length)];
+
+                // Swap
+                [tiles[currentIndex], tiles[next]] = [tiles[next], tiles[currentIndex]];
+                lastIndex = currentIndex;
+                currentIndex = next;
+            }
+        }
+
+        function getNeighbors(idx) {
+            const neighbors = [];
+            const row = Math.floor(idx / currSize);
+            const col = idx % currSize;
+
+            if (row > 0) neighbors.push(idx - currSize); // Top
+            if (row < currSize - 1) neighbors.push(idx + currSize); // Bottom
+            if (col > 0) neighbors.push(idx - 1); // Left
+            if (col < currSize - 1) neighbors.push(idx + 1); // Right
+
+            return neighbors;
+        }
+
+        function move(idx) {
+            const emptyIdx = tiles.indexOf(null);
+            const neighbors = getNeighbors(emptyIdx);
+
+            if (neighbors.includes(idx)) {
+                // Swap
+                [tiles[emptyIdx], tiles[idx]] = [tiles[idx], tiles[emptyIdx]];
+                moves++;
+                movesEl.innerText = moves;
+                render();
+                checkWin();
+            }
+        }
+
+        function checkWin() {
+            // Check if 1, 2, 3... null
+            for (let i = 0; i < tiles.length - 1; i++) {
+                if (tiles[i] !== i + 1) return;
+            }
+            // Last must be null
+            if (tiles[tiles.length - 1] !== null) return;
+
+            successMsg.classList.remove('hidden');
+        }
+
+        function render() {
+            board.innerHTML = '';
+            tiles.forEach((val, idx) => {
+                const el = document.createElement('div');
+                if (val === null) {
+                    el.className = 'tile empty';
+                } else {
+                    el.className = 'tile bg-amber-100 text-amber-900 rounded-lg flex items-center justify-center font-bold text-2xl aspect-square border border-amber-200';
+                    el.innerText = val;
+                    el.onclick = () => move(idx);
+                }
+                board.appendChild(el);
+            });
+        }
+
+        // Init
+        initGame(3);
+    </script>
+</body>
+
+</html>

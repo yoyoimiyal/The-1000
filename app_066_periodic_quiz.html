@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>元素大挑战</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .element-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100px;
+            height: 120px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .shake {
+            animation: shake 0.4s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
+        @keyframes shake {
+
+            10%,
+            90% {
+                transform: translate3d(-1px, 0, 0);
+            }
+
+            20%,
+            80% {
+                transform: translate3d(2px, 0, 0);
+            }
+
+            30%,
+            50%,
+            70% {
+                transform: translate3d(-4px, 0, 0);
+            }
+
+            40%,
+            60% {
+                transform: translate3d(4px, 0, 0);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-indigo-50 min-h-screen flex flex-col items-center justify-center p-4 select-none">
+
+    <div class="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-indigo-100 relative overflow-hidden">
+
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-indigo-900">Element Quiz</h1>
+            <div class="text-sm font-bold text-indigo-400">Score: <span id="score" class="text-indigo-700">0</span>
+            </div>
+        </div>
+
+        <!-- Question Area -->
+        <div class="flex flex-col items-center mb-8">
+            <p class="text-slate-500 mb-4 text-sm uppercase tracking-wide">Which element is this?</p>
+
+            <div class="element-card transform scale-125 mb-4">
+                <span class="text-xs font-bold text-slate-400 absolute top-2 left-2" id="q-num">1</span>
+                <span class="text-5xl font-bold text-slate-800" id="q-symbol">H</span>
+            </div>
+        </div>
+
+        <!-- Options -->
+        <div class="grid grid-cols-2 gap-3 mb-6" id="options">
+            <!-- Buttons injected here -->
+        </div>
+
+        <!-- Feedback Overlay -->
+        <div id="feedback"
+            class="absolute inset-0 bg-white/90 backdrop-blur-sm z-10 hidden flex-col items-center justify-center text-center">
+            <div class="text-6xl mb-4" id="fb-icon">🎉</div>
+            <h2 class="text-2xl font-bold text-slate-800 mb-2" id="fb-title">Correct!</h2>
+            <p class="text-slate-500 mb-6" id="fb-msg">Hydrogen is element #1</p>
+            <button onclick="nextQuestion()"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-full font-bold shadow-lg transition">Next
+                Question</button>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="./navigation.html" class="text-xs text-indigo-300 hover:text-indigo-500">Exit</a>
+        </div>
+
+    </div>
+
+    <script>
+        const elements = [
+            { n: 1, s: 'H', name: '氢 (Hydrogen)' }, { n: 2, s: 'He', name: '氦 (Helium)' },
+            { n: 3, s: 'Li', name: '锂 (Lithium)' }, { n: 4, s: 'Be', name: '铍 (Beryllium)' },
+            { n: 5, s: 'B', name: '硼 (Boron)' }, { n: 6, s: 'C', name: '碳 (Carbon)' },
+            { n: 7, s: 'N', name: '氮 (Nitrogen)' }, { n: 8, s: 'O', name: '氧 (Oxygen)' },
+            { n: 9, s: 'F', name: '氟 (Fluorine)' }, { n: 10, s: 'Ne', name: '氖 (Neon)' },
+            { n: 11, s: 'Na', name: '钠 (Sodium)' }, { n: 12, s: 'Mg', name: '镁 (Magnesium)' },
+            { n: 13, s: 'Al', name: '铝 (Aluminium)' }, { n: 14, s: 'Si', name: '硅 (Silicon)' },
+            { n: 15, s: 'P', name: '磷 (Phosphorus)' }, { n: 16, s: 'S', name: '硫 (Sulfur)' },
+            { n: 17, s: 'Cl', name: '氯 (Chlorine)' }, { n: 18, s: 'Ar', name: '氩 (Argon)' },
+            { n: 19, s: 'K', name: '钾 (Potassium)' }, { n: 20, s: 'Ca', name: '钙 (Calcium)' },
+            { n: 26, s: 'Fe', name: '铁 (Iron)' }, { n: 29, s: 'Cu', name: '铜 (Copper)' },
+            { n: 47, s: 'Ag', name: '银 (Silver)' }, { n: 79, s: 'Au', name: '金 (Gold)' }
+        ];
+
+        let currentQ = null;
+        let score = 0;
+
+        const qSymbol = document.getElementById('q-symbol');
+        const qNum = document.getElementById('q-num');
+        const optionsEl = document.getElementById('options');
+        const scoreEl = document.getElementById('score');
+        const feedbackEl = document.getElementById('feedback');
+        const fbIcon = document.getElementById('fb-icon');
+        const fbTitle = document.getElementById('fb-title');
+        const fbMsg = document.getElementById('fb-msg');
+
+        function nextQuestion() {
+            feedbackEl.classList.add('hidden');
+            feedbackEl.classList.remove('flex');
+
+            // Pick random element
+            currentQ = elements[Math.floor(Math.random() * elements.length)];
+
+            qSymbol.innerText = currentQ.s;
+            qNum.innerText = currentQ.n;
+
+            // Generate options (1 correct + 3 wrong)
+            let opts = [currentQ];
+            while (opts.length < 4) {
+                const randomEl = elements[Math.floor(Math.random() * elements.length)];
+                if (!opts.includes(randomEl)) opts.push(randomEl);
+            }
+
+            // Shuffle options
+            opts.sort(() => Math.random() - 0.5);
+
+            optionsEl.innerHTML = '';
+            opts.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "w-full py-3 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-xl text-slate-700 font-bold transition text-sm";
+                btn.innerText = opt.name;
+                btn.onclick = () => checkAnswer(opt);
+                optionsEl.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selected) {
+            feedbackEl.classList.remove('hidden');
+            feedbackEl.classList.add('flex');
+
+            if (selected.n === currentQ.n) {
+                score += 10;
+                fbIcon.innerText = "🎉";
+                fbTitle.innerText = "回答正确!";
+                fbTitle.className = "text-2xl font-bold text-green-600 mb-2";
+                fbMsg.innerText = `${currentQ.s} 是 ${currentQ.name}`;
+            } else {
+                score = Math.max(0, score - 5);
+                fbIcon.innerText = "😅";
+                fbTitle.innerText = "哎呀，错了";
+                fbTitle.className = "text-2xl font-bold text-red-500 mb-2";
+                fbMsg.innerText = `正确答案是: ${currentQ.name}`;
+            }
+            scoreEl.innerText = score;
+        }
+
+        // Init
+        nextQuestion();
+    </script>
+</body>
+
+</html>

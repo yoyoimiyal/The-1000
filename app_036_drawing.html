@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简易画板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            cursor: crosshair;
+            touch-action: none;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex flex-col items-center p-4">
+
+    <div class="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row h-[85vh]">
+
+        <!-- Canvas Area -->
+        <div class="flex-1 bg-white relative border-r border-slate-200" id="canvas-container">
+            <canvas id="canvas"></canvas>
+            <div id="start-msg"
+                class="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-300 text-2xl font-bold select-none">
+                开始绘画...
+            </div>
+        </div>
+
+        <!-- Sidebar Tools -->
+        <div class="w-full md:w-64 bg-slate-50 p-6 flex flex-col gap-6 shrink-0 z-10 overflow-y-auto">
+
+            <h1 class="text-xl font-bold text-slate-700 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                Sketch Pad
+            </h1>
+
+            <!-- Colors -->
+            <div>
+                <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">颜色</label>
+                <div class="grid grid-cols-4 gap-2">
+                    <button
+                        class="w-8 h-8 rounded-full bg-black border-2 border-transparent hover:scale-110 transition ring-2 ring-transparent focus:ring-indigo-300"
+                        onclick="setColor('#000000')"></button>
+                    <button
+                        class="w-8 h-8 rounded-full bg-red-500 border-2 border-transparent hover:scale-110 transition ring-2 ring-transparent focus:ring-indigo-300"
+                        onclick="setColor('#ef4444')"></button>
+                    <button
+                        class="w-8 h-8 rounded-full bg-orange-500 border-2 border-transparent hover:scale-110 transition ring-2 ring-transparent focus:ring-indigo-300"
+                        onclick="setColor('#f97316')"></button>
+                    <button
+                        class="w-8 h-8 rounded-full bg-yellow-400 border-2 border-transparent hover:scale-110 transition ring-2 ring-transparent focus:ring-indigo-300"
+                        onclick="setColor('#facc15')"></button>
+                    <button
+                        class="w-8 h-8 rounded-full bg-green-500 border-2 border-transparent hover:scale-110 transition ring-2 ring-transparent focus:ring-indigo-300"
+                        onclick="setColor('#22c55e')"></button>
+                    <button
+                        class="w-8 h-8 rounded-full bg-blue-500 border-2 border-transparent hover:scale-110 transition ring-2 ring-transparent focus:ring-indigo-300"
+                        onclick="setColor('#3b82f6')"></button>
+                    <button
+                        class="w-8 h-8 rounded-full bg-purple-500 border-2 border-transparent hover:scale-110 transition ring-2 ring-transparent focus:ring-indigo-300"
+                        onclick="setColor('#a855f7')"></button>
+                    <input type="color" class="w-8 h-8 rounded-full p-0 border-0 overflow-hidden cursor-pointer"
+                        onchange="setColor(this.value)">
+                </div>
+            </div>
+
+            <!-- Brush Size -->
+            <div>
+                <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">画笔大小: <span
+                        id="size-val">5</span></label>
+                <input type="range" min="1" max="50" value="5"
+                    class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                    oninput="setSize(this.value)">
+            </div>
+
+            <!-- Eraser -->
+            <button onclick="setEraser()" id="btn-eraser"
+                class="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 transition text-sm font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                橡皮擦
+            </button>
+
+            <!-- Actions -->
+            <div class="mt-auto flex flex-col gap-3">
+                <button onclick="clearCanvas()"
+                    class="w-full py-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-200 font-bold transition">清空</button>
+                <button onclick="downloadCanvas()"
+                    class="w-full py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold shadow-lg transition">下载图片</button>
+                <a href="./navigation.html"
+                    class="text-center text-xs text-slate-400 hover:text-indigo-600 mt-2">返回导航</a>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+        const startMsg = document.getElementById('start-msg');
+
+        let painting = false;
+        let color = '#000000';
+        let lineWidth = 5;
+        let isEraser = false;
+
+        function resizeCanvas() {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function startPosition(e) {
+            painting = true;
+            startMsg.style.display = 'none';
+            draw(e);
+        }
+
+        function endPosition() {
+            painting = false;
+            ctx.beginPath();
+        }
+
+        function draw(e) {
+            if (!painting) return;
+
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+
+            // Support Touch and Mouse
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            ctx.lineWidth = lineWidth;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = isEraser ? '#ffffff' : color;
+
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        // Event Listeners
+        canvas.addEventListener('mousedown', startPosition);
+        canvas.addEventListener('mouseup', endPosition);
+        canvas.addEventListener('mousemove', draw);
+
+        canvas.addEventListener('touchstart', startPosition);
+        canvas.addEventListener('touchend', endPosition);
+        canvas.addEventListener('touchmove', draw);
+
+        // Tools
+        function setColor(newColor) {
+            isEraser = false;
+            color = newColor;
+            document.getElementById('btn-eraser').classList.remove('bg-indigo-100', 'text-indigo-700', 'border-indigo-200');
+            document.getElementById('btn-eraser').classList.add('bg-white', 'text-slate-600', 'border-slate-200');
+        }
+
+        function setSize(newSize) {
+            lineWidth = newSize;
+            document.getElementById('size-val').innerText = newSize;
+        }
+
+        function setEraser() {
+            isEraser = true;
+            const btn = document.getElementById('btn-eraser');
+            btn.classList.remove('bg-white', 'text-slate-600', 'border-slate-200');
+            btn.classList.add('bg-indigo-100', 'text-indigo-700', 'border-indigo-200');
+        }
+
+        function clearCanvas() {
+            if (confirm('确定要清空画板吗？')) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                startMsg.style.display = 'flex';
+            }
+        }
+
+        function downloadCanvas() {
+            // Create a temporary canvas to add white background (otherwise transparent)
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tCtx = tempCanvas.getContext('2d');
+
+            // Fill white
+            tCtx.fillStyle = '#ffffff';
+            tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            // Draw original
+            tCtx.drawImage(canvas, 0, 0);
+
+            const link = document.createElement('a');
+            link.download = 'my-drawing.png';
+            link.href = tempCanvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+
+</html>

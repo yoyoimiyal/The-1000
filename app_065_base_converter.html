@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>程序员进制转换</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        .mono {
+            font-family: 'Fira Code', monospace;
+        }
+
+        input:focus+label {
+            color: #4f46e5;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4 text-slate-700">
+
+    <div class="bg-white w-full max-w-lg p-8 rounded-2xl shadow-xl border border-slate-100">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-slate-800">Base Converter</h1>
+            <a href="./navigation.html"
+                class="text-xs text-slate-400 hover:text-indigo-600 uppercase font-bold">Exit</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <!-- Decimal -->
+            <div class="relative">
+                <input type="text" id="dec"
+                    class="peer w-full h-14 px-4 pt-4 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition mono font-bold text-lg text-slate-800"
+                    placeholder=" " oninput="convert(10, this.value)">
+                <label
+                    class="absolute top-1 left-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest transition-colors peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px]">Decimal
+                    (10)</label>
+            </div>
+
+            <!-- Hex -->
+            <div class="relative">
+                <input type="text" id="hex"
+                    class="peer w-full h-14 px-4 pt-4 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition mono font-bold text-lg text-pink-600 uppercase"
+                    placeholder=" " oninput="convert(16, this.value)">
+                <label
+                    class="absolute top-1 left-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest transition-colors peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px]">Hexadecimal
+                    (16)</label>
+            </div>
+
+            <!-- Octal -->
+            <div class="relative">
+                <input type="text" id="oct"
+                    class="peer w-full h-14 px-4 pt-4 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white transition mono font-bold text-lg text-orange-600"
+                    placeholder=" " oninput="convert(8, this.value)">
+                <label
+                    class="absolute top-1 left-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest transition-colors peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px]">Octal
+                    (8)</label>
+            </div>
+
+            <!-- Binary -->
+            <div class="relative">
+                <input type="text" id="bin"
+                    class="peer w-full h-14 px-4 pt-4 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition mono font-bold text-lg text-emerald-600 break-all"
+                    placeholder=" " oninput="convert(2, this.value)">
+                <label
+                    class="absolute top-1 left-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest transition-colors peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px]">Binary
+                    (2)</label>
+            </div>
+
+        </div>
+
+        <button onclick="clearAll()"
+            class="mt-8 w-full py-3 text-sm text-slate-400 hover:text-red-500 font-bold hover:bg-red-50 rounded-lg transition">Clear
+            All</button>
+
+    </div>
+
+    <script>
+        const inputs = {
+            10: document.getElementById('dec'),
+            16: document.getElementById('hex'),
+            8: document.getElementById('oct'),
+            2: document.getElementById('bin')
+        };
+
+        function convert(fromBase, value) {
+            // Remove invalid characters based on base
+            // e.g., if base 2, remove non 0-1
+            let cleanVal = value.trim();
+
+            if (cleanVal === "") {
+                clearAll(false); // Clear others but don't clear self if actively typing? No, clear all is safer to sync.
+                // But clearing self while typing is bad UI.
+                // We just clear others.
+                Object.keys(inputs).forEach(b => {
+                    if (b != fromBase) inputs[b].value = "";
+                });
+                return;
+            }
+
+            // Parse
+            const intVal = parseInt(cleanVal, fromBase);
+
+            if (isNaN(intVal)) {
+                // Invalid input for this base
+                // Just clear others or show error? 
+                // Let's just do nothing to others or show dashes
+                return;
+            }
+
+            // Update others
+            Object.keys(inputs).forEach(targetBase => {
+                if (targetBase != fromBase) {
+                    inputs[targetBase].value = intVal.toString(targetBase).toUpperCase();
+                }
+            });
+        }
+
+        function clearAll(clearSelf = true) {
+            Object.values(inputs).forEach(input => input.value = "");
+        }
+    </script>
+</body>
+
+</html>

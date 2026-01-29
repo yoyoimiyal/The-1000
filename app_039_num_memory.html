@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字记忆挑战</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .progress-bar {
+            transition: width 1s linear;
+        }
+    </style>
+</head>
+
+<body class="bg-indigo-900 min-h-screen text-white flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md text-center">
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="bg-white/10 backdrop-blur-md p-8 rounded-3xl shadow-2xl border border-white/20">
+            <div class="text-6xl mb-4">🧠</div>
+            <h1 class="text-3xl font-bold mb-2">Number Memory</h1>
+            <p class="text-indigo-200 mb-8">数字会在屏幕上短暂显示，请凭记忆输入。<br>位数会越来越长。</p>
+            <button onclick="gameStart()"
+                class="bg-yellow-400 hover:bg-yellow-300 text-indigo-900 font-bold py-3 px-10 rounded-full text-lg shadow-lg transition transform hover:scale-105">开始挑战</button>
+            <div class="mt-8">
+                <a href="./navigation.html" class="text-sm text-indigo-300 hover:text-white underline">退出</a>
+            </div>
+        </div>
+
+        <!-- Display Screen -->
+        <div id="display-screen" class="hidden">
+            <h2 class="text-xl text-indigo-300 mb-8">记住这个数字</h2>
+            <div id="number-display" class="text-6xl sm:text-7xl font-bold tracking-widest mb-8 text-white">1234</div>
+            <div class="w-64 h-2 bg-indigo-800 rounded-full mx-auto overflow-hidden">
+                <div id="timer-bar" class="h-full bg-yellow-400 w-full"></div>
+            </div>
+        </div>
+
+        <!-- Input Screen -->
+        <div id="input-screen"
+            class="hidden bg-white/10 backdrop-blur-md p-8 rounded-3xl shadow-2xl border border-white/20">
+            <h2 class="text-xl mb-4">数字是...?</h2>
+            <input type="number" id="user-input"
+                class="w-full bg-indigo-950 border border-indigo-700 rounded-xl px-4 py-4 text-center text-3xl tracking-widest outline-none focus:border-yellow-400 mb-6"
+                placeholder="?" onkeydown="if(event.key==='Enter') submitAnswer()">
+            <button onclick="submitAnswer()"
+                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition">提交</button>
+        </div>
+
+        <!-- Result Screen (Success/Fail) -->
+        <div id="result-screen"
+            class="hidden bg-white/10 backdrop-blur-md p-8 rounded-3xl shadow-2xl border border-white/20">
+            <div id="result-icon" class="text-6xl mb-4">✅</div>
+            <h2 id="result-title" class="text-2xl font-bold mb-2">正确!</h2>
+            <p id="result-msg" class="text-indigo-200 mb-6">数字: 1234<br>你的答案: 1234</p>
+            <button onclick="nextLevel()" id="next-btn"
+                class="bg-white text-indigo-900 font-bold py-2 px-8 rounded-full">下一关</button>
+        </div>
+
+    </div>
+
+    <script>
+        let level = 1;
+        let currentNumber = "";
+        let displayTime = 1000; // ms per digit roughly, or fixed base + scale
+
+        const screens = {
+            start: document.getElementById('start-screen'),
+            display: document.getElementById('display-screen'),
+            input: document.getElementById('input-screen'),
+            result: document.getElementById('result-screen')
+        };
+        const numDisplay = document.getElementById('number-display');
+        const timerBar = document.getElementById('timer-bar');
+        const userInput = document.getElementById('user-input');
+
+        function showScreen(name) {
+            Object.values(screens).forEach(el => el.classList.add('hidden'));
+            screens[name].classList.remove('hidden');
+        }
+
+        function gameStart() {
+            level = 1;
+            nextLevel();
+        }
+
+        function nextLevel() {
+            generateNumber();
+            showScreen('display');
+
+            // Timer animation
+            timerBar.style.transition = 'none';
+            timerBar.style.width = '100%';
+
+            // Display time based on length. Base 1s + 0.5s per digit?
+            // Or simpler: Level 1 (1 digit) -> 1.5s, Level 5 (5 digits) -> 3s
+            const duration = Math.max(2000, level * 800);
+
+            setTimeout(() => {
+                timerBar.style.transition = `width ${duration}ms linear`;
+                timerBar.style.width = '0%';
+            }, 50);
+
+            setTimeout(() => {
+                showScreen('input');
+                userInput.value = '';
+                userInput.focus();
+            }, duration);
+        }
+
+        function generateNumber() {
+            // Level 1: 1 digit
+            // Level n: n digits
+            currentNumber = "";
+            for (let i = 0; i < level; i++) {
+                currentNumber += Math.floor(Math.random() * 10);
+            }
+            numDisplay.innerText = currentNumber;
+        }
+
+        function submitAnswer() {
+            const val = userInput.value;
+            showScreen('result');
+
+            const title = document.getElementById('result-title');
+            const msg = document.getElementById('result-msg');
+            const icon = document.getElementById('result-icon');
+            const nextBtn = document.getElementById('next-btn');
+
+            if (val === currentNumber) {
+                icon.innerText = "🎉";
+                title.innerText = "正确!";
+                title.className = "text-2xl font-bold mb-2 text-green-400";
+                msg.innerHTML = `等级 ${level} 完成`;
+                nextBtn.innerText = "下一关";
+                nextBtn.onclick = () => {
+                    level++;
+                    nextLevel();
+                };
+            } else {
+                icon.innerText = "💥";
+                title.innerText = "失败";
+                title.className = "text-2xl font-bold mb-2 text-red-400";
+                msg.innerHTML = `正确答案: ${currentNumber}<br>你的答案: ${val}`;
+                nextBtn.innerText = "重新开始";
+                nextBtn.onclick = gameStart;
+            }
+        }
+    </script>
+</body>
+
+</html>

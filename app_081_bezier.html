@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>贝塞尔曲线生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .handle {
+            cursor: grab;
+            transition: r 0.1s;
+        }
+
+        .handle:hover {
+            r: 8;
+        }
+
+        .handle:active {
+            cursor: grabbing;
+        }
+
+        .code-block {
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-700 select-none">
+
+    <div class="w-full max-w-4xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-indigo-600 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                Bezier Generator
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="flex flex-col md:flex-row gap-8">
+
+            <!-- Editor -->
+            <div class="flex-1 bg-white rounded-xl shadow-lg border border-slate-200 p-1 relative">
+                <svg width="100%" height="400" id="svg-editor"
+                    class="bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px]">
+                    <!-- Connecting Lines -->
+                    <line id="line-1" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4" />
+                    <line id="line-2" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4" />
+
+                    <!-- The Curve -->
+                    <path id="curve" fill="none" stroke="#4f46e5" stroke-width="4" stroke-linecap="round" />
+
+                    <!-- Points -->
+                    <circle id="p1" r="6" fill="#ef4444" class="handle" /> <!-- Start -->
+                    <circle id="p4" r="6" fill="#ef4444" class="handle" /> <!-- End -->
+
+                    <!-- Controls -->
+                    <circle id="p2" r="6" fill="#3b82f6" class="handle" /> <!-- C1 -->
+                    <circle id="p3" r="6" fill="#3b82f6" class="handle" /> <!-- C2 -->
+                </svg>
+                <div class="absolute bottom-4 right-4 text-xs text-slate-400 pointer-events-none">拖动蓝点调节曲线</div>
+            </div>
+
+            <!-- Output -->
+            <div class="w-full md:w-80 flex flex-col gap-4">
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-slate-800 mb-4">输出代码</h3>
+
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">SVG Path (d)</label>
+                        <div class="relative">
+                            <input type="text" id="out-svg"
+                                class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs code-block text-indigo-600"
+                                readonly>
+                            <button onclick="copy('out-svg')"
+                                class="absolute right-1 top-1 bg-white border border-slate-200 px-2 py-0.5 rounded text-[10px] hover:text-indigo-600">Copy</button>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">CSS cubic-bezier</label>
+                        <div class="relative">
+                            <input type="text" id="out-css"
+                                class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs code-block text-pink-600"
+                                readonly>
+                            <button onclick="copy('out-css')"
+                                class="absolute right-1 top-1 bg-white border border-slate-200 px-2 py-0.5 rounded text-[10px] hover:text-indigo-600">Copy</button>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-1">* CSS 贝塞尔仅支持时间(0-1)范围内的动画曲线</p>
+                    </div>
+                </div>
+
+                <div class="bg-indigo-600 p-6 rounded-xl shadow-lg text-white">
+                    <h3 class="font-bold mb-2">动画预览</h3>
+                    <div class="w-full h-2 bg-indigo-800 rounded-full overflow-hidden mb-2">
+                        <div id="anim-box" class="h-full bg-white w-1/4 rounded-full"></div>
+                    </div>
+                    <button onclick="playAnim()"
+                        class="text-xs bg-indigo-500 hover:bg-indigo-400 px-3 py-1 rounded">播放动画</button>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const svg = document.getElementById('svg-editor');
+        const width = svg.clientWidth;
+        const height = svg.clientHeight;
+
+        // Initial Points
+        const points = {
+            p1: { x: 50, y: 350 }, // Start
+            p2: { x: 150, y: 50 },  // C1
+            p3: { x: 350, y: 50 },  // C2
+            p4: { x: 450, y: 350 }  // End
+        };
+
+        // If mobile/small screen, adjust defaults
+        if (width < 500) {
+            points.p3.x = width - 50;
+            points.p4.x = width - 50;
+        }
+
+        let activePoint = null;
+
+        function update() {
+            // Draw Lines
+            const line1 = document.getElementById('line-1');
+            line1.setAttribute('x1', points.p1.x);
+            line1.setAttribute('y1', points.p1.y);
+            line1.setAttribute('x2', points.p2.x);
+            line1.setAttribute('y2', points.p2.y);
+
+            const line2 = document.getElementById('line-2');
+            line2.setAttribute('x1', points.p4.x);
+            line2.setAttribute('y1', points.p4.y);
+            line2.setAttribute('x2', points.p3.x);
+            line2.setAttribute('y2', points.p3.y);
+
+            // Draw Curve
+            const path = `M ${points.p1.x},${points.p1.y} C ${points.p2.x},${points.p2.y} ${points.p3.x},${points.p3.y} ${points.p4.x},${points.p4.y}`;
+            document.getElementById('curve').setAttribute('d', path);
+
+            // Draw Points
+            ['p1', 'p2', 'p3', 'p4'].forEach(id => {
+                const circle = document.getElementById(id);
+                circle.setAttribute('cx', points[id].x);
+                circle.setAttribute('cy', points[id].y);
+            });
+
+            // Output SVG
+            document.getElementById('out-svg').value = path;
+
+            // Output CSS (Approximate mapping to 0-1 range based on bounding box if standard animation)
+            // Standard CSS bezier is P1(0,0) P2(x1,y1) P3(x2,y2) P4(1,1)
+            // We calculate normalized values relative to the box formed by start/end
+            const rangeX = points.p4.x - points.p1.x;
+            const rangeY = points.p4.y - points.p1.y; // Assuming p1 is bottom-left visually but y is inverted in SVG
+
+            // CSS coordinate system: bottom-left is 0,0? No, CSS animation progress is Time(x) vs Prog(y).
+            // Usually graphical editors map: x axis (time 0->1), y axis (prog 0->1).
+            // Here we just estimate for fun or show "N/A" if points are complex
+            if (rangeX > 0) {
+                const x1 = (points.p2.x - points.p1.x) / rangeX;
+                const y1 = (points.p1.y - points.p2.y) / 300; // Arbitrary height scale
+                // This part is hard to map 1:1 from a free drawing canvas to CSS timing function without a fixed frame.
+                // Let's just output raw coords for SVG as primary feature.
+                document.getElementById('out-css').value = `cubic-bezier(${(points.p2.x / width).toFixed(2)}, ${(points.p2.y / height).toFixed(2)}, ${(points.p3.x / width).toFixed(2)}, ${(points.p3.y / height).toFixed(2)})`;
+            }
+        }
+
+        // Interaction
+        svg.addEventListener('mousedown', startDrag);
+        svg.addEventListener('touchstart', startDrag);
+        window.addEventListener('mousemove', drag);
+        window.addEventListener('touchmove', drag);
+        window.addEventListener('mouseup', endDrag);
+        window.addEventListener('touchend', endDrag);
+
+        function startDrag(e) {
+            const target = e.target;
+            if (target.classList.contains('handle')) {
+                activePoint = target.id;
+                e.preventDefault();
+            }
+        }
+
+        function drag(e) {
+            if (!activePoint) return;
+            e.preventDefault();
+
+            const pt = getCoords(e);
+            const rect = svg.getBoundingClientRect();
+
+            points[activePoint].x = pt.x - rect.left;
+            points[activePoint].y = pt.y - rect.top;
+
+            update();
+        }
+
+        function endDrag() {
+            activePoint = null;
+        }
+
+        function getCoords(e) {
+            if (e.touches) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            return { x: e.clientX, y: e.clientY };
+        }
+
+        function copy(id) {
+            const el = document.getElementById(id);
+            el.select();
+            document.execCommand('copy');
+        }
+
+        function playAnim() {
+            const box = document.getElementById('anim-box');
+            box.style.transition = 'none';
+            box.style.transform = 'translateX(0)';
+
+            // Force reflow
+            void box.offsetWidth;
+
+            // Use the CSS bezier from inputs
+            // Note: SVG coords are Y-down, CSS animation curve Y is usually "progression".
+            // We map x1, y1, x2, y2 naively from canvas normalized coords
+            const x1 = Math.max(0, Math.min(1, points.p2.x / width));
+            const y1 = Math.max(0, Math.min(1, 1 - (points.p2.y / height))); // Invert Y
+            const x2 = Math.max(0, Math.min(1, points.p3.x / width));
+            const y2 = Math.max(0, Math.min(1, 1 - (points.p3.y / height))); // Invert Y
+
+            const cubic = `cubic-bezier(${x1}, ${y1}, ${x2}, ${y2})`;
+
+            box.style.transition = `transform 1s ${cubic}`;
+            box.style.transform = 'translateX(300%)';
+            document.getElementById('out-css').value = cubic;
+        }
+
+        // Init
+        update();
+    </script>
+</body>
+
+</html>
