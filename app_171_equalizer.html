@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5段均衡器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type=range][orient=vertical] {
+            writing-mode: bt-lr;
+            /* IE */
+            -webkit-appearance: slider-vertical;
+            /* WebKit */
+            width: 8px;
+            height: 100%;
+            padding: 0 5px;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-white">
+
+    <div class="w-full max-w-lg bg-gray-800 p-8 rounded-3xl shadow-2xl border border-gray-700">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold flex items-center gap-2 text-green-400">
+                <span class="text-3xl">🎚️</span> EQ Visualizer
+            </h1>
+            <a href="./navigation.html"
+                class="text-xs text-gray-500 hover:text-white border border-gray-700 px-3 py-1 rounded">退出</a>
+        </header>
+
+        <!-- EQ Sliders -->
+        <div class="flex justify-between h-48 mb-8 px-4">
+            <!-- 60Hz -->
+            <div class="flex flex-col items-center h-full gap-2">
+                <input type="range" orient="vertical" min="-12" max="12" value="0" id="eq-60"
+                    class="flex-1 accent-green-500 cursor-pointer" oninput="updateEQ()">
+                <label class="text-xs font-bold text-gray-500">60Hz</label>
+                <span class="text-[10px] text-green-400 font-mono" id="val-60">0dB</span>
+            </div>
+
+            <!-- 250Hz -->
+            <div class="flex flex-col items-center h-full gap-2">
+                <input type="range" orient="vertical" min="-12" max="12" value="0" id="eq-250"
+                    class="flex-1 accent-green-500 cursor-pointer" oninput="updateEQ()">
+                <label class="text-xs font-bold text-gray-500">250Hz</label>
+                <span class="text-[10px] text-green-400 font-mono" id="val-250">0dB</span>
+            </div>
+
+            <!-- 1kHz -->
+            <div class="flex flex-col items-center h-full gap-2">
+                <input type="range" orient="vertical" min="-12" max="12" value="0" id="eq-1k"
+                    class="flex-1 accent-green-500 cursor-pointer" oninput="updateEQ()">
+                <label class="text-xs font-bold text-gray-500">1kHz</label>
+                <span class="text-[10px] text-green-400 font-mono" id="val-1k">0dB</span>
+            </div>
+
+            <!-- 4kHz -->
+            <div class="flex flex-col items-center h-full gap-2">
+                <input type="range" orient="vertical" min="-12" max="12" value="0" id="eq-4k"
+                    class="flex-1 accent-green-500 cursor-pointer" oninput="updateEQ()">
+                <label class="text-xs font-bold text-gray-500">4kHz</label>
+                <span class="text-[10px] text-green-400 font-mono" id="val-4k">0dB</span>
+            </div>
+
+            <!-- 16kHz -->
+            <div class="flex flex-col items-center h-full gap-2">
+                <input type="range" orient="vertical" min="-12" max="12" value="0" id="eq-16k"
+                    class="flex-1 accent-green-500 cursor-pointer" oninput="updateEQ()">
+                <label class="text-xs font-bold text-gray-500">16kHz</label>
+                <span class="text-[10px] text-green-400 font-mono" id="val-16k">0dB</span>
+            </div>
+        </div>
+
+        <div class="flex gap-4">
+            <button onclick="togglePlay()" id="play-btn"
+                class="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl shadow-lg transition">
+                播放白噪音 (测试音源)
+            </button>
+            <button onclick="resetEQ()" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-bold transition">
+                重置
+            </button>
+        </div>
+
+        <p class="mt-4 text-center text-xs text-gray-500">
+            * 调节滑块改变不同频段的音量增益
+        </p>
+
+    </div>
+
+    <script>
+        let audioCtx;
+        let source;
+        let filters = [];
+        let isPlaying = false;
+
+        const frequencies = [60, 250, 1000, 4000, 16000];
+        const ids = ['60', '250', '1k', '4k', '16k'];
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+                // Create filters
+                filters = frequencies.map(freq => {
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = 'peaking';
+                    filter.frequency.value = freq;
+                    filter.Q.value = 1;
+                    filter.gain.value = 0;
+                    return filter;
+                });
+
+                // Connect filters in series
+                for (let i = 0; i < filters.length - 1; i++) {
+                    filters[i].connect(filters[i + 1]);
+                }
+                filters[filters.length - 1].connect(audioCtx.destination);
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function createWhiteNoise() {
+            const bufferSize = audioCtx.sampleRate * 2; // 2 sec loop
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            noise.loop = true;
+            return noise;
+        }
+
+        function togglePlay() {
+            initAudio();
+            const btn = document.getElementById('play-btn');
+
+            if (isPlaying) {
+                if (source) source.stop();
+                isPlaying = false;
+                btn.innerText = "播放白噪音 (测试音源)";
+                btn.className = "flex-1 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl shadow-lg transition";
+            } else {
+                source = createWhiteNoise();
+                source.connect(filters[0]); // Connect to first filter
+                source.start();
+                isPlaying = true;
+                btn.innerText = "停止播放";
+                btn.className = "flex-1 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl shadow-lg transition";
+            }
+        }
+
+        function updateEQ() {
+            ids.forEach((id, index) => {
+                const val = document.getElementById(`eq-${id}`).value;
+                document.getElementById(`val-${id}`).innerText = (val > 0 ? '+' : '') + val + 'dB';
+                if (filters[index]) {
+                    filters[index].gain.setTargetAtTime(val, audioCtx.currentTime, 0.1);
+                }
+            });
+        }
+
+        function resetEQ() {
+            ids.forEach(id => {
+                document.getElementById(`eq-${id}`).value = 0;
+            });
+            updateEQ();
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>粒子引力场</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            cursor: none;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            pointer-events: none;
+            mix-blend-mode: difference;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="ui-overlay">
+        <h1 class="font-bold text-xl">Particle Gravity</h1>
+        <p class="text-xs opacity-70">Move mouse to attract</p>
+        <p class="text-xs opacity-70">Click to repel</p>
+    </div>
+
+    <div class="absolute bottom-8 w-full text-center z-20 pointer-events-none">
+        <a href="./navigation.html"
+            class="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full backdrop-blur-sm transition border border-white/20 pointer-events-auto text-xs font-bold uppercase">Exit</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let particles = [];
+        const count = 2000;
+
+        let mouse = { x: -1000, y: -1000 };
+        let isRepelling = false;
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            init();
+        }
+        window.addEventListener('resize', resize);
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.friction = 0.95;
+                this.color = `hsl(${Math.random() * 60 + 200}, 100%, 70%)`; // Blue-ish
+            }
+
+            update() {
+                // Physics
+                const dx = mouse.x - this.x;
+                const dy = mouse.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                // Gravity / Repel
+                if (dist < 300) {
+                    const forceDirectionX = dx / dist;
+                    const forceDirectionY = dy / dist;
+                    const force = (300 - dist) / 300;
+
+                    const dir = isRepelling ? -1 : 1;
+                    const strength = force * 2 * dir;
+
+                    this.vx += forceDirectionX * strength;
+                    this.vy += forceDirectionY * strength;
+                }
+
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Bounds (Wrap)
+                if (this.x < 0) this.x = width;
+                if (this.x > width) this.x = 0;
+                if (this.y < 0) this.y = height;
+                if (this.y > height) this.y = 0;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, 2, 2);
+            }
+        }
+
+        function init() {
+            particles = [];
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function animate() {
+            // Trails
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+
+        // Input
+        window.addEventListener('mousemove', e => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+        window.addEventListener('mousedown', () => isRepelling = true);
+        window.addEventListener('mouseup', () => isRepelling = false);
+
+        window.addEventListener('touchmove', e => {
+            e.preventDefault();
+            mouse.x = e.touches[0].clientX;
+            mouse.y = e.touches[0].clientY;
+        }, { passive: false });
+        window.addEventListener('touchstart', () => isRepelling = true);
+        window.addEventListener('touchend', () => isRepelling = false);
+
+        // Start
+        resize();
+        animate();
+    </script>
+</body>
+
+</html>

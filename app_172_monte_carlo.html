@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蒙特卡罗 π 计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-4xl bg-white p-8 rounded-3xl shadow-xl flex flex-col md:flex-row gap-8 items-center">
+
+        <!-- Canvas -->
+        <div class="relative w-[300px] h-[300px] shrink-0 border border-slate-300 bg-white">
+            <canvas id="canvas" width="300" height="300" class="w-full h-full"></canvas>
+            <!-- Overlay Shapes Guides -->
+            <div class="absolute inset-0 border border-slate-200 pointer-events-none"></div>
+            <div class="absolute inset-0 rounded-full border border-slate-300 pointer-events-none"></div>
+        </div>
+
+        <!-- Info -->
+        <div class="flex-1 w-full space-y-6">
+
+            <header>
+                <h1 class="text-2xl font-bold text-slate-800 mb-2">Monte Carlo π</h1>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                    通过向正方形内随机投点，计算落在内切圆中的比例来估算 π。<br>
+                    π ≈ 4 × (圆内点数 / 总点数)
+                </p>
+            </header>
+
+            <div class="grid grid-cols-2 gap-4 text-center">
+                <div class="bg-blue-50 p-3 rounded-xl">
+                    <p class="text-xs text-blue-400 font-bold uppercase">总点数 (Total)</p>
+                    <p class="text-xl font-mono font-bold text-blue-700" id="total-pts">0</p>
+                </div>
+                <div class="bg-red-50 p-3 rounded-xl">
+                    <p class="text-xs text-red-400 font-bold uppercase">圆内点数 (Inside)</p>
+                    <p class="text-xl font-mono font-bold text-red-700" id="inside-pts">0</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 text-white p-6 rounded-2xl text-center shadow-lg">
+                <p class="text-xs text-slate-400 uppercase font-bold mb-1">估算结果 (Estimated π)</p>
+                <p class="text-5xl font-mono font-bold text-green-400" id="pi-val">0.00000</p>
+                <p class="text-xs text-slate-500 mt-2">真实值: 3.14159...</p>
+            </div>
+
+            <div class="flex gap-4">
+                <button onclick="toggleSim()" id="btn-toggle"
+                    class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold transition">开始模拟</button>
+                <button onclick="resetSim()"
+                    class="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-600 font-bold rounded-xl transition">重置</button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="mt-8">
+        <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600 underline">返回导航</a>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const totalEl = document.getElementById('total-pts');
+        const insideEl = document.getElementById('inside-pts');
+        const piEl = document.getElementById('pi-val');
+        const btnToggle = document.getElementById('btn-toggle');
+
+        let total = 0;
+        let inside = 0;
+        let isRunning = false;
+        let animationId;
+        const size = 300;
+        const radius = size / 2;
+
+        function toggleSim() {
+            isRunning = !isRunning;
+            btnToggle.innerText = isRunning ? "暂停" : "继续";
+            btnToggle.classList.toggle('bg-yellow-600', isRunning);
+            btnToggle.classList.toggle('bg-indigo-600', !isRunning);
+
+            if (isRunning) loop();
+        }
+
+        function resetSim() {
+            isRunning = false;
+            cancelAnimationFrame(animationId);
+            total = 0;
+            inside = 0;
+            ctx.clearRect(0, 0, size, size);
+            updateUI();
+            btnToggle.innerText = "开始模拟";
+            btnToggle.classList.remove('bg-yellow-600');
+            btnToggle.classList.add('bg-indigo-600');
+        }
+
+        function loop() {
+            if (!isRunning) return;
+
+            // Batch process for speed (100 pts per frame)
+            for (let i = 0; i < 100; i++) {
+                const x = Math.random() * size;
+                const y = Math.random() * size;
+
+                // Distance from center
+                const dx = x - radius;
+                const dy = y - radius;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                total++;
+
+                if (dist <= radius) {
+                    inside++;
+                    ctx.fillStyle = '#ef4444'; // Red inside
+                } else {
+                    ctx.fillStyle = '#3b82f6'; // Blue outside
+                }
+                ctx.fillRect(x, y, 1, 1);
+            }
+
+            updateUI();
+            animationId = requestAnimationFrame(loop);
+        }
+
+        function updateUI() {
+            totalEl.innerText = total.toLocaleString();
+            insideEl.innerText = inside.toLocaleString();
+
+            const pi = total > 0 ? 4 * (inside / total) : 0;
+            piEl.innerText = pi.toFixed(5);
+        }
+    </script>
+</body>
+
+</html>

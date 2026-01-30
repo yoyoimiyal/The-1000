@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态渐变背景</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #preview {
+            background-size: 400% 400%;
+            animation: gradient-anim 10s ease infinite;
+        }
+
+        @keyframes gradient-anim {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col md:flex-row">
+
+    <!-- Preview -->
+    <div id="preview" class="flex-1 w-full h-[50vh] md:h-screen flex items-center justify-center transition-all">
+        <div class="bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/20 shadow-2xl text-center">
+            <h1 class="text-4xl md:text-6xl font-black text-white drop-shadow-md">Gradient</h1>
+            <p class="text-white/80 font-bold mt-2 tracking-widest uppercase">Animated Background</p>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="w-full md:w-80 bg-white p-8 flex flex-col gap-6 shadow-2xl overflow-y-auto z-10">
+
+        <header class="flex justify-between items-center">
+            <h2 class="font-bold text-slate-800">Settings</h2>
+            <a href="./navigation.html" class="text-xs text-blue-600 hover:underline">Exit</a>
+        </header>
+
+        <div class="space-y-4">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Colors</label>
+                <div class="flex flex-col gap-2">
+                    <div class="flex gap-2">
+                        <input type="color" id="c1" value="#ee7752" class="flex-1 h-8 rounded cursor-pointer"
+                            oninput="update()">
+                        <input type="color" id="c2" value="#e73c7e" class="flex-1 h-8 rounded cursor-pointer"
+                            oninput="update()">
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="color" id="c3" value="#23a6d5" class="flex-1 h-8 rounded cursor-pointer"
+                            oninput="update()">
+                        <input type="color" id="c4" value="#23d5ab" class="flex-1 h-8 rounded cursor-pointer"
+                            oninput="update()">
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Angle (deg)</label>
+                <input type="range" id="angle" min="0" max="360" value="-45" class="w-full" oninput="update()">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Speed (s)</label>
+                <input type="range" id="speed" min="2" max="30" value="15" class="w-full" oninput="update()">
+            </div>
+
+            <div class="pt-4 border-t border-slate-100">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Generated CSS</label>
+                <textarea id="css-output"
+                    class="w-full h-40 p-3 bg-slate-900 text-green-400 text-[10px] font-mono rounded-lg outline-none resize-none"
+                    readonly></textarea>
+                <button onclick="copyCSS()"
+                    class="mt-2 w-full py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded transition">Copy
+                    CSS</button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Style injection for dynamic keyframes -->
+    <style id="dynamic-style"></style>
+
+    <script>
+        const preview = document.getElementById('preview');
+        const styleTag = document.getElementById('dynamic-style');
+        const output = document.getElementById('css-output');
+
+        function update() {
+            const c1 = document.getElementById('c1').value;
+            const c2 = document.getElementById('c2').value;
+            const c3 = document.getElementById('c3').value;
+            const c4 = document.getElementById('c4').value;
+            const angle = document.getElementById('angle').value;
+            const speed = document.getElementById('speed').value;
+
+            const gradient = `linear-gradient(${angle}deg, ${c1}, ${c2}, ${c3}, ${c4})`;
+            preview.style.backgroundImage = gradient;
+            preview.style.animationDuration = `${speed}s`;
+
+            const css = `body {
+    background: ${gradient};
+    background-size: 400% 400%;
+    animation: gradient ${speed}s ease infinite;
+    height: 100vh;
+}
+
+@keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}`;
+            output.value = css;
+        }
+
+        function copyCSS() {
+            output.select();
+            document.execCommand('copy');
+            alert("CSS 已复制!");
+        }
+
+        update();
+    </script>
+</body>
+
+</html>

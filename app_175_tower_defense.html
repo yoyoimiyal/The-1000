@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简塔防</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            touch-action: none;
+            background: #e5e7eb;
+            cursor: crosshair;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-800 h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Header / Stats -->
+    <div class="w-full max-w-[600px] flex justify-between items-center mb-4 text-white">
+        <div>
+            <h1 class="font-bold text-xl text-yellow-400">MINI TD</h1>
+            <div class="text-xs text-gray-400">
+                Gold: <span id="gold" class="text-yellow-300 font-bold">100</span> |
+                Lives: <span id="lives" class="text-red-400 font-bold">10</span> |
+                Wave: <span id="wave">1</span>
+            </div>
+        </div>
+
+        <div class="flex gap-2">
+            <button onclick="startWave()" id="wave-btn"
+                class="bg-green-600 hover:bg-green-500 px-4 py-1 rounded text-sm font-bold shadow transition">Next
+                Wave</button>
+            <a href="./navigation.html"
+                class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-sm font-bold">Exit</a>
+        </div>
+    </div>
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas" width="600" height="400"
+        class="rounded-xl shadow-2xl border-4 border-slate-600 bg-slate-200"></canvas>
+
+    <!-- Build Controls -->
+    <div class="w-full max-w-[600px] mt-4 flex gap-4 justify-center">
+        <button
+            class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow border-2 border-transparent focus:border-white"
+            onclick="selectTower(1)">
+            Basic Turret ($50)
+        </button>
+        <button
+            class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow border-2 border-transparent focus:border-white"
+            onclick="selectTower(2)">
+            Sniper ($100)
+        </button>
+        <button
+            class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow border-2 border-transparent focus:border-white"
+            onclick="selectTower(3)">
+            Rapid ($150)
+        </button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const goldEl = document.getElementById('gold');
+        const livesEl = document.getElementById('lives');
+        const waveEl = document.getElementById('wave');
+        const waveBtn = document.getElementById('wave-btn');
+
+        // Game State
+        let gold = 100;
+        let lives = 10;
+        let wave = 1;
+        let enemies = [];
+        let towers = [];
+        let projectiles = [];
+        let particles = [];
+        let selectedTowerType = 1;
+        let isWaveActive = false;
+        let spawnTimer = 0;
+        let enemiesToSpawn = 0;
+
+        // Path (Simple S shape for 600x400)
+        // Waypoints
+        const path = [
+            { x: 0, y: 50 }, { x: 500, y: 50 },
+            { x: 500, y: 200 }, { x: 100, y: 200 },
+            { x: 100, y: 350 }, { x: 600, y: 350 }
+        ];
+
+        // Constants
+        const TILE = 40;
+
+        function updateStats() {
+            goldEl.innerText = gold;
+            livesEl.innerText = lives;
+            waveEl.innerText = wave;
+        }
+
+        function selectTower(type) {
+            selectedTowerType = type;
+        }
+
+        function startWave() {
+            if (isWaveActive) return;
+            isWaveActive = true;
+            enemiesToSpawn = 5 + wave * 2;
+            waveBtn.disabled = true;
+            waveBtn.classList.add('opacity-50');
+        }
+
+        // Logic
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Path
+            ctx.beginPath();
+            ctx.strokeStyle = '#d1d5db'; // gray-300
+            ctx.lineWidth = 30;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+            ctx.stroke();
+
+            // Draw Towers
+            towers.forEach(t => {
+                ctx.fillStyle = t.color;
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, 15, 0, Math.PI * 2);
+                ctx.fill();
+                // Range (hover effect ideally, but draw thin line for active)
+                if (t.target) {
+                    ctx.beginPath();
+                    ctx.moveTo(t.x, t.y);
+                    ctx.lineTo(t.target.x, t.target.y);
+                    ctx.strokeStyle = t.color;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+
+                // Cooldown
+                t.cooldown--;
+                if (t.cooldown <= 0) {
+                    // Find Target
+                    let bestDist = t.range;
+                    let target = null;
+                    // Target First enemy in range
+                    // Or enemy closest to end (advanced)
+                    for (const e of enemies) {
+                        const dist = Math.hypot(e.x - t.x, e.y - t.y);
+                        if (dist < t.range) {
+                            target = e;
+                            break; // First one (which is usually leading)
+                        }
+                    }
+                    if (target) {
+                        t.target = target; // For visual line
+                        projectiles.push({
+                            x: t.x, y: t.y,
+                            target: target,
+                            speed: 8,
+                            damage: t.damage,
+                            color: t.color
+                        });
+                        t.cooldown = t.maxCooldown;
+                    } else {
+                        t.target = null;
+                    }
+                }
+            });
+
+            // Spawner
+            if (isWaveActive && enemiesToSpawn > 0) {
+                spawnTimer++;
+                if (spawnTimer > 40) { // spawn rate
+                    enemies.push({
+                        x: path[0].x, y: path[0].y,
+                        pathIdx: 0,
+                        hp: 10 + wave * 5,
+                        maxHp: 10 + wave * 5,
+                        speed: 1 + wave * 0.1,
+                        r: 8
+                    });
+                    enemiesToSpawn--;
+                    spawnTimer = 0;
+                }
+            } else if (isWaveActive && enemies.length === 0 && enemiesToSpawn === 0) {
+                // Wave Complete
+                isWaveActive = false;
+                wave++;
+                updateStats();
+                waveBtn.disabled = false;
+                waveBtn.classList.remove('opacity-50');
+            }
+
+            // Enemies
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
+                // Move
+                const target = path[e.pathIdx + 1];
+                if (!target) {
+                    // Reached End
+                    lives--;
+                    updateStats();
+                    enemies.splice(i, 1);
+                    if (lives <= 0) {
+                        alert("Game Over!");
+                        location.reload();
+                    }
+                    continue;
+                }
+
+                const dx = target.x - e.x;
+                const dy = target.y - e.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist < e.speed) {
+                    e.x = target.x;
+                    e.y = target.y;
+                    e.pathIdx++;
+                } else {
+                    e.x += (dx / dist) * e.speed;
+                    e.y += (dy / dist) * e.speed;
+                }
+
+                // Draw Enemy
+                ctx.fillStyle = '#1f2937'; // gray-800
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+                ctx.fill();
+
+                // HP Bar
+                const hpPct = e.hp / e.maxHp;
+                ctx.fillStyle = 'red';
+                ctx.fillRect(e.x - 8, e.y - 12, 16, 3);
+                ctx.fillStyle = '#22c55e';
+                ctx.fillRect(e.x - 8, e.y - 12, 16 * hpPct, 3);
+            }
+
+            // Projectiles
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                if (!enemies.includes(p.target)) {
+                    projectiles.splice(i, 1); // Target dead
+                    continue;
+                }
+
+                const dx = p.target.x - p.x;
+                const dy = p.target.y - p.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist < p.speed) {
+                    // Hit
+                    p.target.hp -= p.damage;
+                    if (p.target.hp <= 0) {
+                        const idx = enemies.indexOf(p.target);
+                        if (idx > -1) {
+                            enemies.splice(idx, 1);
+                            gold += 10;
+                            updateStats();
+                        }
+                    }
+                    projectiles.splice(i, 1);
+                } else {
+                    p.x += (dx / dist) * p.speed;
+                    p.y += (dy / dist) * p.speed;
+
+                    // Draw
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Build
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Basic checks: Enough Gold? Not on path? Not on other tower?
+            // Simple check: Distance to path line segments > 20
+
+            let costs = [0, 50, 100, 150];
+            let cost = costs[selectedTowerType];
+
+            if (gold < cost) return;
+
+            // Check collision with path (simplified: distance to points)
+            // Better: just check distance to existing towers
+            for (const t of towers) {
+                if (Math.hypot(t.x - x, t.y - y) < 30) return; // Too close
+            }
+
+            // Simplified Path collision: Distance to any path node < 20? 
+            // In a grid TD we check tiles. In free TD we need line distance.
+            // Let's assume user is smart for this mini-app.
+
+            // Build
+            let tower = { x, y, cooldown: 0, target: null };
+            if (selectedTowerType === 1) {
+                tower = { ...tower, range: 100, damage: 1, maxCooldown: 20, color: '#2563eb' }; // Blue
+            } else if (selectedTowerType === 2) {
+                tower = { ...tower, range: 200, damage: 5, maxCooldown: 60, color: '#dc2626' }; // Red Sniper
+            } else if (selectedTowerType === 3) {
+                tower = { ...tower, range: 80, damage: 0.5, maxCooldown: 5, color: '#9333ea' }; // Purple Rapid
+            }
+
+            towers.push(tower);
+            gold -= cost;
+            updateStats();
+        });
+
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+
+</html>

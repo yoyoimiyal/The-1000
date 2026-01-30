@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS 光标图鉴</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .cursor-card:hover {
+            transform: scale(1.05);
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen p-6 text-slate-800">
+
+    <div class="max-w-6xl mx-auto">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                </svg>
+                CSS Cursors
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-blue-600">退出</a>
+        </header>
+
+        <div class="mb-6 bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg text-sm text-center">
+            🖱️ 将鼠标悬停在卡片上预览光标样式，点击卡片复制 CSS 代码。
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="grid">
+            <!-- Items injected here -->
+        </div>
+
+    </div>
+
+    <!-- Toast -->
+    <div id="toast"
+        class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-2 rounded-full shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none">
+        已复制: cursor: pointer;
+    </div>
+
+    <script>
+        const cursors = [
+            "auto", "default", "none", "context-menu", "help", "pointer", "progress", "wait",
+            "cell", "crosshair", "text", "vertical-text", "alias", "copy", "move", "no-drop", "not-allowed",
+            "grab", "grabbing", "e-resize", "n-resize", "ne-resize", "nw-resize", "s-resize", "se-resize",
+            "sw-resize", "w-resize", "ew-resize", "ns-resize", "nesw-resize", "nwse-resize", "col-resize",
+            "row-resize", "all-scroll", "zoom-in", "zoom-out"
+        ];
+
+        const grid = document.getElementById('grid');
+        const toast = document.getElementById('toast');
+
+        function init() {
+            cursors.forEach(c => {
+                const div = document.createElement('div');
+                div.className = "cursor-card bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col items-center justify-center gap-2 transition-all duration-200 cursor-pointer h-32";
+                div.style.cursor = c;
+                div.onclick = () => copyCSS(c);
+
+                div.innerHTML = `
+                    <div class="w-full h-full flex items-center justify-center bg-slate-50 rounded mb-2 border border-slate-100">
+                        <span class="text-xs text-slate-300">Hover Me</span>
+                    </div>
+                    <code class="text-xs font-bold font-mono bg-slate-100 px-2 py-1 rounded">${c}</code>
+                `;
+
+                grid.appendChild(div);
+            });
+        }
+
+        function copyCSS(val) {
+            const text = `cursor: ${val};`;
+            navigator.clipboard.writeText(text);
+            showToast(text);
+        }
+
+        function showToast(msg) {
+            toast.innerText = `Copied: ${msg}`;
+            toast.classList.remove('opacity-0');
+            setTimeout(() => toast.classList.add('opacity-0'), 1500);
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

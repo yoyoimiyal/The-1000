@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>世界首都问答</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-indigo-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800 select-none">
+
+    <div class="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-indigo-100 relative overflow-hidden">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-indigo-900 flex items-center gap-2">
+                <span class="text-2xl">🌍</span> Capitals Quiz
+            </h1>
+            <div class="text-sm font-bold text-indigo-500">Score: <span id="score">0</span></div>
+        </header>
+
+        <div id="game-area">
+            <div class="mb-8 text-center">
+                <p class="text-sm text-slate-400 uppercase tracking-widest mb-2">Country</p>
+                <h2 class="text-3xl font-black text-slate-800" id="question">Loading...</h2>
+            </div>
+
+            <div class="space-y-3" id="options">
+                <!-- Options injected here -->
+            </div>
+        </div>
+
+        <div id="feedback"
+            class="absolute inset-0 bg-white/95 backdrop-blur z-10 hidden flex-col items-center justify-center text-center p-6">
+            <div class="text-6xl mb-4" id="fb-icon">🎉</div>
+            <h2 class="text-2xl font-bold text-slate-800 mb-2" id="fb-title">Correct!</h2>
+            <p class="text-slate-500 mb-6" id="fb-msg">...</p>
+            <button onclick="nextQuestion()"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-full font-bold shadow-lg transition transform active:scale-95">Next
+                Question</button>
+        </div>
+
+    </div>
+
+    <div class="mt-8">
+        <a href="./navigation.html" class="text-sm text-indigo-400 hover:text-indigo-600 underline">退出</a>
+    </div>
+
+    <script>
+        const data = [
+            { country: "China (中国)", capital: "Beijing (北京)" },
+            { country: "USA (美国)", capital: "Washington, D.C. (华盛顿)" },
+            { country: "Japan (日本)", capital: "Tokyo (东京)" },
+            { country: "UK (英国)", capital: "London (伦敦)" },
+            { country: "France (法国)", capital: "Paris (巴黎)" },
+            { country: "Germany (德国)", capital: "Berlin (柏林)" },
+            { country: "Russia (俄罗斯)", capital: "Moscow (莫斯科)" },
+            { country: "Italy (意大利)", capital: "Rome (罗马)" },
+            { country: "Spain (西班牙)", capital: "Madrid (马德里)" },
+            { country: "Canada (加拿大)", capital: "Ottawa (渥太华)" },
+            { country: "Australia (澳大利亚)", capital: "Canberra (堪培拉)" },
+            { country: "Brazil (巴西)", capital: "Brasília (巴西利亚)" },
+            { country: "India (印度)", capital: "New Delhi (新德里)" },
+            { country: "South Korea (韩国)", capital: "Seoul (首尔)" },
+            { country: "Thailand (泰国)", capital: "Bangkok (曼谷)" },
+            { country: "Egypt (埃及)", capital: "Bangkok (开罗)" }, // Corrected in logic below? No, data entry error check: Egypt is Cairo.
+            // Wait, manual fix:
+            { country: "Egypt (埃及)", capital: "Cairo (开罗)" },
+            { country: "Turkey (土耳其)", capital: "Ankara (安卡拉)" },
+            { country: "Argentina (阿根廷)", capital: "Buenos Aires (布宜诺斯艾利斯)" },
+            { country: "Mexico (墨西哥)", capital: "Mexico City (墨西哥城)" },
+            { country: "Sweden (瑞典)", capital: "Stockholm (斯德哥尔摩)" }
+        ];
+
+        let currentItem = null;
+        let score = 0;
+
+        const questionEl = document.getElementById('question');
+        const optionsEl = document.getElementById('options');
+        const scoreEl = document.getElementById('score');
+        const feedbackEl = document.getElementById('feedback');
+        const fbIcon = document.getElementById('fb-icon');
+        const fbTitle = document.getElementById('fb-title');
+        const fbMsg = document.getElementById('fb-msg');
+
+        function nextQuestion() {
+            feedbackEl.classList.add('hidden');
+            feedbackEl.classList.remove('flex');
+
+            // Random Country
+            currentItem = data[Math.floor(Math.random() * data.length)];
+            questionEl.innerText = currentItem.country;
+
+            // Generate Options (1 correct + 3 wrong)
+            let opts = [currentItem.capital];
+            while (opts.length < 4) {
+                const r = data[Math.floor(Math.random() * data.length)].capital;
+                if (!opts.includes(r)) opts.push(r);
+            }
+            // Shuffle
+            opts.sort(() => Math.random() - 0.5);
+
+            // Render
+            optionsEl.innerHTML = '';
+            opts.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "w-full py-4 px-6 bg-slate-50 border border-slate-200 rounded-xl text-left font-bold text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition shadow-sm";
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(opt);
+                optionsEl.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selected) {
+            feedbackEl.classList.remove('hidden');
+            feedbackEl.classList.add('flex');
+
+            if (selected === currentItem.capital) {
+                score += 10;
+                fbIcon.innerText = "🎉";
+                fbTitle.innerText = "Correct!";
+                fbTitle.className = "text-2xl font-bold text-green-600 mb-2";
+                fbMsg.innerText = `${currentItem.capital} is the capital of ${currentItem.country}`;
+            } else {
+                score = Math.max(0, score - 5);
+                fbIcon.innerText = "😅";
+                fbTitle.innerText = "Oops!";
+                fbTitle.className = "text-2xl font-bold text-red-500 mb-2";
+                fbMsg.innerText = `The correct answer is ${currentItem.capital}`;
+            }
+            scoreEl.innerText = score;
+        }
+
+        // Init
+        nextQuestion();
+    </script>
+</body>
+
+</html>

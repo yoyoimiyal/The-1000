@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>密码破解时间估算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-900 min-h-screen flex flex-col items-center justify-center p-6 text-slate-200">
+
+    <div class="w-full max-w-2xl bg-slate-800 p-8 rounded-3xl shadow-2xl border border-slate-700">
+
+        <header class="flex justify-between items-center mb-10">
+            <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+                <span class="text-3xl">🔐</span> Password Strength
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-white">退出</a>
+        </header>
+
+        <div class="space-y-8">
+
+            <div class="relative">
+                <input type="text" id="password"
+                    class="w-full p-4 bg-slate-900 border-2 border-slate-600 rounded-xl outline-none focus:border-blue-500 text-xl tracking-wide transition-colors"
+                    placeholder="在此输入密码..." oninput="analyze()">
+                <div
+                    class="absolute right-4 top-4 text-xs font-bold text-slate-500 uppercase tracking-widest pointer-events-none">
+                    Crack Time</div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+                <!-- Result Card -->
+                <div
+                    class="bg-slate-700/50 p-6 rounded-2xl border border-slate-600 flex flex-col justify-center items-center text-center">
+                    <p class="text-xs text-slate-400 font-bold uppercase mb-2">黑客暴力破解需要</p>
+                    <div class="text-4xl font-black text-white mb-2" id="time-display">0 秒</div>
+                    <div class="w-full bg-slate-600 h-2 rounded-full mt-4 overflow-hidden">
+                        <div id="strength-bar" class="h-full bg-red-500 w-0 transition-all duration-500"></div>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-2" id="complexity-text">极弱</p>
+                </div>
+
+                <!-- Stats -->
+                <div class="space-y-4 text-sm">
+                    <div class="flex justify-between p-3 bg-slate-900 rounded-lg">
+                        <span class="text-slate-400">长度 (Length)</span>
+                        <span class="font-bold text-white" id="stat-len">0</span>
+                    </div>
+                    <div class="flex justify-between p-3 bg-slate-900 rounded-lg">
+                        <span class="text-slate-400">字符集 (Charset)</span>
+                        <span class="font-bold text-white" id="stat-set">0</span>
+                    </div>
+                    <div class="flex justify-between p-3 bg-slate-900 rounded-lg">
+                        <span class="text-slate-400">熵 (Entropy)</span>
+                        <span class="font-bold text-white"><span id="stat-entropy">0</span> bits</span>
+                    </div>
+                    <div class="flex justify-between p-3 bg-slate-900 rounded-lg">
+                        <span class="text-slate-400">组合数</span>
+                        <span class="font-bold text-white font-mono text-xs truncate max-w-[150px]"
+                            id="stat-combos">0</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="text-xs text-slate-500 text-center leading-relaxed">
+                <p>* 假设破解速度：1000 亿次/秒 (高性能 GPU 集群)。</p>
+                <p>仅供参考，实际安全受多种因素影响。</p>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        function analyze() {
+            const pwd = document.getElementById('password').value;
+            const timeDisp = document.getElementById('time-display');
+            const bar = document.getElementById('strength-bar');
+            const compText = document.getElementById('complexity-text');
+
+            if (!pwd) {
+                timeDisp.innerText = "0 秒";
+                bar.style.width = '0%';
+                bar.className = 'h-full bg-red-500 w-0 transition-all duration-500';
+                compText.innerText = "极弱";
+                resetStats();
+                return;
+            }
+
+            // Calculate Pool Size
+            let pool = 0;
+            if (/[a-z]/.test(pwd)) pool += 26;
+            if (/[A-Z]/.test(pwd)) pool += 26;
+            if (/[0-9]/.test(pwd)) pool += 10;
+            if (/[^a-zA-Z0-9]/.test(pwd)) pool += 32;
+
+            const len = pwd.length;
+            const combinations = BigInt(pool) ** BigInt(len);
+
+            // Entropy = log2(combinations)
+            // Approx using Math.log2
+            const entropy = Math.log2(pool) * len;
+
+            // Crack Rate: 100 Billion per second (10^11) - Good GPU Rig
+            const rate = 100000000000n;
+            const seconds = Number(combinations / rate); // Approximation for display
+
+            document.getElementById('stat-len').innerText = len;
+            document.getElementById('stat-set').innerText = pool;
+            document.getElementById('stat-entropy').innerText = Math.round(entropy);
+
+            // Format big number combos
+            let comboStr = combinations.toString();
+            if (comboStr.length > 15) comboStr = comboStr.substring(0, 5) + '...' + 'e+' + (comboStr.length - 1);
+            document.getElementById('stat-combos').innerText = comboStr;
+
+            const humanTime = formatTime(seconds);
+            timeDisp.innerText = humanTime;
+
+            // Visual Strength
+            updateVisuals(entropy);
+        }
+
+        function formatTime(seconds) {
+            if (seconds < 1) return "瞬间";
+            if (seconds < 60) return Math.round(seconds) + " 秒";
+            if (seconds < 3600) return Math.round(seconds / 60) + " 分钟";
+            if (seconds < 86400) return Math.round(seconds / 3600) + " 小时";
+            if (seconds < 31536000) return Math.round(seconds / 86400) + " 天";
+
+            const years = seconds / 31536000;
+            if (years < 1000) return Math.round(years) + " 年";
+            if (years < 1000000) return Math.round(years / 1000) + " 千年";
+            if (years < 1000000000) return Math.round(years / 1000000) + " 百万年";
+
+            return "数亿年 (永久)";
+        }
+
+        function updateVisuals(entropy) {
+            const bar = document.getElementById('strength-bar');
+            const compText = document.getElementById('complexity-text');
+            const input = document.getElementById('password');
+
+            let pct = 0;
+            let color = 'bg-red-500';
+            let text = '极弱';
+            let border = 'border-slate-600';
+
+            if (entropy < 28) {
+                pct = 10; color = 'bg-red-500'; text = '极弱 (Very Weak)'; border = 'border-red-500';
+            } else if (entropy < 36) {
+                pct = 25; color = 'bg-orange-500'; text = '弱 (Weak)'; border = 'border-orange-500';
+            } else if (entropy < 60) {
+                pct = 50; color = 'bg-yellow-500'; text = '一般 (Reasonable)'; border = 'border-yellow-500';
+            } else if (entropy < 128) {
+                pct = 75; color = 'bg-green-500'; text = '强 (Strong)'; border = 'border-green-500';
+            } else {
+                pct = 100; color = 'bg-emerald-400'; text = '极强 (Very Strong)'; border = 'border-emerald-400';
+            }
+
+            bar.className = `h-full ${color} transition-all duration-500`;
+            bar.style.width = `${pct}%`;
+            compText.innerText = text;
+            input.className = `w-full p-4 bg-slate-900 border-2 rounded-xl outline-none text-xl tracking-wide transition-colors ${border}`;
+        }
+
+        function resetStats() {
+            document.getElementById('stat-len').innerText = '0';
+            document.getElementById('stat-set').innerText = '0';
+            document.getElementById('stat-entropy').innerText = '0';
+            document.getElementById('stat-combos').innerText = '0';
+            document.getElementById('password').className = 'w-full p-4 bg-slate-900 border-2 border-slate-600 rounded-xl outline-none focus:border-blue-500 text-xl tracking-wide transition-colors';
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS Grid 生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .grid-preview-box {
+            background-color: #e0e7ff;
+            border: 1px dashed #6366f1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: #4338ca;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col md:flex-row text-slate-800">
+
+    <!-- Controls -->
+    <div
+        class="w-full md:w-80 bg-white border-r border-slate-200 p-6 flex flex-col h-auto md:h-screen overflow-y-auto shrink-0 z-10 shadow-xl">
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <span class="bg-purple-100 text-purple-600 px-2 py-1 rounded text-xs">CSS</span> Grid Builder
+            </h1>
+            <a href="./navigation.html" class="text-xs text-slate-400 hover:text-purple-600">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">列 (Columns)</label>
+                <div class="flex gap-2">
+                    <input type="range" id="cols" min="1" max="12" value="3" class="flex-1" oninput="update()">
+                    <span id="cols-val" class="font-mono text-sm w-6 text-right">3</span>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">行 (Rows)</label>
+                <div class="flex gap-2">
+                    <input type="range" id="rows" min="1" max="12" value="3" class="flex-1" oninput="update()">
+                    <span id="rows-val" class="font-mono text-sm w-6 text-right">3</span>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">间距 (Gap)</label>
+                <div class="flex gap-2">
+                    <input type="range" id="gap" min="0" max="50" value="10" class="flex-1" oninput="update()">
+                    <span id="gap-val" class="font-mono text-sm w-8 text-right">10px</span>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Generated CSS</label>
+                <div class="bg-slate-800 text-green-400 p-4 rounded-xl text-xs font-mono break-all cursor-pointer hover:bg-slate-700 transition"
+                    onclick="copyCSS()">
+                    <span id="css-code">.container { display: grid; ... }</span>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-1 text-right">点击复制代码</p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Preview -->
+    <div
+        class="flex-1 bg-white p-8 flex items-center justify-center overflow-auto bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px]">
+
+        <div id="grid-container"
+            class="w-full h-full max-w-2xl max-h-[600px] border-2 border-slate-300 rounded bg-white shadow-sm overflow-hidden"
+            style="display: grid;">
+            <!-- Items injected here -->
+        </div>
+
+    </div>
+
+    <script>
+        const container = document.getElementById('grid-container');
+        const codeEl = document.getElementById('css-code');
+
+        function update() {
+            const cols = document.getElementById('cols').value;
+            const rows = document.getElementById('rows').value;
+            const gap = document.getElementById('gap').value;
+
+            document.getElementById('cols-val').innerText = cols;
+            document.getElementById('rows-val').innerText = rows;
+            document.getElementById('gap-val').innerText = gap + 'px';
+
+            // Update Style
+            container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            container.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+            container.style.gap = `${gap}px`;
+
+            // Update Content
+            const total = cols * rows;
+            container.innerHTML = '';
+            for (let i = 1; i <= total; i++) {
+                const div = document.createElement('div');
+                div.className = 'grid-preview-box';
+                div.innerText = i;
+                container.appendChild(div);
+            }
+
+            // Generate Code
+            const css = `.container {
+  display: grid;
+  grid-template-columns: repeat(${cols}, 1fr);
+  grid-template-rows: repeat(${rows}, 1fr);
+  gap: ${gap}px;
+}`;
+            codeEl.innerText = css;
+        }
+
+        function copyCSS() {
+            navigator.clipboard.writeText(codeEl.innerText);
+            alert("CSS 已复制!");
+        }
+
+        update();
+    </script>
+</body>
+
+</html>

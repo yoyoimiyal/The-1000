@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简思维导图</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        textarea {
+            font-family: monospace;
+            white-space: pre;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col p-4 text-slate-800">
+
+    <header class="flex justify-between items-center mb-4">
+        <h1 class="text-xl font-bold flex items-center gap-2 text-slate-700">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+            </svg>
+            Text to MindMap
+        </h1>
+        <a href="./navigation.html" class="text-sm text-slate-400 hover:text-blue-600">退出</a>
+    </header>
+
+    <div class="flex-1 flex flex-col md:flex-row gap-4 h-[85vh]">
+
+        <!-- Text Editor -->
+        <div class="w-full md:w-80 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200">
+            <div class="p-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
+                输入大纲 (Tab 缩进)
+            </div>
+            <textarea id="input"
+                class="flex-1 p-4 resize-none outline-none text-sm leading-relaxed focus:bg-blue-50/30 transition"
+                oninput="renderMap()" onkeydown="handleTab(event)">
+核心主题
+	分支 1
+		子节点 A
+		子节点 B
+	分支 2
+		子节点 C
+			细节 1
+			细节 2
+	分支 3</textarea>
+            <div class="p-2 text-[10px] text-slate-400 text-center border-t border-slate-100">
+                支持 Tab 键缩进层级
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+            <div class="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                <span class="text-xs font-bold text-slate-500 uppercase">思维导图预览</span>
+            </div>
+            <div class="flex-1 overflow-auto p-4 flex items-center justify-center bg-white" id="preview-container">
+                <div class="mermaid" id="map-div"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: false, theme: 'default' });
+
+        const input = document.getElementById('input');
+        const container = document.getElementById('preview-container');
+
+        function handleTab(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = input.selectionStart;
+                const end = input.selectionEnd;
+                // Insert tab character
+                input.value = input.value.substring(0, start) + "\t" + input.value.substring(end);
+                // Put caret at right position again
+                input.selectionStart = input.selectionEnd = start + 1;
+                renderMap();
+            }
+        }
+
+        async function renderMap() {
+            const raw = input.value;
+            const lines = raw.split('\n').filter(line => line.trim() !== '');
+
+            if (lines.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            // Convert indented text to Mermaid Mindmap syntax
+            let mmCode = 'mindmap\n  root((' + lines[0].trim() + '))\n';
+
+            // Very simple parser: assumes 1 tab = 1 level indent
+            // Mermaid mindmap syntax is just indentation based but needs root first
+
+            for (let i = 1; i < lines.length; i++) {
+                // Determine indent level
+                // Convert tabs to 2 spaces for mermaid (or just keep tabs if mermaid supports? Mermaid usually uses spaces)
+                // Let's count leading tabs
+                const line = lines[i];
+                const content = line.trim();
+                const tabs = (line.match(/^\t+/) || [''])[0].length;
+
+                // Add to mermaid code. Root is level 0.
+                // Indent = (tabs + 1) * 2 spaces?
+                const indent = ' '.repeat((tabs + 1) * 2);
+                mmCode += `${indent}${content}\n`;
+            }
+
+            // Render
+            try {
+                const { svg } = await mermaid.render('map-div-render', mmCode);
+                container.innerHTML = svg;
+            } catch (e) {
+                // console.error(e);
+                // Mermaid error handling is tricky, often it writes error to DOM.
+                // We silently fail or keep old until valid.
+            }
+        }
+
+        // Init
+        setTimeout(renderMap, 500);
+    </script>
+</body>
+
+</html>

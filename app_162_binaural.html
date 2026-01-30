@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>双耳节拍发生器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type=range] {
+            height: 4px;
+            background: #334155;
+            border-radius: 2px;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #a855f7;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+
+        .brain-glow {
+            animation: pulse 4s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.6;
+                transform: scale(1.05);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-white">
+
+    <div class="w-full max-w-lg bg-gray-800 p-8 rounded-3xl shadow-2xl border border-gray-700 relative overflow-hidden">
+
+        <!-- Brain Visual -->
+        <div
+            class="absolute top-0 right-0 w-64 h-64 bg-purple-600 rounded-full blur-[80px] opacity-20 pointer-events-none brain-glow">
+        </div>
+        <div class="absolute bottom-0 left-0 w-64 h-64 bg-blue-600 rounded-full blur-[80px] opacity-20 pointer-events-none brain-glow"
+            style="animation-delay: 2s"></div>
+
+        <header class="flex justify-between items-center mb-8 relative z-10">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <span class="text-3xl">🎧</span> Binaural Beats
+            </h1>
+            <a href="./navigation.html" class="text-sm text-gray-400 hover:text-white">退出</a>
+        </header>
+
+        <div class="space-y-8 relative z-10">
+
+            <div class="text-center p-6 bg-gray-900/50 rounded-2xl border border-gray-700">
+                <div class="text-xs font-bold text-purple-400 uppercase tracking-widest mb-1">Difference (Beat)</div>
+                <div class="text-5xl font-mono font-bold text-white mb-4"><span id="beat-val">10</span> Hz</div>
+                <div class="text-sm text-gray-400 font-bold" id="wave-type">Alpha (Relaxed)</div>
+            </div>
+
+            <!-- Controls -->
+            <div class="space-y-6">
+
+                <div>
+                    <div class="flex justify-between text-xs font-bold text-gray-400 uppercase mb-2">
+                        <span>Base Frequency</span>
+                        <span id="base-val">200 Hz</span>
+                    </div>
+                    <input type="range" id="base-freq" min="100" max="500" value="200" class="w-full"
+                        oninput="update()">
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs font-bold text-gray-400 uppercase mb-2">
+                        <span>Beat Frequency</span>
+                        <span>Adjust to change state</span>
+                    </div>
+                    <input type="range" id="beat-freq" min="1" max="40" value="10" step="0.5" class="w-full"
+                        oninput="update()">
+                </div>
+
+                <!-- Presets -->
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="setPreset(4)"
+                        class="py-2 bg-gray-700 rounded text-xs font-bold hover:bg-gray-600 transition">Delta
+                        (Sleep)</button>
+                    <button onclick="setPreset(7)"
+                        class="py-2 bg-gray-700 rounded text-xs font-bold hover:bg-gray-600 transition">Theta
+                        (Deep)</button>
+                    <button onclick="setPreset(10)"
+                        class="py-2 bg-gray-700 rounded text-xs font-bold hover:bg-gray-600 transition">Alpha
+                        (Relax)</button>
+                    <button onclick="setPreset(20)"
+                        class="py-2 bg-gray-700 rounded text-xs font-bold hover:bg-gray-600 transition">Beta
+                        (Focus)</button>
+                </div>
+
+                <div class="pt-4">
+                    <button onclick="togglePlay()" id="play-btn"
+                        class="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-lg transition">
+                        开始播放 (请佩戴耳机)
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        let audioCtx;
+        let oscLeft, oscRight;
+        let merger;
+        let isPlaying = false;
+
+        const baseInput = document.getElementById('base-freq');
+        const beatInput = document.getElementById('beat-freq');
+        const playBtn = document.getElementById('play-btn');
+        const beatDisplay = document.getElementById('beat-val');
+        const baseDisplay = document.getElementById('base-val');
+        const typeDisplay = document.getElementById('wave-type');
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function update() {
+            const base = parseInt(baseInput.value);
+            const beat = parseFloat(beatInput.value);
+
+            beatDisplay.innerText = beat;
+            baseDisplay.innerText = base + " Hz";
+
+            // Identify Wave Type
+            let typeText = "";
+            if (beat < 4) typeText = "Delta (Deep Sleep)";
+            else if (beat < 8) typeText = "Theta (Meditation/Dream)";
+            else if (beat < 14) typeText = "Alpha (Relaxed/Focus)";
+            else if (beat < 30) typeText = "Beta (Active/Alert)";
+            else typeText = "Gamma (High Performance)";
+            typeDisplay.innerText = typeText;
+
+            if (isPlaying && oscLeft && oscRight) {
+                // Left Ear: Base
+                // Right Ear: Base + Beat
+                oscLeft.frequency.setTargetAtTime(base, audioCtx.currentTime, 0.1);
+                oscRight.frequency.setTargetAtTime(base + beat, audioCtx.currentTime, 0.1);
+            }
+        }
+
+        function setPreset(val) {
+            beatInput.value = val;
+            update();
+        }
+
+        function togglePlay() {
+            initAudio();
+
+            if (isPlaying) {
+                stop();
+                playBtn.innerText = "开始播放 (请佩戴耳机)";
+                playBtn.className = "w-full py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-lg transition";
+            } else {
+                start();
+                playBtn.innerText = "停止播放";
+                playBtn.className = "w-full py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg transition";
+            }
+        }
+
+        function start() {
+            const base = parseInt(baseInput.value);
+            const beat = parseFloat(beatInput.value);
+
+            // Left
+            oscLeft = audioCtx.createOscillator();
+            oscLeft.type = 'sine';
+            oscLeft.frequency.value = base;
+            const pannerLeft = audioCtx.createStereoPanner();
+            pannerLeft.pan.value = -1;
+            oscLeft.connect(pannerLeft).connect(audioCtx.destination);
+
+            // Right
+            oscRight = audioCtx.createOscillator();
+            oscRight.type = 'sine';
+            oscRight.frequency.value = base + beat;
+            const pannerRight = audioCtx.createStereoPanner();
+            pannerRight.pan.value = 1;
+            oscRight.connect(pannerRight).connect(audioCtx.destination);
+
+            oscLeft.start();
+            oscRight.start();
+            isPlaying = true;
+        }
+
+        function stop() {
+            if (oscLeft) { oscLeft.stop(); oscLeft = null; }
+            if (oscRight) { oscRight.stop(); oscRight = null; }
+            isPlaying = false;
+        }
+
+        update();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二维码解码器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsQR Library -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-3xl shadow-xl border border-gray-200">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-gray-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM5 4h4v4H5V4zm0 11h4v4H5v-4zm11-11h4v4h-4V4zM9 9H5v4h4V9zm11 0h-4v4h4V9z" />
+                </svg>
+                QR Decoder
+            </h1>
+            <a href="./navigation.html" class="text-sm text-gray-400 hover:text-gray-600">退出</a>
+        </header>
+
+        <label
+            class="block w-full h-48 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-blue-400 transition mb-6 bg-slate-50 relative overflow-hidden">
+            <div id="upload-ui" class="text-center">
+                <span class="text-4xl block mb-2 opacity-30">📷</span>
+                <span class="text-sm font-bold text-gray-500">点击上传二维码图片</span>
+            </div>
+            <img id="preview" class="absolute inset-0 w-full h-full object-contain hidden bg-white">
+            <input type="file" class="hidden" accept="image/*" onchange="handleFile(event)">
+        </label>
+
+        <!-- Result -->
+        <div class="relative">
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">扫描结果 (Result)</label>
+            <textarea id="output"
+                class="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-xl resize-none outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                readonly placeholder="解码结果将显示在这里..."></textarea>
+
+            <!-- Status Badge -->
+            <div id="status"
+                class="absolute top-8 right-4 text-xs font-bold px-2 py-1 rounded bg-gray-200 text-gray-500 hidden">
+                Scanning...
+            </div>
+        </div>
+
+        <div class="flex gap-4 mt-4">
+            <button onclick="copyResult()"
+                class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition shadow">复制内容</button>
+            <button onclick="openLink()" id="btn-link"
+                class="flex-1 py-2 bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 font-bold rounded-lg transition hidden">打开链接</button>
+        </div>
+
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+        const preview = document.getElementById('preview');
+        const uploadUI = document.getElementById('upload-ui');
+        const status = document.getElementById('status');
+        const btnLink = document.getElementById('btn-link');
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            uploadUI.style.opacity = '0';
+            preview.src = URL.createObjectURL(file);
+            preview.classList.remove('hidden');
+            output.value = "";
+            btnLink.classList.add('hidden');
+
+            status.innerText = "Processing...";
+            status.className = "absolute top-8 right-4 text-xs font-bold px-2 py-1 rounded bg-yellow-100 text-yellow-700";
+            status.classList.remove('hidden');
+
+            // Need to draw to canvas to get data
+            const img = new Image();
+            img.src = URL.createObjectURL(file);
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+                if (code) {
+                    output.value = code.data;
+                    status.innerText = "Success";
+                    status.className = "absolute top-8 right-4 text-xs font-bold px-2 py-1 rounded bg-green-100 text-green-700";
+
+                    if (code.data.startsWith('http')) {
+                        btnLink.classList.remove('hidden');
+                    }
+                } else {
+                    output.value = "无法识别二维码，请确保图片清晰。";
+                    status.innerText = "Failed";
+                    status.className = "absolute top-8 right-4 text-xs font-bold px-2 py-1 rounded bg-red-100 text-red-700";
+                }
+            };
+        }
+
+        function copyResult() {
+            output.select();
+            document.execCommand('copy');
+            alert("已复制!");
+        }
+
+        function openLink() {
+            const url = output.value;
+            if (url.startsWith('http')) {
+                window.open(url, '_blank');
+            }
+        }
+    </script>
+</body>
+
+</html>

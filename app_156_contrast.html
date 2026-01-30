@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>色彩对比度检查</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .preview-box {
+            transition: all 0.2s;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-2xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold flex items-center gap-2 text-slate-700">
+                <span class="text-3xl">👁️</span> Contrast Checker
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+
+            <!-- Controls -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">文字颜色 (Foreground)</label>
+                    <div class="flex gap-2">
+                        <input type="color" id="fg-color" value="#FFFFFF"
+                            class="w-12 h-10 rounded cursor-pointer border border-slate-200" oninput="update()">
+                        <input type="text" id="fg-text" value="#FFFFFF"
+                            class="flex-1 p-2 border border-slate-200 rounded uppercase font-mono"
+                            oninput="syncColor('fg')">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">背景颜色 (Background)</label>
+                    <div class="flex gap-2">
+                        <input type="color" id="bg-color" value="#4F46E5"
+                            class="w-12 h-10 rounded cursor-pointer border border-slate-200" oninput="update()">
+                        <input type="text" id="bg-text" value="#4F46E5"
+                            class="flex-1 p-2 border border-slate-200 rounded uppercase font-mono"
+                            oninput="syncColor('bg')">
+                    </div>
+                </div>
+
+                <button onclick="swapColors()"
+                    class="w-full py-2 border border-slate-300 rounded-lg text-slate-600 text-sm font-bold hover:bg-slate-50 transition">
+                    ⇅ 交换颜色
+                </button>
+
+            </div>
+
+            <!-- Result -->
+            <div
+                class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-center text-center">
+                <p class="text-xs font-bold text-slate-400 uppercase mb-2">对比度 (Contrast Ratio)</p>
+                <div class="text-5xl font-black text-slate-800 mb-2" id="ratio-display">4.5:1</div>
+                <div id="rating-text" class="font-bold text-lg mb-4">Good</div>
+
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="bg-slate-50 p-2 rounded border border-slate-100">
+                        <span class="block text-xs text-slate-400">WCAG AA</span>
+                        <span class="font-bold" id="aa-status">Pass</span>
+                    </div>
+                    <div class="bg-slate-50 p-2 rounded border border-slate-100">
+                        <span class="block text-xs text-slate-400">WCAG AAA</span>
+                        <span class="font-bold" id="aaa-status">Fail</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Preview -->
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden border border-slate-200 preview-box"
+            id="preview-box">
+            <div class="p-8 md:p-12 flex flex-col gap-4">
+                <h2 class="text-4xl font-bold">Large Heading Text</h2>
+                <p class="text-lg opacity-90">This is how normal body text looks like. Good contrast is essential for
+                    readability and accessibility.</p>
+                <p class="text-sm opacity-70">Small text example (14px). Requires higher contrast ratio.</p>
+                <div class="mt-4">
+                    <button
+                        class="px-6 py-2 rounded-full border-2 font-bold opacity-90 hover:opacity-100 transition">Button</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const fgInput = document.getElementById('fg-color');
+        const fgText = document.getElementById('fg-text');
+        const bgInput = document.getElementById('bg-color');
+        const bgText = document.getElementById('bg-text');
+        const previewBox = document.getElementById('preview-box');
+        const ratioDisplay = document.getElementById('ratio-display');
+        const aaStatus = document.getElementById('aa-status');
+        const aaaStatus = document.getElementById('aaa-status');
+        const ratingText = document.getElementById('rating-text');
+
+        function hexToRgb(hex) {
+            const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+            hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        function luminance(r, g, b) {
+            const a = [r, g, b].map(v => {
+                v /= 255;
+                return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+            });
+            return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+        }
+
+        function calculateRatio(color1, color2) {
+            const l1 = luminance(color1.r, color1.g, color1.b);
+            const l2 = luminance(color2.r, color2.g, color2.b);
+            const lighter = Math.max(l1, l2);
+            const darker = Math.min(l1, l2);
+            return (lighter + 0.05) / (darker + 0.05);
+        }
+
+        function update() {
+            const fgHex = fgInput.value;
+            const bgHex = bgInput.value;
+
+            fgText.value = fgHex.toUpperCase();
+            bgText.value = bgHex.toUpperCase();
+
+            previewBox.style.backgroundColor = bgHex;
+            previewBox.style.color = fgHex;
+            previewBox.style.borderColor = fgHex; // Just for button border logic simulation
+
+            // Button border in preview
+            const btn = previewBox.querySelector('button');
+            btn.style.borderColor = fgHex;
+
+            const fgRgb = hexToRgb(fgHex);
+            const bgRgb = hexToRgb(bgHex);
+
+            const ratio = calculateRatio(fgRgb, bgRgb);
+            const ratioStr = ratio.toFixed(2);
+            ratioDisplay.innerText = ratioStr + ":1";
+
+            // Status
+            // Normal Text: AA >= 4.5, AAA >= 7
+            // Large Text: AA >= 3, AAA >= 4.5
+
+            let aa = ratio >= 4.5 ? "Pass" : (ratio >= 3 ? "Large Text Only" : "Fail");
+            let aaa = ratio >= 7 ? "Pass" : (ratio >= 4.5 ? "Large Text Only" : "Fail");
+
+            aaStatus.innerText = aa;
+            aaaStatus.innerText = aaa;
+
+            aaStatus.className = "font-bold " + (ratio >= 4.5 ? "text-green-600" : (ratio >= 3 ? "text-yellow-600" : "text-red-500"));
+            aaaStatus.className = "font-bold " + (ratio >= 7 ? "text-green-600" : (ratio >= 4.5 ? "text-yellow-600" : "text-red-500"));
+
+            if (ratio >= 7) {
+                ratingText.innerText = "Excellent (AAA)";
+                ratingText.className = "font-bold text-lg mb-4 text-green-600";
+            } else if (ratio >= 4.5) {
+                ratingText.innerText = "Good (AA)";
+                ratingText.className = "font-bold text-lg mb-4 text-green-500";
+            } else if (ratio >= 3) {
+                ratingText.innerText = "Poor (Large Text Only)";
+                ratingText.className = "font-bold text-lg mb-4 text-yellow-500";
+            } else {
+                ratingText.innerText = "Very Poor (Fail)";
+                ratingText.className = "font-bold text-lg mb-4 text-red-500";
+            }
+        }
+
+        function syncColor(type) {
+            const textInput = document.getElementById(type + '-text');
+            const colorInput = document.getElementById(type + '-color');
+            if (/^#[0-9A-F]{6}$/i.test(textInput.value)) {
+                colorInput.value = textInput.value;
+                update();
+            }
+        }
+
+        function swapColors() {
+            const temp = fgInput.value;
+            fgInput.value = bgInput.value;
+            bgInput.value = temp;
+            update();
+        }
+
+        update();
+    </script>
+</body>
+
+</html>

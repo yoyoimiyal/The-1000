@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSVP 速读训练器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .word-display {
+            font-variant-numeric: tabular-nums;
+        }
+
+        .focus-point {
+            color: #ef4444;
+        }
+    </style>
+</head>
+
+<body class="bg-amber-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-2xl h-[85vh] flex flex-col">
+
+        <header class="flex justify-between items-center mb-8 shrink-0">
+            <h1 class="text-2xl font-bold text-amber-900 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                RSVP Reader
+            </h1>
+            <a href="./navigation.html" class="text-sm text-amber-600 hover:underline">退出</a>
+        </header>
+
+        <!-- Reader Area -->
+        <div
+            class="flex-1 bg-white rounded-3xl shadow-xl flex flex-col items-center justify-center relative mb-8 border border-amber-100 overflow-hidden">
+
+            <!-- Focus Guides -->
+            <div class="absolute top-0 bottom-0 w-px bg-amber-200 left-1/2 -translate-x-1/2"></div>
+            <div class="absolute top-1/2 left-0 right-0 h-px bg-amber-200 -translate-y-1/2"></div>
+
+            <div id="display" class="text-5xl md:text-7xl font-bold text-slate-800 z-10 text-center bg-white px-4 py-2">
+                Ready?
+            </div>
+
+            <div class="absolute bottom-4 text-xs font-mono text-slate-400">
+                <span id="progress">0 / 0</span>
+            </div>
+
+        </div>
+
+        <!-- Controls -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-amber-100 flex flex-col gap-4">
+
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <button onclick="togglePlay()" id="play-btn"
+                        class="w-12 h-12 bg-amber-500 hover:bg-amber-600 text-white rounded-full flex items-center justify-center shadow-md transition">
+                        ▶
+                    </button>
+                    <button onclick="reset()" class="text-slate-400 hover:text-slate-600">
+                        ⏮
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase">WPM</span>
+                    <input type="number" id="wpm" value="300" step="50" min="50" max="1000"
+                        class="w-20 p-2 border border-slate-200 rounded text-center font-bold text-amber-700 outline-none"
+                        onchange="updateWPM()">
+                </div>
+            </div>
+
+            <textarea id="text-input"
+                class="w-full h-24 p-3 bg-amber-50 rounded-lg text-sm border border-amber-100 resize-none outline-none focus:ring-2 focus:ring-amber-300 transition"
+                placeholder="在此粘贴要阅读的文章...">
+Rapid Serial Visual Presentation (RSVP) is a method of displaying information (generally text) in which the text is displayed word-by-word in a fixed focal position. This method allows reading at very high speeds by eliminating eye movements.
+            </textarea>
+
+        </div>
+
+    </div>
+
+    <script>
+        const display = document.getElementById('display');
+        const input = document.getElementById('text-input');
+        const playBtn = document.getElementById('play-btn');
+        const progressEl = document.getElementById('progress');
+
+        let words = [];
+        let index = 0;
+        let isPlaying = false;
+        let wpm = 300;
+        let intervalId = null;
+
+        function updateWPM() {
+            wpm = parseInt(document.getElementById('wpm').value);
+            if (isPlaying) {
+                stop();
+                start();
+            }
+        }
+
+        function togglePlay() {
+            if (isPlaying) stop();
+            else start();
+        }
+
+        function start() {
+            if (words.length === 0) parseText();
+            if (words.length === 0) return;
+
+            isPlaying = true;
+            playBtn.innerHTML = "⏸";
+            playBtn.classList.replace('bg-amber-500', 'bg-slate-700');
+            playBtn.classList.replace('hover:bg-amber-600', 'hover:bg-slate-600');
+
+            const delay = 60000 / wpm;
+            intervalId = setInterval(nextWord, delay);
+        }
+
+        function stop() {
+            isPlaying = false;
+            clearInterval(intervalId);
+            playBtn.innerHTML = "▶";
+            playBtn.classList.replace('bg-slate-700', 'bg-amber-500');
+            playBtn.classList.replace('hover:bg-slate-600', 'hover:bg-amber-600');
+        }
+
+        function reset() {
+            stop();
+            index = 0;
+            updateDisplay();
+        }
+
+        function parseText() {
+            const raw = input.value;
+            words = raw.split(/\s+/).filter(w => w.length > 0);
+            index = 0;
+        }
+
+        function nextWord() {
+            if (index >= words.length) {
+                stop();
+                index = 0; // Loop or stop? Stop.
+                return;
+            }
+            updateDisplay();
+            index++;
+        }
+
+        function updateDisplay() {
+            const word = words[index] || "Done";
+
+            // Optimal Recognition Point (ORP) highlighting?
+            // Simple logic: highlight middle letter red
+            const mid = Math.floor(word.length / 2);
+            // Actually ORP is slightly left of center. 
+            // Let's just center text.
+
+            // To make it nicer, we can color the middle character red
+            // But handling HTML in center is tricky for alignment.
+            // Just plain text is fine for basic MVP.
+
+            display.innerText = word;
+            progressEl.innerText = `${index + 1} / ${words.length}`;
+        }
+
+        // Init
+        parseText();
+    </script>
+</body>
+
+</html>
