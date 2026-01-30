@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日喝水打卡</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .wave-water {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #3b82f6;
+            transition: height 0.5s ease-out;
+            z-index: 0;
+        }
+
+        .cup-container {
+            width: 200px;
+            height: 300px;
+            border: 8px solid #e2e8f0;
+            border-top: 0;
+            border-bottom-left-radius: 40px;
+            border-bottom-right-radius: 40px;
+            position: relative;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .bubble {
+            position: absolute;
+            bottom: -10px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            animation: rise 4s infinite ease-in;
+        }
+
+        @keyframes rise {
+            0% {
+                bottom: -10px;
+                transform: translateX(0);
+            }
+
+            100% {
+                bottom: 100%;
+                transform: translateX(-20px);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-blue-50 min-h-screen flex flex-col items-center justify-center p-4 font-sans text-slate-700">
+
+    <div class="flex justify-between w-full max-w-sm mb-8 items-end">
+        <div>
+            <h1 class="text-2xl font-bold text-blue-900">Hydration</h1>
+            <p class="text-xs text-blue-400" id="date-display">Today</p>
+        </div>
+        <button onclick="resetDay()" class="text-xs text-slate-400 hover:text-red-500">Reset</button>
+    </div>
+
+    <!-- The Cup -->
+    <div class="cup-container mb-8">
+        <div id="water" class="wave-water h-0"></div>
+        <div class="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+            <span class="text-4xl font-bold text-slate-800 mix-blend-multiply"><span id="current-ml">0</span> ml</span>
+            <span class="text-xs text-slate-400 font-bold mt-1">Goal: <span id="goal-display">2000</span> ml</span>
+            <span class="text-lg font-bold text-blue-900 mt-2" id="percent">0%</span>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="w-full max-w-sm grid grid-cols-3 gap-4 mb-8">
+        <button onclick="addWater(150)"
+            class="bg-white p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-50 transition flex flex-col items-center gap-1 active:scale-95">
+            <span class="text-xl">🍵</span>
+            <span class="text-xs font-bold text-slate-500">+150ml</span>
+        </button>
+        <button onclick="addWater(250)"
+            class="bg-white p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-50 transition flex flex-col items-center gap-1 active:scale-95">
+            <span class="text-xl">🥤</span>
+            <span class="text-xs font-bold text-slate-500">+250ml</span>
+        </button>
+        <button onclick="addWater(500)"
+            class="bg-white p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-50 transition flex flex-col items-center gap-1 active:scale-95">
+            <span class="text-xl">🍼</span>
+            <span class="text-xs font-bold text-slate-500">+500ml</span>
+        </button>
+    </div>
+
+    <!-- Goal Setting -->
+    <div class="w-full max-w-sm bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
+        <span class="text-xs font-bold text-slate-400 uppercase">Daily Goal</span>
+        <input type="number" id="goal-input" value="2000"
+            class="w-20 text-right p-1 border-b border-slate-200 outline-none text-slate-700 font-bold"
+            onchange="updateGoal()">
+    </div>
+
+    <div class="mt-8">
+        <a href="./navigation.html" class="text-xs text-blue-300 hover:text-blue-500">退出</a>
+    </div>
+
+    <script>
+        let current = 0;
+        let goal = 2000;
+
+        const waterEl = document.getElementById('water');
+        const currentEl = document.getElementById('current-ml');
+        const goalEl = document.getElementById('goal-display');
+        const goalInput = document.getElementById('goal-input');
+        const pctEl = document.getElementById('percent');
+        const dateDisplay = document.getElementById('date-display');
+
+        function init() {
+            const today = new Date().toLocaleDateString();
+            dateDisplay.innerText = today;
+
+            const saved = JSON.parse(localStorage.getItem('hydration_data') || '{}');
+            if (saved.date === today) {
+                current = saved.amount || 0;
+                goal = saved.goal || 2000;
+            } else {
+                current = 0;
+                goal = saved.goal || 2000; // Keep goal preference
+            }
+
+            goalInput.value = goal;
+            updateUI();
+        }
+
+        function addWater(amount) {
+            current += amount;
+            save();
+            updateUI();
+        }
+
+        function updateGoal() {
+            goal = parseInt(goalInput.value);
+            if (goal < 100) goal = 100;
+            save();
+            updateUI();
+        }
+
+        function resetDay() {
+            if (confirm("确定清空今日记录吗？")) {
+                current = 0;
+                save();
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            currentEl.innerText = current;
+            goalEl.innerText = goal;
+
+            let pct = Math.min(100, Math.round((current / goal) * 100));
+            waterEl.style.height = `${pct}%`;
+            pctEl.innerText = `${pct}%`;
+
+            if (pct >= 100) {
+                waterEl.classList.add('bg-green-500');
+                waterEl.classList.remove('bg-blue-500');
+            } else {
+                waterEl.classList.add('bg-blue-500');
+                waterEl.classList.remove('bg-green-500');
+            }
+        }
+
+        function save() {
+            const today = new Date().toLocaleDateString();
+            const data = { date: today, amount: current, goal: goal };
+            localStorage.setItem('hydration_data', JSON.stringify(data));
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

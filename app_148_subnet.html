@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>子网掩码计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #f1f5f9;
+            padding: 12px 0;
+        }
+
+        .result-label {
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+
+        .result-val {
+            font-family: monospace;
+            font-weight: 600;
+            color: #334155;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                Subnet Calculator
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="flex gap-2 mb-8">
+            <input type="text" id="ip" value="192.168.1.1"
+                class="flex-1 p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-lg"
+                placeholder="IP Address">
+            <div class="flex items-center text-xl font-bold text-slate-400">/</div>
+            <input type="number" id="mask" value="24" min="0" max="32"
+                class="w-20 p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-lg"
+                onchange="calc()">
+        </div>
+
+        <button onclick="calc()"
+            class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg mb-8 shadow transition">计算
+            Calculate</button>
+
+        <div id="results" class="bg-slate-50 p-6 rounded-xl border border-slate-100">
+            <div class="result-row">
+                <span class="result-label">IP Address</span>
+                <span class="result-val" id="res-ip">...</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">Subnet Mask</span>
+                <span class="result-val" id="res-mask">...</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">Network Address</span>
+                <span class="result-val text-green-600" id="res-net">...</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">Broadcast Address</span>
+                <span class="result-val text-blue-600" id="res-broad">...</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">Usable Host Range</span>
+                <span class="result-val" id="res-range">...</span>
+            </div>
+            <div class="result-row border-b-0">
+                <span class="result-label">Total Hosts</span>
+                <span class="result-val" id="res-hosts">...</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function ip2long(ip) {
+            let components;
+            if (components = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)) {
+                let ipl = 0;
+                ipl = ipl * 256 + parseInt(components[1]);
+                ipl = ipl * 256 + parseInt(components[2]);
+                ipl = ipl * 256 + parseInt(components[3]);
+                ipl = ipl * 256 + parseInt(components[4]);
+                return ipl;
+            }
+            return 0;
+        }
+
+        function long2ip(ipl) {
+            return ((ipl >>> 24) + '.' + (ipl >> 16 & 255) + '.' + (ipl >> 8 & 255) + '.' + (ipl & 255));
+        }
+
+        function calc() {
+            const ipStr = document.getElementById('ip').value;
+            const maskBits = parseInt(document.getElementById('mask').value);
+
+            if (!ipStr || isNaN(maskBits)) return;
+
+            const ipLong = ip2long(ipStr);
+            const maskLong = -1 << (32 - maskBits); // Create mask
+
+            const netLong = ipLong & maskLong;
+            const broadLong = netLong | (~maskLong);
+
+            const startIp = long2ip(netLong + 1);
+            const endIp = long2ip(broadLong - 1);
+            const hosts = Math.pow(2, 32 - maskBits) - 2;
+
+            document.getElementById('res-ip').innerText = ipStr;
+            document.getElementById('res-mask').innerText = long2ip(maskLong);
+            document.getElementById('res-net').innerText = long2ip(netLong);
+            document.getElementById('res-broad').innerText = long2ip(broadLong);
+
+            if (maskBits >= 31) {
+                document.getElementById('res-range').innerText = "N/A (PtP)";
+                document.getElementById('res-hosts').innerText = 0;
+            } else {
+                document.getElementById('res-range').innerText = `${startIp} - ${endIp}`;
+                document.getElementById('res-hosts').innerText = hosts.toLocaleString();
+            }
+        }
+
+        // Init
+        calc();
+    </script>
+</body>
+
+</html>

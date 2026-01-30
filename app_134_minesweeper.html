@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>经典扫雷</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .cell {
+            width: 30px;
+            height: 30px;
+            background-color: #cbd5e1;
+            /* slate-300 */
+            border-top: 3px solid #f1f5f9;
+            border-left: 3px solid #f1f5f9;
+            border-right: 3px solid #94a3b8;
+            border-bottom: 3px solid #94a3b8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .cell.revealed {
+            background-color: #e2e8f0;
+            /* slate-200 */
+            border: 1px solid #94a3b8;
+        }
+
+        .cell.mine {
+            background-color: #ef4444;
+            border: 1px solid #b91c1c;
+        }
+
+        .num-1 {
+            color: blue;
+        }
+
+        .num-2 {
+            color: green;
+        }
+
+        .num-3 {
+            color: red;
+        }
+
+        .num-4 {
+            color: purple;
+        }
+
+        .num-5 {
+            color: maroon;
+        }
+
+        .num-6 {
+            color: turquoise;
+        }
+
+        .num-7 {
+            color: black;
+        }
+
+        .num-8 {
+            color: gray;
+        }
+    </style>
+</head>
+
+<body class="bg-teal-50 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div
+        class="bg-slate-200 p-4 rounded shadow-xl border-t-4 border-l-4 border-white border-b-4 border-r-4 border-slate-400 inline-block">
+
+        <!-- Header -->
+        <div
+            class="flex justify-between items-center bg-slate-300 border-2 border-slate-400 border-b-white border-r-white p-2 mb-4 inset-shadow">
+            <div class="bg-black text-red-500 font-mono text-xl px-2 py-1 w-16 text-center border-2 border-slate-400 border-b-white border-r-white"
+                id="mines-count">010</div>
+
+            <button onclick="initGame()"
+                class="w-10 h-10 bg-slate-200 border-t-2 border-l-2 border-white border-b-2 border-r-2 border-slate-500 active:border-t-slate-500 active:border-l-slate-500 active:border-b-white active:border-r-white flex items-center justify-center text-xl"
+                id="face-btn">
+                🙂
+            </button>
+
+            <div class="bg-black text-red-500 font-mono text-xl px-2 py-1 w-16 text-center border-2 border-slate-400 border-b-white border-r-white"
+                id="timer">000</div>
+        </div>
+
+        <!-- Grid -->
+        <div id="grid"
+            class="grid gap-0 border-4 border-slate-400 border-t-slate-500 border-l-slate-500 border-b-white border-r-white">
+            <!-- Cells injected -->
+        </div>
+
+    </div>
+
+    <div class="mt-8 text-center">
+        <a href="./navigation.html" class="text-xs text-slate-400 hover:text-slate-600 underline">退出游戏</a>
+    </div>
+
+    <script>
+        const gridEl = document.getElementById('grid');
+        const minesDisplay = document.getElementById('mines-count');
+        const timerDisplay = document.getElementById('timer');
+        const faceBtn = document.getElementById('face-btn');
+
+        // Settings (Beginner)
+        const rows = 9;
+        const cols = 9;
+        const minesCount = 10;
+
+        let grid = [];
+        let gameOver = false;
+        let flags = 0;
+        let timer = 0;
+        let timerId = null;
+        let firstClick = true;
+
+        function initGame() {
+            gridEl.style.gridTemplateColumns = `repeat(${cols}, 30px)`;
+            grid = [];
+            gameOver = false;
+            flags = 0;
+            timer = 0;
+            firstClick = true;
+            clearInterval(timerId);
+            timerDisplay.innerText = "000";
+            minesDisplay.innerText = minesCount.toString().padStart(3, '0');
+            faceBtn.innerText = "🙂";
+
+            gridEl.innerHTML = '';
+
+            // Init empty grid
+            for (let i = 0; i < rows * cols; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.id = i;
+                cell.addEventListener('mousedown', handleClick);
+                cell.oncontextmenu = (e) => { e.preventDefault(); }; // Disable context menu
+                gridEl.appendChild(cell);
+
+                grid.push({
+                    el: cell,
+                    isMine: false,
+                    isRevealed: false,
+                    isFlagged: false,
+                    neighborMines: 0
+                });
+            }
+        }
+
+        function placeMines(excludeIdx) {
+            let placed = 0;
+            while (placed < minesCount) {
+                const idx = Math.floor(Math.random() * (rows * cols));
+                if (idx !== excludeIdx && !grid[idx].isMine) {
+                    grid[idx].isMine = true;
+                    placed++;
+                }
+            }
+
+            // Calc neighbors
+            for (let i = 0; i < grid.length; i++) {
+                if (grid[i].isMine) continue;
+                grid[i].neighborMines = countMines(i);
+            }
+        }
+
+        function countMines(idx) {
+            let count = 0;
+            const neighbors = getNeighbors(idx);
+            neighbors.forEach(n => {
+                if (grid[n].isMine) count++;
+            });
+            return count;
+        }
+
+        function getNeighbors(idx) {
+            const neighbors = [];
+            const r = Math.floor(idx / cols);
+            const c = idx % cols;
+
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (i === 0 && j === 0) continue;
+                    const nr = r + i;
+                    const nc = c + j;
+                    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                        neighbors.push(nr * cols + nc);
+                    }
+                }
+            }
+            return neighbors;
+        }
+
+        function handleClick(e) {
+            if (gameOver) return;
+            const idx = parseInt(this.dataset.id);
+            const cell = grid[idx];
+
+            if (e.button === 2) { // Right click
+                if (!cell.isRevealed) {
+                    cell.isFlagged = !cell.isFlagged;
+                    cell.el.innerText = cell.isFlagged ? "🚩" : "";
+                    flags += cell.isFlagged ? 1 : -1;
+                    minesDisplay.innerText = (minesCount - flags).toString().padStart(3, '0');
+                }
+                return;
+            }
+
+            if (cell.isFlagged) return;
+
+            if (firstClick) {
+                placeMines(idx);
+                firstClick = false;
+                startTimer();
+            }
+
+            if (cell.isMine) {
+                explode();
+            } else {
+                reveal(idx);
+                checkWin();
+            }
+        }
+
+        function reveal(idx) {
+            const cell = grid[idx];
+            if (cell.isRevealed || cell.isFlagged) return;
+
+            cell.isRevealed = true;
+            cell.el.classList.add('revealed');
+
+            if (cell.neighborMines > 0) {
+                cell.el.innerText = cell.neighborMines;
+                cell.el.classList.add(`num-${cell.neighborMines}`);
+            } else {
+                // Auto expand empty
+                const neighbors = getNeighbors(idx);
+                neighbors.forEach(n => reveal(n));
+            }
+        }
+
+        function explode() {
+            gameOver = true;
+            faceBtn.innerText = "😵";
+            clearInterval(timerId);
+
+            grid.forEach(cell => {
+                if (cell.isMine) {
+                    cell.el.classList.add('revealed', 'mine');
+                    cell.el.innerText = "💣";
+                }
+            });
+        }
+
+        function checkWin() {
+            const revealedCount = grid.filter(c => c.isRevealed).length;
+            if (revealedCount === (rows * cols - minesCount)) {
+                gameOver = true;
+                faceBtn.innerText = "😎";
+                clearInterval(timerId);
+                alert("你赢了！");
+            }
+        }
+
+        function startTimer() {
+            timerId = setInterval(() => {
+                timer++;
+                if (timer > 999) timer = 999;
+                timerDisplay.innerText = timer.toString().padStart(3, '0');
+            }, 1000);
+        }
+
+        initGame();
+    </script>
+</body>
+
+</html>

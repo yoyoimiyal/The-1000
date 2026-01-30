@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>花式圆角生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .blob-box {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            transition: border-radius 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.5rem;
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+        }
+
+        input[type=range] {
+            width: 100%;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col md:flex-row items-center justify-center p-6 gap-12">
+
+    <!-- Visual Editor -->
+    <div class="relative">
+        <div id="blob" class="blob-box">
+            BLOB
+        </div>
+
+        <!-- Absolute Sliders positioned around the box -->
+        <!-- Top X -->
+        <input type="range" id="tl-x" min="0" max="100" value="30" class="absolute -top-8 left-0 w-full"
+            oninput="update()">
+        <!-- Bottom X -->
+        <input type="range" id="bl-x" min="0" max="100" value="30" class="absolute -bottom-8 left-0 w-full"
+            oninput="update()">
+
+        <!-- Left Y (Rotated) -->
+        <input type="range" id="tl-y" min="0" max="100" value="30"
+            class="absolute top-1/2 -left-[170px] w-[300px] -rotate-90" oninput="update()">
+        <!-- Right Y (Rotated) -->
+        <input type="range" id="tr-y" min="0" max="100" value="70"
+            class="absolute top-1/2 -right-[170px] w-[300px] -rotate-90" oninput="update()">
+
+        <p class="absolute -bottom-16 w-full text-center text-xs text-slate-400">拖动滑块调整形状</p>
+    </div>
+
+    <!-- Output & Controls -->
+    <div class="w-full max-w-sm bg-white p-8 rounded-2xl shadow-xl border border-slate-200 z-10">
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-xl font-bold text-slate-800">Fancy Border Radius</h1>
+            <a href="./navigation.html" class="text-sm text-indigo-500 hover:underline">退出</a>
+        </header>
+
+        <div class="mb-6 relative group cursor-pointer" onclick="copyCSS()">
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">CSS Code</label>
+            <div
+                class="bg-slate-800 text-green-400 p-4 rounded-lg font-mono text-xs break-all leading-relaxed hover:bg-slate-700 transition">
+                <span id="css-output">border-radius: ...</span>
+            </div>
+            <div class="absolute top-8 right-2 text-[10px] text-white/50 group-hover:text-white transition">点击复制</div>
+        </div>
+
+        <div class="flex gap-4">
+            <button onclick="randomize()"
+                class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow transition">随机形状</button>
+            <button onclick="reset()"
+                class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-xl transition">重置</button>
+        </div>
+
+    </div>
+
+    <script>
+        const blob = document.getElementById('blob');
+        const output = document.getElementById('css-output');
+
+        // Use 4 sliders to control 8 values (simplified UI: 4 sliders control pairs? No, fancy radius has 8 values)
+        // Full syntax: top-left-x top-right-x bottom-right-x bottom-left-x / top-left-y top-right-y bottom-right-y bottom-left-y
+        // The UI above shows 4 sliders. Let's map them to control the shape organically.
+        // Or actually, 8 sliders are needed for full control.
+        // Let's implement simplified control: 
+        // Horizontal Top (controls TL-x and TR-x inverse?)
+        // Let's use 4 sliders that control the "warp".
+
+        // Actually, many generators use 4 sliders, each controlling one side's split.
+        // Slider Top: Left % vs Right %
+        // Slider Bottom: Left % vs Right %
+        // Slider Left: Top % vs Bottom %
+        // Slider Right: Top % vs Bottom %
+
+        const iTop = document.getElementById('tl-x'); // Controls horizontal top split
+        const iBottom = document.getElementById('bl-x'); // Controls horizontal bottom split
+        const iLeft = document.getElementById('tl-y'); // Controls vertical left split
+        const iRight = document.getElementById('tr-y'); // Controls vertical right split
+
+        function update() {
+            const t = iTop.value;
+            const b = iBottom.value;
+            const l = iLeft.value;
+            const r = iRight.value;
+
+            // Syntax: horizontal-radii / vertical-radii
+            // H: TL TR BR BL
+            // V: TL TR BR BL
+
+            // Logic:
+            // Top slider: TL-x = t%, TR-x = (100-t)%
+            // Bottom slider: BL-x = b%, BR-x = (100-b)%
+            // Left slider: TL-y = l%, BL-y = (100-l)%
+            // Right slider: TR-y = r%, BR-y = (100-r)%
+
+            const r1 = `${t}% ${100 - t}% ${100 - b}% ${b}%`;
+            const r2 = `${l}% ${r}% ${100 - r}% ${100 - l}%`;
+
+            const val = `${r1} / ${r2}`;
+
+            blob.style.borderRadius = val;
+            output.innerText = `border-radius: ${val};`;
+        }
+
+        function randomize() {
+            iTop.value = Math.floor(Math.random() * 80) + 20;
+            iBottom.value = Math.floor(Math.random() * 80) + 20;
+            iLeft.value = Math.floor(Math.random() * 80) + 20;
+            iRight.value = Math.floor(Math.random() * 80) + 20;
+            update();
+        }
+
+        function reset() {
+            iTop.value = 50;
+            iBottom.value = 50;
+            iLeft.value = 50;
+            iRight.value = 50;
+            update();
+        }
+
+        function copyCSS() {
+            navigator.clipboard.writeText(output.innerText);
+            alert("CSS 已复制!");
+        }
+
+        // Init
+        randomize();
+    </script>
+</body>
+
+</html>

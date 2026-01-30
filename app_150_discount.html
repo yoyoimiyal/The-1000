@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>折扣叠加计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-rose-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-3xl shadow-xl border border-rose-100">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-rose-600">
+                <span class="text-2xl">🏷️</span> Discount Calc
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-rose-600">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">原价 (Original Price)</label>
+                <div class="relative">
+                    <span class="absolute left-3 top-3 text-slate-400">¥</span>
+                    <input type="number" id="price"
+                        class="w-full pl-8 p-3 border border-rose-200 rounded-xl text-xl font-bold text-slate-800 outline-none focus:ring-2 focus:ring-rose-500"
+                        placeholder="0.00" oninput="calc()">
+                </div>
+            </div>
+
+            <!-- Discount 1 -->
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">折扣 1 (Discount 1)</label>
+                <div class="flex gap-2">
+                    <input type="number" id="d1"
+                        class="flex-1 p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-rose-500"
+                        placeholder="例如: 8 (8折)" oninput="calc()">
+                    <select id="d1-type" class="p-3 border border-slate-200 rounded-xl bg-slate-50 outline-none"
+                        onchange="calc()">
+                        <option value="off">折 (1-9)</option>
+                        <option value="percent">% Off</option>
+                        <option value="minus">- 减免</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Discount 2 -->
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">折扣 2 (Stacking Discount)</label>
+                <div class="flex gap-2">
+                    <input type="number" id="d2"
+                        class="flex-1 p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-rose-500"
+                        placeholder="折上折 / 满减" oninput="calc()">
+                    <select id="d2-type" class="p-3 border border-slate-200 rounded-xl bg-slate-50 outline-none"
+                        onchange="calc()">
+                        <option value="off">折 (1-9)</option>
+                        <option value="percent">% Off</option>
+                        <option value="minus">- 减免</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Result -->
+            <div class="bg-rose-50 p-6 rounded-2xl border border-rose-100 mt-6">
+                <div class="flex justify-between items-end mb-2">
+                    <span class="text-sm font-bold text-slate-500">最终到手价</span>
+                    <span class="text-4xl font-bold text-rose-600">¥<span id="final-price">0.00</span></span>
+                </div>
+                <div class="flex justify-between text-xs text-slate-400 border-t border-rose-200 pt-2 mt-2">
+                    <span>共节省: ¥<span id="saved">0.00</span></span>
+                    <span id="total-off">0% Off</span>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        function calc() {
+            const price = parseFloat(document.getElementById('price').value) || 0;
+
+            // Calc D1
+            let d1Val = parseFloat(document.getElementById('d1').value) || 0;
+            const d1Type = document.getElementById('d1-type').value;
+            let p1 = price;
+
+            if (d1Val > 0) {
+                if (d1Type === 'off') {
+                    // 8折 = price * 0.8
+                    p1 = price * (d1Val / 10);
+                } else if (d1Type === 'percent') {
+                    // 20% off = price * (1 - 0.2)
+                    p1 = price * (1 - d1Val / 100);
+                } else { // minus
+                    p1 = price - d1Val;
+                }
+            }
+            if (p1 < 0) p1 = 0;
+
+            // Calc D2 (Stacked on P1)
+            let d2Val = parseFloat(document.getElementById('d2').value) || 0;
+            const d2Type = document.getElementById('d2-type').value;
+            let p2 = p1;
+
+            if (d2Val > 0) {
+                if (d2Type === 'off') {
+                    p2 = p1 * (d2Val / 10);
+                } else if (d2Type === 'percent') {
+                    p2 = p1 * (1 - d2Val / 100);
+                } else { // minus
+                    p2 = p1 - d2Val;
+                }
+            }
+            if (p2 < 0) p2 = 0;
+
+            const saved = price - p2;
+            const offPct = price > 0 ? ((saved / price) * 100).toFixed(0) : 0;
+
+            document.getElementById('final-price').innerText = p2.toFixed(2);
+            document.getElementById('saved').innerText = saved.toFixed(2);
+            document.getElementById('total-off').innerText = offPct + "% Off";
+        }
+    </script>
+</body>
+
+</html>

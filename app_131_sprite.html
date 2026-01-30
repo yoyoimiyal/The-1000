@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS 雪碧图动画预览</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .checker-bg {
+            background-color: #f0f0f0;
+            background-image: linear-gradient(45deg, #ddd 25%, transparent 25%, transparent 75%, #ddd 75%, #ddd),
+                linear-gradient(45deg, #ddd 25%, transparent 25%, transparent 75%, #ddd 75%, #ddd);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+        }
+
+        #preview-box {
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animation class will be injected */
+        .animate-sprite {
+            animation: play-sprite 1s steps(10) infinite;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col md:flex-row">
+
+    <!-- Preview Area -->
+    <div
+        class="flex-1 p-8 flex flex-col items-center justify-center checker-bg relative border-b md:border-b-0 md:border-r border-slate-200">
+        <div id="preview-container"
+            class="border-4 border-dashed border-slate-300 rounded-lg flex items-center justify-center bg-transparent">
+            <!-- The Sprite Div -->
+            <div id="sprite" class="bg-no-repeat bg-left-top"></div>
+        </div>
+        <p class="mt-4 text-xs text-slate-500 font-bold uppercase" id="dims-display">0 x 0 px</p>
+    </div>
+
+    <!-- Controls -->
+    <div class="w-full md:w-96 bg-white p-6 overflow-y-auto flex flex-col gap-6 shadow-xl z-10">
+
+        <header class="flex justify-between items-center mb-2">
+            <h1 class="text-xl font-bold text-slate-800">Sprite Animator</h1>
+            <a href="./navigation.html" class="text-xs text-indigo-500 hover:underline">退出</a>
+        </header>
+
+        <div class="space-y-5">
+
+            <!-- Upload -->
+            <label
+                class="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-indigo-200 rounded-xl cursor-pointer bg-indigo-50 hover:bg-indigo-100 transition">
+                <span class="text-indigo-600 font-bold text-sm">📂 上传雪碧图 (Sprite Sheet)</span>
+                <input type="file" class="hidden" accept="image/*" onchange="loadImage(event)">
+            </label>
+
+            <!-- Settings -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">总帧数 (Steps)</label>
+                    <input type="number" id="steps" value="10" min="1"
+                        class="w-full p-2 border border-slate-200 rounded font-bold text-center outline-none focus:border-indigo-500"
+                        oninput="update()">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">时长 (Seconds)</label>
+                    <input type="number" id="duration" value="1.0" min="0.1" step="0.1"
+                        class="w-full p-2 border border-slate-200 rounded font-bold text-center outline-none focus:border-indigo-500"
+                        oninput="update()">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">单帧宽度 (px)</label>
+                    <input type="number" id="frame-w" value="64"
+                        class="w-full p-2 border border-slate-200 rounded font-bold text-center outline-none focus:border-indigo-500"
+                        oninput="updateDims()">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">单帧高度 (px)</label>
+                    <input type="number" id="frame-h" value="64"
+                        class="w-full p-2 border border-slate-200 rounded font-bold text-center outline-none focus:border-indigo-500"
+                        oninput="updateDims()">
+                </div>
+            </div>
+
+            <!-- Code -->
+            <div class="bg-slate-800 rounded-xl p-4 relative group">
+                <code id="css-output"
+                    class="text-[10px] text-green-400 font-mono break-all block leading-relaxed whitespace-pre-wrap"></code>
+                <button onclick="copyCSS()"
+                    class="absolute top-2 right-2 text-[10px] bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded">Copy</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Style Injection -->
+    <style id="dynamic-style"></style>
+
+    <script>
+        const sprite = document.getElementById('sprite');
+        const styleTag = document.getElementById('dynamic-style');
+        const output = document.getElementById('css-output');
+        const dimsDisplay = document.getElementById('dims-display');
+
+        let imgUrl = '';
+        let imgWidth = 0;
+        let imgHeight = 0;
+
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imgUrl = e.target.result;
+                const img = new Image();
+                img.onload = () => {
+                    imgWidth = img.width;
+                    imgHeight = img.height;
+                    // Auto guess frame width based on steps if horizontal strip
+                    const steps = parseInt(document.getElementById('steps').value);
+                    document.getElementById('frame-w').value = Math.floor(imgWidth / steps);
+                    document.getElementById('frame-h').value = imgHeight;
+
+                    updateDims();
+                };
+                img.src = imgUrl;
+                sprite.style.backgroundImage = `url(${imgUrl})`;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updateDims() {
+            const w = document.getElementById('frame-w').value;
+            const h = document.getElementById('frame-h').value;
+
+            sprite.style.width = w + 'px';
+            sprite.style.height = h + 'px';
+            dimsDisplay.innerText = `${w} x ${h} px`;
+
+            update();
+        }
+
+        function update() {
+            const steps = document.getElementById('steps').value;
+            const duration = document.getElementById('duration').value;
+            const w = document.getElementById('frame-w').value;
+
+            // Calculate final position
+            // Assuming horizontal sprite strip: background-position from 0 to -totalWidth
+            // Actually it should go from 0 to -(width * steps) ??
+            // Standard CSS steps: background-position moves from 0 to 100%? No.
+            // Usually we animate background-position-x from 0px to -TOTAL_WIDTH px.
+
+            const totalScroll = w * steps;
+
+            const css = `
+.sprite-animation {
+  width: ${w}px;
+  height: ${document.getElementById('frame-h').value}px;
+  background-image: url('sprite.png');
+  animation: play ${duration}s steps(${steps}) infinite;
+}
+
+@keyframes play {
+  from { background-position: 0 0; }
+  to { background-position: -${totalScroll}px 0; }
+}`;
+
+            output.innerText = css;
+
+            styleTag.innerHTML = `
+                @keyframes play-sprite {
+                    from { background-position: 0 0; }
+                    to { background-position: -${totalScroll}px 0; }
+                }
+                #sprite {
+                    animation: play-sprite ${duration}s steps(${steps}) infinite;
+                }
+            `;
+        }
+
+        function copyCSS() {
+            navigator.clipboard.writeText(output.innerText);
+            alert("CSS 已复制");
+        }
+
+        // Initial call
+        update();
+    </script>
+</body>
+
+</html>

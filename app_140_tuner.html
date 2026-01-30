@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网页吉他调音器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .needle {
+            transition: transform 0.1s linear;
+            transform-origin: bottom center;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-white">
+
+    <div class="w-full max-w-sm">
+
+        <header class="flex justify-between items-center mb-10">
+            <h1 class="text-2xl font-bold flex items-center gap-2 text-green-400">
+                <span class="text-3xl">🎸</span> Guitar Tuner
+            </h1>
+            <a href="./navigation.html"
+                class="text-xs text-gray-500 hover:text-white border border-gray-700 px-3 py-1 rounded">退出</a>
+        </header>
+
+        <!-- Tuner Display -->
+        <div class="relative bg-gray-800 rounded-3xl p-8 shadow-2xl border border-gray-700 overflow-hidden mb-8">
+
+            <!-- Note Name -->
+            <div class="text-center mb-8 relative z-10">
+                <div class="text-8xl font-black text-white tracking-tighter" id="note-name">--</div>
+                <div class="text-xl text-gray-500 font-mono mt-2"><span id="frequency">0</span> Hz</div>
+            </div>
+
+            <!-- Gauge -->
+            <div class="relative h-20 w-full overflow-hidden">
+                <!-- Center Mark -->
+                <div class="absolute bottom-0 left-1/2 w-1 h-4 bg-green-500 -translate-x-1/2 z-0"></div>
+                <!-- Needle -->
+                <div id="needle" class="needle absolute bottom-0 left-1/2 w-1 h-full bg-red-500 -translate-x-1/2 z-10"
+                    style="transform: rotate(0deg);"></div>
+            </div>
+
+            <!-- Arc overlay -->
+            <div class="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-gray-800 to-transparent"></div>
+
+        </div>
+
+        <button onclick="startTuner()" id="start-btn"
+            class="w-full py-4 bg-green-600 hover:bg-green-500 text-white font-bold rounded-2xl shadow-lg transition text-lg">
+            开启麦克风
+        </button>
+
+        <p class="text-center text-xs text-gray-500 mt-6">
+            支持标准调弦 (E A D G B E)
+        </p>
+
+    </div>
+
+    <script>
+        const noteNameEl = document.getElementById('note-name');
+        const freqEl = document.getElementById('frequency');
+        const needle = document.getElementById('needle');
+        const startBtn = document.getElementById('start-btn');
+
+        let audioCtx;
+        let analyser;
+        let bufferLength;
+        let dataArray;
+        let isRunning = false;
+
+        const notes = [
+            "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
+        ];
+
+        async function startTuner() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                const source = audioCtx.createMediaStreamSource(stream);
+
+                source.connect(analyser);
+                analyser.fftSize = 2048;
+                bufferLength = analyser.frequencyBinCount;
+                dataArray = new Float32Array(bufferLength);
+
+                startBtn.classList.add('hidden');
+                isRunning = true;
+                update();
+            } catch (err) {
+                alert("无法访问麦克风: " + err.message);
+            }
+        }
+
+        // Auto-correlation for pitch detection (better than FFT peak for low notes)
+        function autoCorrelate(buf, sampleRate) {
+            let SIZE = buf.length;
+            let MAX_SAMPLES = Math.floor(SIZE / 2);
+            let best_offset = -1;
+            let best_correlation = 0;
+            let rms = 0;
+            let foundGoodCorrelation = false;
+            let correlations = new Array(MAX_SAMPLES);
+
+            for (let i = 0; i < SIZE; i++) {
+                let val = buf[i];
+                rms += val * val;
+            }
+            rms = Math.sqrt(rms / SIZE);
+            if (rms < 0.01) return -1; // Not enough signal
+
+            let lastCorrelation = 1;
+            for (let offset = 0; offset < MAX_SAMPLES; offset++) {
+                let correlation = 0;
+
+                for (let i = 0; i < MAX_SAMPLES; i++) {
+                    correlation += Math.abs((buf[i]) - (buf[i + offset]));
+                }
+                correlation = 1 - (correlation / MAX_SAMPLES);
+                correlations[offset] = correlation;
+                if ((correlation > 0.9) && (correlation > lastCorrelation)) {
+                    foundGoodCorrelation = true;
+                    if (correlation > best_correlation) {
+                        best_correlation = correlation;
+                        best_offset = offset;
+                    }
+                } else if (foundGoodCorrelation) {
+                    // shift slightly
+                    let shift = (correlations[best_offset + 1] - correlations[best_offset - 1]) / correlations[best_offset];
+                    return sampleRate / (best_offset + (8 * shift));
+                }
+                lastCorrelation = correlation;
+            }
+            if (best_correlation > 0.01) {
+                return sampleRate / best_offset;
+            }
+            return -1;
+        }
+
+        function noteFromPitch(frequency) {
+            const noteNum = 12 * (Math.log(frequency / 440) / Math.log(2));
+            return Math.round(noteNum) + 69;
+        }
+
+        function frequencyFromNoteNumber(note) {
+            return 440 * Math.pow(2, (note - 69) / 12);
+        }
+
+        function centsOffFromPitch(frequency, note) {
+            return Math.floor(1200 * Math.log(frequency / frequencyFromNoteNumber(note)) / Math.log(2));
+        }
+
+        function update() {
+            if (!isRunning) return;
+            requestAnimationFrame(update);
+
+            analyser.getFloatTimeDomainData(dataArray);
+            const freq = autoCorrelate(dataArray, audioCtx.sampleRate);
+
+            if (freq === -1) {
+                // No signal or too quiet
+                // needle.style.transform = 'rotate(0deg)'; // Keep last pos or reset? 
+                // Don't update display to reduce flicker
+            } else {
+                const noteNum = noteFromPitch(freq);
+                const noteName = notes[noteNum % 12];
+                const cents = centsOffFromPitch(freq, noteNum);
+
+                noteNameEl.innerText = noteName;
+                freqEl.innerText = freq.toFixed(1);
+
+                // Needle: -50 cents to +50 cents -> -45deg to +45deg
+                let deg = cents * (45 / 50);
+                if (deg < -45) deg = -45;
+                if (deg > 45) deg = 45;
+
+                needle.style.transform = `translateX(-50%) rotate(${deg}deg)`;
+
+                // Color feedback
+                if (Math.abs(cents) < 5) {
+                    needle.classList.replace('bg-red-500', 'bg-green-500');
+                    noteNameEl.classList.add('text-green-400');
+                    noteNameEl.classList.remove('text-white');
+                } else {
+                    needle.classList.replace('bg-green-500', 'bg-red-500');
+                    noteNameEl.classList.add('text-white');
+                    noteNameEl.classList.remove('text-green-400');
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

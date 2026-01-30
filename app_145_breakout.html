@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打砖块</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            touch-action: none;
+            cursor: none;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 h-screen w-screen flex flex-col overflow-hidden">
+
+    <!-- Header UI -->
+    <div class="absolute top-0 left-0 w-full p-4 flex justify-between items-center text-white pointer-events-none z-10">
+        <div>
+            <h1 class="font-bold text-xl text-yellow-400">BREAKOUT</h1>
+            <p class="text-sm opacity-70">Score: <span id="score">0</span> | Lives: <span id="lives">3</span></p>
+        </div>
+        <a href="./navigation.html"
+            class="pointer-events-auto bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded text-xs font-bold transition">EXIT</a>
+    </div>
+
+    <!-- Start Overlay -->
+    <div id="overlay" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-20">
+        <h2 class="text-4xl font-bold text-white mb-4">准备开始</h2>
+        <p class="text-gray-400 mb-8 text-sm">移动鼠标或拖动屏幕控制挡板</p>
+        <button onclick="startGame()"
+            class="px-8 py-3 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold rounded-full shadow-lg transition transform hover:scale-105">
+            开始游戏
+        </button>
+    </div>
+
+    <canvas id="gameCanvas" class="w-full h-full block bg-black"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const livesEl = document.getElementById('lives');
+        const overlay = document.getElementById('overlay');
+
+        let width, height;
+        let isPlaying = false;
+        let animationId;
+
+        // Game State
+        let score = 0;
+        let lives = 3;
+
+        // Paddle
+        const paddleH = 15;
+        const paddleW = 100;
+        let paddleX;
+
+        // Ball
+        let x, y, dx, dy;
+        const ballRadius = 8;
+        const speed = 5;
+
+        // Bricks
+        const brickRowCount = 5;
+        const brickColCount = 8; // Will recalc based on width
+        let brickW, brickH = 25;
+        let brickPadding = 10;
+        let brickOffsetTop = 80;
+        let brickOffsetLeft = 30;
+        let bricks = [];
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+
+            paddleX = (width - paddleW) / 2;
+
+            // Recalc bricks layout
+            const cols = Math.floor((width - 40) / (60 + 10)); // approximate brick width 60
+            const actualW = (width - (cols + 1) * 10) / cols;
+
+            // Re-init bricks only if game not running effectively? 
+            // Or just stretch current? For simplicity, we restart on resize or just adjust positions.
+            // Let's just adjust paddle.
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function initBricks() {
+            bricks = [];
+            const cols = Math.floor((width - 40) / 70);
+            const offsetL = (width - (cols * 70 - 10)) / 2;
+
+            for (let c = 0; c < cols; c++) {
+                bricks[c] = [];
+                for (let r = 0; r < brickRowCount; r++) {
+                    bricks[c][r] = { x: 0, y: 0, status: 1 };
+                }
+            }
+            return { cols, offsetL };
+        }
+
+        let brickCols, brickOffL;
+
+        function startGame() {
+            score = 0;
+            lives = 3;
+            scoreEl.innerText = score;
+            livesEl.innerText = lives;
+
+            const layout = initBricks();
+            brickCols = layout.cols;
+            brickOffL = layout.offsetL;
+
+            // Ball start
+            x = width / 2;
+            y = height - 40;
+            dx = speed * (Math.random() > 0.5 ? 1 : -1);
+            dy = -speed;
+
+            isPlaying = true;
+            overlay.style.display = 'none';
+            loop();
+        }
+
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
+            ctx.fillStyle = "#fbbf24"; // yellow
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawPaddle() {
+            ctx.beginPath();
+            ctx.rect(paddleX, height - paddleH - 10, paddleW, paddleH);
+            ctx.fillStyle = "#3b82f6"; // blue
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawBricks() {
+            for (let c = 0; c < brickCols; c++) {
+                for (let r = 0; r < brickRowCount; r++) {
+                    if (bricks[c][r].status === 1) {
+                        const bX = c * (60 + 10) + brickOffL;
+                        const bY = r * (25 + 10) + brickOffsetTop;
+                        bricks[c][r].x = bX;
+                        bricks[c][r].y = bY;
+
+                        ctx.beginPath();
+                        ctx.rect(bX, bY, 60, 25);
+                        // Color based on row
+                        const colors = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6"];
+                        ctx.fillStyle = colors[r % colors.length];
+                        ctx.fill();
+                        ctx.closePath();
+                    }
+                }
+            }
+        }
+
+        function collisionDetection() {
+            for (let c = 0; c < brickCols; c++) {
+                for (let r = 0; r < brickRowCount; r++) {
+                    const b = bricks[c][r];
+                    if (b.status === 1) {
+                        if (x > b.x && x < b.x + 60 && y > b.y && y < b.y + 25) {
+                            dy = -dy;
+                            b.status = 0;
+                            score++;
+                            scoreEl.innerText = score;
+                            if (score === brickRowCount * brickCols) {
+                                alert("YOU WIN!");
+                                document.location.reload();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function loop() {
+            if (!isPlaying) return;
+
+            ctx.clearRect(0, 0, width, height);
+
+            drawBricks();
+            drawBall();
+            drawPaddle();
+            collisionDetection();
+
+            // Wall collision
+            if (x + dx > width - ballRadius || x + dx < ballRadius) {
+                dx = -dx;
+            }
+            if (y + dy < ballRadius) {
+                dy = -dy;
+            } else if (y + dy > height - ballRadius - 10 - paddleH) {
+                // Paddle collision check
+                if (x > paddleX && x < paddleX + paddleW) {
+                    // Calc angle based on hit position
+                    // Center of paddle = 0 deg vertical?
+                    // Simple bounce
+                    dy = -dy;
+                    // Add some english?
+                    const hitPoint = x - (paddleX + paddleW / 2);
+                    dx = hitPoint * 0.15;
+                } else if (y + dy > height - ballRadius) {
+                    lives--;
+                    livesEl.innerText = lives;
+                    if (!lives) {
+                        alert("GAME OVER");
+                        document.location.reload();
+                    } else {
+                        x = width / 2;
+                        y = height - 40;
+                        dx = speed * (Math.random() > 0.5 ? 1 : -1);
+                        dy = -speed;
+                        paddleX = (width - paddleW) / 2;
+                    }
+                }
+            }
+
+            x += dx;
+            y += dy;
+
+            animationId = requestAnimationFrame(loop);
+        }
+
+        // Input
+        function moveHandler(clientX) {
+            const relativeX = clientX;
+            if (relativeX > 0 && relativeX < width) {
+                paddleX = relativeX - paddleW / 2;
+            }
+        }
+
+        document.addEventListener("mousemove", e => {
+            moveHandler(e.clientX);
+        });
+        document.addEventListener("touchmove", e => {
+            e.preventDefault();
+            moveHandler(e.touches[0].clientX);
+        }, { passive: false });
+
+    </script>
+</body>
+
+</html>

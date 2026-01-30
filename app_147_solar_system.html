@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>太阳系漫游</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #000;
+            overflow: hidden;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="controls bg-gray-900/80 p-4 rounded-xl border border-gray-700">
+        <h1 class="text-lg font-bold mb-2">Solar System</h1>
+        <div class="text-xs text-gray-400 mb-2">Speed: <span id="speed-val">1x</span></div>
+        <input type="range" id="speed" min="0" max="5" step="0.1" value="1"
+            class="w-32 h-1 bg-gray-600 rounded appearance-none" oninput="updateSpeed(this.value)">
+        <div class="mt-4">
+            <a href="./navigation.html" class="text-xs text-blue-400 hover:text-blue-300">退出</a>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height, cx, cy;
+        let speedMult = 1;
+
+        // Simplified data (Relative distances/sizes/speeds are approximated for visibility, not scale)
+        const planets = [
+            { name: "Mercury", r: 4, dist: 60, speed: 0.04, color: "#a1a1a1" },
+            { name: "Venus", r: 7, dist: 90, speed: 0.015, color: "#e3bb76" },
+            { name: "Earth", r: 7, dist: 130, speed: 0.01, color: "#22d3ee" }, // Blue
+            { name: "Mars", r: 5, dist: 170, speed: 0.008, color: "#ef4444" },  // Red
+            { name: "Jupiter", r: 18, dist: 240, speed: 0.002, color: "#d97706" }, // Orange
+            { name: "Saturn", r: 15, dist: 310, speed: 0.0009, color: "#facc15", ring: true },
+            { name: "Uranus", r: 10, dist: 370, speed: 0.0004, color: "#a5f3fc" },
+            { name: "Neptune", r: 10, dist: 420, speed: 0.0001, color: "#3b82f6" }
+        ];
+
+        let time = 0;
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            cx = width / 2;
+            cy = height / 2;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function updateSpeed(val) {
+            speedMult = parseFloat(val);
+            document.getElementById('speed-val').innerText = speedMult + 'x';
+        }
+
+        function draw() {
+            // Trail effect
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Sun
+            ctx.beginPath();
+            ctx.arc(cx, cy, 30, 0, Math.PI * 2);
+            ctx.fillStyle = "#fdb813";
+            ctx.shadowBlur = 50;
+            ctx.shadowColor = "#fdb813";
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Planets
+            planets.forEach(p => {
+                const angle = time * p.speed;
+                const x = cx + Math.cos(angle) * p.dist;
+                const y = cy + Math.sin(angle) * p.dist;
+
+                // Orbit path
+                ctx.beginPath();
+                ctx.arc(cx, cy, p.dist, 0, Math.PI * 2);
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Planet
+                ctx.beginPath();
+                ctx.arc(x, y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+
+                // Saturn Ring
+                if (p.ring) {
+                    ctx.beginPath();
+                    ctx.ellipse(x, y, p.r * 2, p.r * 0.5, Math.PI / 4, 0, Math.PI * 2);
+                    ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+                    ctx.stroke();
+                }
+            });
+
+            time += speedMult;
+            requestAnimationFrame(draw);
+        }
+
+        draw();
+    </script>
+</body>
+
+</html>

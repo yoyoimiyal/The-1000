@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPM 测速器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tap-zone {
+            transition: all 0.1s;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .tap-zone:active {
+            transform: scale(0.98);
+            background-color: #374151;
+        }
+
+        /* gray-700 */
+        .pulse {
+            animation: pulse-anim 0.3s ease-out;
+        }
+
+        @keyframes pulse-anim {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-white font-sans">
+
+    <div class="w-full max-w-md text-center">
+
+        <header class="flex justify-between items-center mb-10 px-4">
+            <h1 class="text-xl font-bold text-gray-400">BPM Tapper</h1>
+            <a href="./navigation.html"
+                class="text-xs text-gray-600 hover:text-white border border-gray-700 px-3 py-1 rounded">EXIT</a>
+        </header>
+
+        <div class="mb-12">
+            <div class="text-8xl font-black tracking-tighter text-white transition-colors" id="bpm-display">0</div>
+            <p class="text-sm font-bold text-gray-500 mt-2 uppercase tracking-widest">Beats Per Minute</p>
+        </div>
+
+        <div id="tap-btn"
+            class="tap-zone w-64 h-64 mx-auto bg-gray-800 rounded-full border-8 border-gray-700 flex items-center justify-center shadow-2xl relative overflow-hidden group"
+            onclick="tap()">
+            <div class="absolute inset-0 bg-indigo-500 opacity-0 group-active:opacity-10 transition-opacity"></div>
+            <span class="text-2xl font-bold text-gray-400 group-active:text-white pointer-events-none">TAP HERE</span>
+            <p class="absolute bottom-10 text-xs text-gray-600 pointer-events-none">按任意键或点击</p>
+        </div>
+
+        <div class="mt-12 flex justify-center gap-8">
+            <button onclick="reset()"
+                class="text-gray-500 hover:text-red-400 text-sm font-bold uppercase transition">Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        let taps = [];
+        const bpmDisplay = document.getElementById('bpm-display');
+        const tapBtn = document.getElementById('tap-btn');
+        const TIMEOUT = 2000; // Reset if no tap for 2s
+
+        function tap() {
+            const now = Date.now();
+
+            // Check timeout
+            if (taps.length > 0 && now - taps[taps.length - 1] > TIMEOUT) {
+                taps = [];
+            }
+
+            taps.push(now);
+
+            // Visual feedback
+            tapBtn.classList.remove('pulse');
+            void tapBtn.offsetWidth; // Trigger reflow
+            tapBtn.classList.add('pulse');
+            tapBtn.style.borderColor = '#6366f1'; // Indigo
+            setTimeout(() => tapBtn.style.borderColor = '#374151', 100);
+
+            if (taps.length > 1) {
+                // Calculate BPM
+                // Average interval of last 4 taps for stability? Or all?
+                // Let's use last 10 taps max for responsive moving average
+                const maxTaps = 8;
+                const recentTaps = taps.slice(-maxTaps);
+
+                let intervals = [];
+                for (let i = 1; i < recentTaps.length; i++) {
+                    intervals.push(recentTaps[i] - recentTaps[i - 1]);
+                }
+
+                const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+                const bpm = Math.round(60000 / avgInterval);
+
+                bpmDisplay.innerText = bpm;
+
+                // Color hint
+                if (bpm < 100) bpmDisplay.className = "text-8xl font-black tracking-tighter text-blue-400";
+                else if (bpm < 140) bpmDisplay.className = "text-8xl font-black tracking-tighter text-green-400";
+                else bpmDisplay.className = "text-8xl font-black tracking-tighter text-red-400";
+            }
+        }
+
+        function reset() {
+            taps = [];
+            bpmDisplay.innerText = 0;
+            bpmDisplay.className = "text-8xl font-black tracking-tighter text-white";
+        }
+
+        // Keyboard Support
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code.startsWith('Key')) {
+                tap();
+            }
+        });
+    </script>
+</body>
+
+</html>

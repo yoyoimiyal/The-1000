@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG 波浪生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex flex-col text-slate-700">
+
+    <!-- Preview Area -->
+    <div class="flex-1 bg-white flex flex-col justify-end relative overflow-hidden transition-colors duration-300"
+        id="preview-bg">
+        <div
+            class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20 text-6xl font-bold text-slate-300">
+            Preview</div>
+        <div id="wave-container" class="w-full transition-all duration-300">
+            <!-- SVG injected here -->
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="bg-white border-t border-gray-200 p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-10">
+        <div class="max-w-5xl mx-auto flex flex-col md:flex-row gap-8 items-start">
+
+            <div class="flex-1 grid grid-cols-2 md:grid-cols-4 gap-6 w-full">
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">层数 (Layers)</label>
+                    <input type="range" id="layers" min="1" max="5" value="3" class="w-full accent-indigo-600"
+                        oninput="generate()">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">高度 (Height)</label>
+                    <input type="range" id="height" min="50" max="300" value="150" class="w-full accent-indigo-600"
+                        oninput="generate()">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">起伏 (Variance)</label>
+                    <input type="range" id="variance" min="0" max="100" value="40" class="w-full accent-indigo-600"
+                        oninput="generate()">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">复杂 (Complexity)</label>
+                    <input type="range" id="points" min="2" max="10" value="4" class="w-full accent-indigo-600"
+                        oninput="generate()">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">颜色 (Color)</label>
+                    <input type="color" id="color" value="#6366f1"
+                        class="w-full h-8 rounded cursor-pointer border-0 p-0" oninput="generate()">
+                </div>
+
+                <div class="flex items-center gap-2 pt-6">
+                    <button onclick="randomize()"
+                        class="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded font-bold transition">🎲
+                        随机</button>
+                    <button onclick="document.getElementById('bg-color').click()"
+                        class="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded font-bold transition">背景色</button>
+                    <input type="color" id="bg-color" value="#ffffff" class="hidden" oninput="updateBg()">
+                </div>
+
+            </div>
+
+            <div class="w-full md:w-64 flex flex-col gap-2">
+                <button onclick="copySVG()"
+                    class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition">
+                    复制 SVG 代码
+                </button>
+                <a href="./navigation.html" class="text-center text-xs text-slate-400 hover:text-indigo-600 py-2">退出</a>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Hidden textarea for copy -->
+    <textarea id="output" class="hidden"></textarea>
+
+    <script>
+        function generate() {
+            const container = document.getElementById('wave-container');
+            const layers = parseInt(document.getElementById('layers').value);
+            const height = parseInt(document.getElementById('height').value);
+            const variance = parseInt(document.getElementById('variance').value);
+            const points = parseInt(document.getElementById('points').value);
+            const color = document.getElementById('color').value;
+
+            // Base SVG
+            let svgContent = '';
+
+            for (let i = 0; i < layers; i++) {
+                const opacity = (i + 1) / (layers + 1); // Fade opacity? Or solid with diff colors? 
+                // Let's do opacity approach for simplicity on one color
+                // Layer height offset to stack them
+                const offset = (i * 20);
+
+                const path = generatePath(points, height - offset, variance);
+                // Invert opacity order: Back layers lighter/darker?
+                // Let's make front layer solid (opacity 1), back layers transparent
+                const layerOpacity = 1 - (i * 0.25);
+                const hexColor = color;
+
+                svgContent += `<path d="${path}" fill="${hexColor}" fill-opacity="${layerOpacity > 0 ? layerOpacity : 0.1}"></path>`;
+            }
+
+            const svg = `<svg viewBox="0 0 1440 320" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">${svgContent}</svg>`;
+
+            container.innerHTML = svg;
+            document.getElementById('output').value = svg;
+        }
+
+        function generatePath(pointCount, height, variance) {
+            // Start bottom-left
+            let d = `M0,320L0,${320 - height}`;
+
+            const step = 1440 / pointCount;
+
+            for (let i = 0; i <= pointCount; i++) {
+                // Curve logic: simple quadratic or cubic? 
+                // Let's use simple cubic bezier spline logic simplified or just connecting random points.
+                // For "Wave", we usually want smooth curves.
+                // Simple version: Straight lines to random points then smooth via CSS? No, SVG needs path.
+                // Let's do C (Cubic Bezier).
+
+                // Random Y for next point
+                const y = 320 - height + (Math.random() - 0.5) * variance * 2;
+                const x = i * step;
+
+                // To make smooth, we need control points.
+                // A simple approximation for smooth wave: 
+                // Use 'S' command or calculate controls.
+                // Let's generate points first.
+            }
+
+            // Re-think: Generate set of [x,y] points then spline them
+            let points = [];
+            points.push({ x: 0, y: 320 - height });
+
+            for (let i = 1; i <= pointCount; i++) {
+                const x = (1440 / pointCount) * i;
+                const y = 320 - height + (Math.random() - 0.5) * variance * 2;
+                points.push({ x, y });
+            }
+            // End at right edge same baseline height logic? Or random?
+            // Usually wave dividers span full width.
+
+            // Construct Path string using Catmull-Rom or simple Cubic
+            // Let's use Q (Quadratic) for simplicity
+            // M startX,startY Q cpX,cpY endX,endY
+
+            let path = `M0,320 L0,${points[0].y}`;
+
+            for (let i = 0; i < points.length - 1; i++) {
+                const p0 = points[i];
+                const p1 = points[i + 1];
+                const midX = (p0.x + p1.x) / 2;
+                const midY = (p0.y + p1.y) / 2;
+                // Use midpoints as endpoints for quadratic curves to ensure continuity? 
+                // Actually: "Smooth Polyline".
+                // Q p0x,p0y midx,midy
+
+                // Let's use the property that a curve through midpoints is smooth.
+                if (i === 0) {
+                    path = `M0,320 L${p0.x},${p0.y}`;
+                }
+
+                const cpX = (p0.x + p1.x) / 2;
+                const cpY = (p0.y + p1.y) / 2;
+
+                // For true smooth, we need C (cubic).
+                // Let's use a simplified "S" command logic or Q.
+                // Q ControlPoint EndPoint
+
+                // Simple smoothing strategy:
+                // Start M p0. 
+                // Loop: Q p[i] (p[i]+p[i+1])/2
+
+                path += ` Q ${p0.x},${p0.y} ${midX},${midY}`;
+            }
+
+            // Last segment
+            const last = points[points.length - 1];
+            path += ` T ${last.x},${last.y}`;
+
+            // Close shape
+            path += ` L1440,320 Z`;
+
+            return path;
+        }
+
+        function randomize() {
+            document.getElementById('height').value = Math.floor(Math.random() * 200) + 50;
+            document.getElementById('variance').value = Math.floor(Math.random() * 80);
+            document.getElementById('points').value = Math.floor(Math.random() * 6) + 3;
+            generate();
+        }
+
+        function updateBg() {
+            document.getElementById('preview-bg').style.backgroundColor = document.getElementById('bg-color').value;
+        }
+
+        function copySVG() {
+            const svg = document.getElementById('output').value;
+            navigator.clipboard.writeText(svg);
+            alert("SVG 代码已复制!");
+        }
+
+        generate();
+    </script>
+</body>
+
+</html>

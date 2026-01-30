@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>表情包配文神器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .meme-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-family: 'Impact', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+            pointer-events: none;
+            line-height: 1.1;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6 text-gray-800">
+
+    <div class="w-full max-w-4xl flex flex-col md:flex-row gap-8">
+
+        <!-- Controls -->
+        <div class="w-full md:w-1/3 space-y-6">
+            <header class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-gray-800">Meme Gen</h1>
+                <a href="./navigation.html" class="text-sm text-gray-400 hover:text-gray-600">退出</a>
+            </header>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                <label
+                    class="block w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-center cursor-pointer hover:bg-gray-50 transition mb-6">
+                    <span class="text-gray-500 font-bold text-sm">📂 上传图片</span>
+                    <input type="file" class="hidden" accept="image/*" onchange="loadImage(event)">
+                </label>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">顶部文字</label>
+                        <input type="text" id="top-text" class="w-full p-2 border rounded font-bold uppercase"
+                            placeholder="TOP TEXT" oninput="update()">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">底部文字</label>
+                        <input type="text" id="bottom-text" class="w-full p-2 border rounded font-bold uppercase"
+                            placeholder="BOTTOM TEXT" oninput="update()">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">字体大小</label>
+                        <input type="range" id="font-size" min="10" max="100" value="40" class="w-full"
+                            oninput="update()">
+                    </div>
+                </div>
+
+                <button onclick="download()"
+                    class="mt-6 w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition">下载表情包</button>
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="flex-1 bg-gray-200 rounded-2xl flex items-center justify-center p-4 min-h-[400px] relative overflow-hidden"
+            id="container">
+            <div class="relative shadow-2xl max-w-full" id="meme-wrapper">
+                <img id="preview-img"
+                    src="https://images.unsplash.com/photo-1531259683007-016a7b628fc3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+                    class="block max-h-[70vh] object-contain">
+                <div id="text-top" class="meme-text" style="top: 10px; font-size: 40px;">TOP TEXT</div>
+                <div id="text-bottom" class="meme-text" style="bottom: 10px; font-size: 40px;">BOTTOM TEXT</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const img = document.getElementById('preview-img');
+        const topEl = document.getElementById('text-top');
+        const botEl = document.getElementById('text-bottom');
+        const wrapper = document.getElementById('meme-wrapper');
+
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                img.src = URL.createObjectURL(file);
+            }
+        }
+
+        function update() {
+            topEl.innerText = document.getElementById('top-text').value;
+            botEl.innerText = document.getElementById('bottom-text').value;
+
+            const size = document.getElementById('font-size').value;
+            topEl.style.fontSize = size + 'px';
+            botEl.style.fontSize = size + 'px';
+        }
+
+        function download() {
+            // Draw to canvas for download
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+
+            ctx.drawImage(img, 0, 0);
+
+            // Scale text logic (Simple ratio based on preview height vs actual height)
+            const scale = img.naturalHeight / img.clientHeight;
+            const fontSize = parseInt(document.getElementById('font-size').value) * scale;
+
+            ctx.font = `900 ${fontSize}px Impact`;
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.lineWidth = fontSize / 15;
+            ctx.strokeStyle = 'black';
+
+            const w = canvas.width;
+            const h = canvas.height;
+            const topText = topEl.innerText;
+            const botText = botEl.innerText;
+            const margin = 10 * scale;
+
+            // Top
+            ctx.strokeText(topText, w / 2, margin);
+            ctx.fillText(topText, w / 2, margin);
+
+            // Bottom
+            ctx.textBaseline = 'bottom';
+            ctx.strokeText(botText, w / 2, h - margin);
+            ctx.fillText(botText, w / 2, h - margin);
+
+            const link = document.createElement('a');
+            link.download = 'meme.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+
+</html>

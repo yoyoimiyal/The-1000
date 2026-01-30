@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快速决策轮盘</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .arrow-down {
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 40px solid #1f2937;
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+        }
+    </style>
+</head>
+
+<body class="bg-indigo-50 min-h-screen flex flex-col items-center justify-center p-6 select-none">
+
+    <h1 class="text-3xl font-bold text-indigo-900 mb-2">YES or NO?</h1>
+    <p class="text-sm text-indigo-400 mb-10">把命运交给轮盘</p>
+
+    <div class="relative">
+        <div class="arrow-down"></div>
+        <canvas id="wheel" width="400" height="400" class="shadow-2xl rounded-full border-8 border-white"></canvas>
+    </div>
+
+    <div class="mt-12 flex flex-col items-center gap-4">
+        <button onclick="spin()" id="spin-btn"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-12 rounded-full text-xl shadow-lg transition transform active:scale-95">
+            SPIN
+        </button>
+        <div id="result" class="h-10 text-2xl font-bold text-indigo-800"></div>
+        <a href="./navigation.html" class="text-sm text-indigo-300 hover:text-indigo-500 mt-4">退出</a>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('wheel');
+        const ctx = canvas.getContext('2d');
+        const resEl = document.getElementById('result');
+        const btn = document.getElementById('spin-btn');
+
+        const options = ["YES", "NO", "YES", "NO", "YES", "NO", "YES", "NO"]; // Interleaved for visual effect
+        const colors = ["#22c55e", "#ef4444", "#22c55e", "#ef4444", "#22c55e", "#ef4444", "#22c55e", "#ef4444"];
+
+        let startAngle = 0;
+        let arc = Math.PI * 2 / options.length;
+        let spinTimeout = null;
+        let spinAngleStart = 10;
+        let spinTime = 0;
+        let spinTimeTotal = 0;
+
+        function draw() {
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const radius = 190;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < options.length; i++) {
+                const angle = startAngle + i * arc;
+                ctx.fillStyle = colors[i];
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.arc(cx, cy, radius, angle, angle + arc);
+                ctx.fill();
+
+                ctx.save();
+                ctx.fillStyle = "white";
+                ctx.font = "bold 30px Arial";
+                ctx.translate(cx + Math.cos(angle + arc / 2) * 120, cy + Math.sin(angle + arc / 2) * 120);
+                ctx.rotate(angle + arc / 2 + Math.PI / 2);
+                const text = options[i];
+                ctx.fillText(text, -ctx.measureText(text).width / 2, 0);
+                ctx.restore();
+            }
+
+            // Center Circle
+            ctx.beginPath();
+            ctx.arc(cx, cy, 30, 0, Math.PI * 2);
+            ctx.fillStyle = "white";
+            ctx.fill();
+        }
+
+        function spin() {
+            spinAngleStart = Math.random() * 10 + 20; // Faster
+            spinTime = 0;
+            spinTimeTotal = Math.random() * 2000 + 3000;
+            rotate();
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+            resEl.innerText = "";
+        }
+
+        function rotate() {
+            spinTime += 20;
+            if (spinTime >= spinTimeTotal) {
+                stopRotate();
+                return;
+            }
+            const spinAngle = spinAngleStart - easeOut(spinTime, 0, spinAngleStart, spinTimeTotal);
+            startAngle += (spinAngle * Math.PI / 180);
+            draw();
+            spinTimeout = requestAnimationFrame(rotate);
+        }
+
+        function stopRotate() {
+            btn.disabled = false;
+            btn.classList.remove('opacity-50');
+
+            // Calc result
+            // Pointer is at Top (270 deg / -90 deg)
+            const degrees = startAngle * 180 / Math.PI + 90;
+            const arcd = arc * 180 / Math.PI;
+            const index = Math.floor((360 - degrees % 360) / arcd);
+
+            const text = options[index];
+            resEl.innerText = text;
+            resEl.className = `h-10 text-4xl font-bold ${text === 'YES' ? 'text-green-600' : 'text-red-600'}`;
+        }
+
+        function easeOut(t, b, c, d) {
+            const ts = (t /= d) * t;
+            const tc = ts * t;
+            return b + c * (tc + -3 * ts + 3 * t);
+        }
+
+        draw();
+    </script>
+</body>
+
+</html>

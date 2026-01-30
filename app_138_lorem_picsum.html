@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>随机图片占位符</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-4xl bg-white p-8 rounded-3xl shadow-xl flex flex-col md:flex-row gap-8">
+
+        <!-- Controls -->
+        <div class="w-full md:w-1/3 flex flex-col justify-center space-y-6">
+            <h1 class="text-2xl font-bold text-slate-800">Picsum Generator</h1>
+
+            <div class="flex gap-4">
+                <div class="flex-1">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">宽度 (W)</label>
+                    <input type="number" id="width" value="400" class="w-full p-2 border rounded font-mono">
+                </div>
+                <div class="flex-1">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">高度 (H)</label>
+                    <input type="number" id="height" value="300" class="w-full p-2 border rounded font-mono">
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="grayscale" class="rounded text-indigo-600 focus:ring-indigo-500">
+                    <span class="text-sm font-medium">黑白 (Grayscale)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="blur" class="rounded text-indigo-600 focus:ring-indigo-500">
+                    <span class="text-sm font-medium">模糊 (Blur)</span>
+                </label>
+            </div>
+
+            <button onclick="generate()"
+                class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition">
+                刷新图片
+            </button>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Image URL</label>
+                <div class="flex gap-2">
+                    <input type="text" id="url-output"
+                        class="flex-1 p-2 bg-slate-50 border rounded text-xs font-mono text-slate-600" readonly>
+                    <button onclick="copyURL()"
+                        class="px-3 py-1 bg-slate-200 hover:bg-slate-300 rounded text-xs font-bold transition">Copy</button>
+                </div>
+            </div>
+
+            <a href="./navigation.html" class="text-center text-xs text-slate-400 hover:text-indigo-600">退出</a>
+        </div>
+
+        <!-- Preview -->
+        <div
+            class="flex-1 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center relative min-h-[300px]">
+            <img id="preview"
+                class="max-w-full max-h-full object-contain shadow-lg opacity-0 transition-opacity duration-500"
+                onload="this.classList.remove('opacity-0')">
+            <div class="absolute text-slate-400 text-sm font-bold pointer-events-none" id="loading-text">Loading...
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const img = document.getElementById('preview');
+        const urlOut = document.getElementById('url-output');
+        const loading = document.getElementById('loading-text');
+
+        function generate() {
+            const w = document.getElementById('width').value || 200;
+            const h = document.getElementById('height').value || 200;
+            const gray = document.getElementById('grayscale').checked;
+            const blur = document.getElementById('blur').checked;
+
+            let url = `https://picsum.photos/${w}/${h}`;
+
+            let params = [];
+            if (gray) params.push('grayscale');
+            if (blur) params.push('blur=2'); // Default blur amount
+
+            if (params.length > 0) {
+                url += '?' + params.join('&');
+            } else {
+                // Add random param to force refresh if same size
+                url += '?random=' + Math.random();
+            }
+
+            // Visual loading state
+            img.classList.add('opacity-0');
+            loading.style.display = 'block';
+
+            // Set source
+            img.src = url;
+            urlOut.value = url;
+        }
+
+        img.onload = () => {
+            loading.style.display = 'none';
+            img.classList.remove('opacity-0');
+        };
+
+        function copyURL() {
+            urlOut.select();
+            document.execCommand('copy');
+            alert("URL Copied!");
+        }
+
+        // Init
+        generate();
+    </script>
+</body>
+
+</html>

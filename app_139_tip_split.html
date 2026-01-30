@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聚餐小费分摊 V2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-amber-50 min-h-screen flex flex-col items-center p-6 text-slate-700">
+
+    <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
+
+        <header class="bg-amber-500 p-6 flex justify-between items-center text-white">
+            <h1 class="font-bold text-xl">Split Bill Pro</h1>
+            <a href="./navigation.html" class="text-xs hover:underline opacity-80">Exit</a>
+        </header>
+
+        <div class="p-6 space-y-6">
+
+            <!-- Basics -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">总金额 (Bill)</label>
+                    <input type="number" id="bill"
+                        class="w-full p-2 border border-slate-200 rounded text-lg font-bold text-slate-800 outline-none focus:border-amber-500"
+                        placeholder="0.00" oninput="calc()">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">小费 % (Tip)</label>
+                    <input type="number" id="tip"
+                        class="w-full p-2 border border-slate-200 rounded text-lg font-bold text-slate-800 outline-none focus:border-amber-500"
+                        value="15" oninput="calc()">
+                </div>
+            </div>
+
+            <!-- People -->
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <label class="text-xs font-bold text-slate-400 uppercase">参与人数 (People)</label>
+                    <div class="flex gap-2 text-xs">
+                        <button onclick="changePeople(-1)"
+                            class="bg-slate-100 px-2 rounded hover:bg-slate-200 font-bold">-</button>
+                        <span id="people-count" class="font-bold w-4 text-center">2</span>
+                        <button onclick="changePeople(1)"
+                            class="bg-slate-100 px-2 rounded hover:bg-slate-200 font-bold">+</button>
+                    </div>
+                </div>
+
+                <!-- Individual Adjustments (Simulated for V2, simple uneven split logic is complex UI) -->
+                <!-- Let's add a simple "Round Up" feature instead for V2 simplification -->
+                <div class="flex items-center gap-2 mt-2">
+                    <input type="checkbox" id="round-up" class="rounded text-amber-600 focus:ring-amber-500"
+                        onchange="calc()">
+                    <span class="text-sm">人均抹零/向上取整 (Round Up per Person)</span>
+                </div>
+            </div>
+
+            <!-- Result Card -->
+            <div class="bg-slate-50 p-6 rounded-xl border border-slate-100">
+                <div class="flex justify-between items-end mb-2">
+                    <span class="text-sm font-bold text-slate-500">每人支付</span>
+                    <span class="text-4xl font-bold text-amber-600">¥<span id="res-per-person">0.00</span></span>
+                </div>
+                <div class="flex justify-between text-xs text-slate-400 border-t border-slate-200 pt-2 mt-2">
+                    <span>总小费: ¥<span id="res-total-tip">0.00</span></span>
+                    <span>总金额: ¥<span id="res-grand-total">0.00</span></span>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        let people = 2;
+
+        function changePeople(delta) {
+            people += delta;
+            if (people < 1) people = 1;
+            document.getElementById('people-count').innerText = people;
+            calc();
+        }
+
+        function calc() {
+            const bill = parseFloat(document.getElementById('bill').value) || 0;
+            const tipPct = parseFloat(document.getElementById('tip').value) || 0;
+            const roundUp = document.getElementById('round-up').checked;
+
+            const tipAmount = bill * (tipPct / 100);
+            let grandTotal = bill + tipAmount;
+
+            let perPerson = grandTotal / people;
+
+            if (roundUp) {
+                perPerson = Math.ceil(perPerson);
+                // Recalculate grand total based on rounded per person
+                // Wait, usually round up means extra tip? Or just user pays more?
+                // Let's assume total collected increases.
+                grandTotal = perPerson * people;
+                // Update displayed tip to reflect the extra
+                // tip = grandTotal - bill
+            }
+
+            document.getElementById('res-per-person').innerText = perPerson.toFixed(2);
+            document.getElementById('res-total-tip').innerText = (grandTotal - bill).toFixed(2);
+            document.getElementById('res-grand-total').innerText = grandTotal.toFixed(2);
+        }
+    </script>
+</body>
+
+</html>
