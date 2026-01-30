@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线音频发生器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #4f46e5;
+            cursor: pointer;
+            margin-top: -8px;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #e2e8f0;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                </svg>
+                Tone Generator
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="space-y-8">
+
+            <!-- Frequency Display -->
+            <div class="text-center">
+                <div class="text-6xl font-bold text-indigo-600 font-mono tracking-tighter" id="freq-display">440</div>
+                <div class="text-sm text-slate-400 uppercase font-bold tracking-widest mt-2">Hertz (Hz)</div>
+            </div>
+
+            <!-- Play Toggle -->
+            <button onclick="togglePlay()" id="play-btn"
+                class="w-full py-4 rounded-2xl font-bold text-xl transition transform active:scale-95 shadow-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>播放 Play</span>
+            </button>
+
+            <!-- Controls -->
+            <div class="space-y-6 bg-slate-50 p-6 rounded-xl border border-slate-200">
+
+                <!-- Waveform -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-3">波形 (Waveform)</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button onclick="setWave('sine')" id="btn-sine"
+                            class="wave-btn py-2 rounded border border-slate-300 text-xs font-bold bg-indigo-100 text-indigo-700 border-indigo-300">Sine</button>
+                        <button onclick="setWave('square')" id="btn-square"
+                            class="wave-btn py-2 rounded border border-slate-300 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100">Square</button>
+                        <button onclick="setWave('sawtooth')" id="btn-sawtooth"
+                            class="wave-btn py-2 rounded border border-slate-300 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100">Saw</button>
+                        <button onclick="setWave('triangle')" id="btn-triangle"
+                            class="wave-btn py-2 rounded border border-slate-300 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100">Tri</button>
+                    </div>
+                </div>
+
+                <!-- Frequency Slider -->
+                <div>
+                    <div class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-2">
+                        <span>频率 Frequency</span>
+                        <button onclick="setFreq(440)" class="text-indigo-500 hover:underline">Reset (A4)</button>
+                    </div>
+                    <input type="range" id="freq-slider" min="20" max="20000" value="440" step="1" class="w-full"
+                        oninput="updateFreq(this.value)">
+                    <div class="flex gap-2 mt-2">
+                        <button onclick="adjustFreq(-1)"
+                            class="flex-1 py-1 bg-white border border-slate-200 rounded text-sm hover:bg-slate-50">-1</button>
+                        <button onclick="adjustFreq(-10)"
+                            class="flex-1 py-1 bg-white border border-slate-200 rounded text-sm hover:bg-slate-50">-10</button>
+                        <button onclick="adjustFreq(10)"
+                            class="flex-1 py-1 bg-white border border-slate-200 rounded text-sm hover:bg-slate-50">+10</button>
+                        <button onclick="adjustFreq(1)"
+                            class="flex-1 py-1 bg-white border border-slate-200 rounded text-sm hover:bg-slate-50">+1</button>
+                    </div>
+                </div>
+
+                <!-- Volume -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">音量 (Volume)</label>
+                    <input type="range" id="vol-slider" min="0" max="1" value="0.5" step="0.01" class="w-full"
+                        oninput="updateVol(this.value)">
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let audioCtx;
+        let osc;
+        let gainNode;
+        let isPlaying = false;
+        let frequency = 440;
+        let volume = 0.5;
+        let waveform = 'sine';
+
+        const freqDisplay = document.getElementById('freq-display');
+        const freqSlider = document.getElementById('freq-slider');
+        const playBtn = document.getElementById('play-btn');
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function togglePlay() {
+            initAudio();
+
+            if (isPlaying) {
+                stop();
+            } else {
+                start();
+            }
+        }
+
+        function start() {
+            osc = audioCtx.createOscillator();
+            gainNode = audioCtx.createGain();
+
+            osc.type = waveform;
+            osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+
+            // Anti-pop fade in
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(volume, audioCtx.currentTime + 0.05);
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            osc.start();
+            isPlaying = true;
+
+            playBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> <span>停止 Stop</span>`;
+            playBtn.classList.replace('bg-indigo-600', 'bg-red-500');
+            playBtn.classList.replace('hover:bg-indigo-700', 'hover:bg-red-600');
+        }
+
+        function stop() {
+            if (osc) {
+                // Anti-pop fade out
+                const now = audioCtx.currentTime;
+                gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+                gainNode.gain.linearRampToValueAtTime(0, now + 0.05);
+                osc.stop(now + 0.05);
+                osc = null;
+            }
+            isPlaying = false;
+
+            playBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> <span>播放 Play</span>`;
+            playBtn.classList.replace('bg-red-500', 'bg-indigo-600');
+            playBtn.classList.replace('hover:bg-red-600', 'hover:bg-indigo-700');
+        }
+
+        function updateFreq(val) {
+            frequency = parseInt(val);
+            freqDisplay.innerText = frequency;
+            freqSlider.value = frequency;
+            if (osc) {
+                osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+            }
+        }
+
+        function setFreq(val) {
+            updateFreq(val);
+        }
+
+        function adjustFreq(delta) {
+            let newFreq = frequency + delta;
+            if (newFreq < 20) newFreq = 20;
+            if (newFreq > 20000) newFreq = 20000;
+            updateFreq(newFreq);
+        }
+
+        function updateVol(val) {
+            volume = parseFloat(val);
+            if (gainNode) {
+                gainNode.gain.setTargetAtTime(volume, audioCtx.currentTime, 0.02);
+            }
+        }
+
+        function setWave(type) {
+            waveform = type;
+            if (osc) {
+                osc.type = type;
+            }
+
+            // UI Update
+            document.querySelectorAll('.wave-btn').forEach(btn => {
+                btn.className = "wave-btn py-2 rounded border border-slate-300 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100";
+            });
+            const activeBtn = document.getElementById(`btn-${type}`);
+            activeBtn.className = "wave-btn py-2 rounded border border-slate-300 text-xs font-bold bg-indigo-100 text-indigo-700 border-indigo-300";
+        }
+    </script>
+</body>
+
+</html>

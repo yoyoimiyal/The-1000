@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSA 密钥生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.min.js"></script>
+    <style>
+        textarea {
+            font-family: monospace;
+            white-space: pre;
+            overflow: auto;
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen p-6 flex flex-col items-center text-slate-800">
+
+    <div class="w-full max-w-4xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-indigo-700 flex items-center gap-2">
+                <span class="text-3xl">🔑</span> RSA Key Generator
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <!-- Controls -->
+        <div
+            class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div class="flex items-center gap-4">
+                <label class="font-bold text-sm text-slate-600">密钥长度 (Key Size)</label>
+                <select id="key-size"
+                    class="p-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="512">512 bit (Fast)</option>
+                    <option value="1024" selected>1024 bit (Standard)</option>
+                    <option value="2048">2048 bit (Secure)</option>
+                </select>
+            </div>
+            <button onclick="generateKeys()" id="gen-btn"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-bold transition shadow disabled:opacity-50 disabled:cursor-not-allowed">
+                生成密钥对
+            </button>
+        </div>
+
+        <!-- Keys Display -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- Public Key -->
+            <div class="flex flex-col">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="font-bold text-xs uppercase text-green-600">公钥 (Public Key)</label>
+                    <button onclick="copy('pub')"
+                        class="text-xs bg-white border border-slate-200 px-2 py-1 rounded hover:bg-slate-50">复制</button>
+                </div>
+                <textarea id="pub-key"
+                    class="w-full h-64 p-4 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 transition resize-none bg-green-50 text-green-800"
+                    readonly placeholder="Waiting for generation..."></textarea>
+            </div>
+
+            <!-- Private Key -->
+            <div class="flex flex-col">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="font-bold text-xs uppercase text-red-600">私钥 (Private Key)</label>
+                    <button onclick="copy('priv')"
+                        class="text-xs bg-white border border-slate-200 px-2 py-1 rounded hover:bg-slate-50">复制</button>
+                </div>
+                <textarea id="priv-key"
+                    class="w-full h-64 p-4 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-red-500 transition resize-none bg-red-50 text-red-800"
+                    readonly placeholder="Waiting for generation..."></textarea>
+            </div>
+
+        </div>
+
+        <!-- Encryption Test -->
+        <div class="mt-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="font-bold text-lg text-slate-700 mb-4">测试加密 (Test Encryption)</h2>
+            <div class="flex flex-col md:flex-row gap-4">
+                <input type="text" id="test-input" class="flex-1 p-2 border border-slate-300 rounded outline-none"
+                    placeholder="输入要加密的内容...">
+                <button onclick="testEncrypt()"
+                    class="bg-slate-800 text-white px-4 py-2 rounded hover:bg-slate-700">使用公钥加密</button>
+            </div>
+            <div class="mt-4 p-3 bg-slate-50 rounded border border-slate-200 min-h-[3rem] text-xs break-all text-slate-500 font-mono"
+                id="test-output">
+                加密结果将显示在这里...
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const pubEl = document.getElementById('pub-key');
+        const privEl = document.getElementById('priv-key');
+        const btn = document.getElementById('gen-btn');
+        const testOut = document.getElementById('test-output');
+
+        let encryptor = null;
+
+        function generateKeys() {
+            const size = parseInt(document.getElementById('key-size').value);
+
+            btn.disabled = true;
+            btn.innerText = "生成中... (可能卡顿)";
+            pubEl.value = "Generating...";
+            privEl.value = "Generating...";
+
+            // Use setTimeout to allow UI to update before heavy computation
+            setTimeout(() => {
+                encryptor = new JSEncrypt({ default_key_size: size });
+
+                // JSEncrypt generation is synchronous and blocking
+                encryptor.getKey(() => {
+                    pubEl.value = encryptor.getPublicKey();
+                    privEl.value = encryptor.getPrivateKey();
+
+                    btn.disabled = false;
+                    btn.innerText = "生成密钥对";
+                });
+            }, 100);
+        }
+
+        function copy(type) {
+            const el = document.getElementById(type === 'pub' ? 'pub-key' : 'priv-key');
+            if (el.value) {
+                el.select();
+                document.execCommand('copy');
+                alert("已复制!");
+            }
+        }
+
+        function testEncrypt() {
+            const input = document.getElementById('test-input').value;
+            if (!encryptor || !pubEl.value) {
+                testOut.innerText = "请先生成密钥！";
+                return;
+            }
+            if (!input) return;
+
+            const encrypted = encryptor.encrypt(input);
+            if (encrypted) {
+                testOut.innerText = encrypted;
+            } else {
+                testOut.innerText = "加密失败";
+            }
+        }
+    </script>
+</body>
+
+</html>

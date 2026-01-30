@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji 壁纸生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body
+    class="bg-gray-100 min-h-screen flex flex-col items-center justify-center overflow-hidden font-sans text-gray-800">
+
+    <!-- Controls Overlay -->
+    <div class="fixed top-4 right-4 bg-white/90 backdrop-blur p-6 rounded-2xl shadow-xl border border-gray-200 w-80 z-20 transition-transform duration-300 translate-x-0"
+        id="controls">
+        <h1 class="text-xl font-bold mb-4 flex items-center gap-2">
+            <span>🎨</span> Emoji Pattern
+        </h1>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">选择 Emoji</label>
+                <input type="text" id="emoji-input" value="🍊"
+                    class="w-full text-center text-2xl py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 outline-none"
+                    oninput="draw()">
+                <div class="flex gap-2 mt-2 justify-center">
+                    <button onclick="setEmoji('🥑')" class="text-xl hover:scale-125 transition">🥑</button>
+                    <button onclick="setEmoji('🐱')" class="text-xl hover:scale-125 transition">🐱</button>
+                    <button onclick="setEmoji('🚀')" class="text-xl hover:scale-125 transition">🚀</button>
+                    <button onclick="setEmoji('💎')" class="text-xl hover:scale-125 transition">💎</button>
+                    <button onclick="setEmoji('💩')" class="text-xl hover:scale-125 transition">💩</button>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">背景颜色</label>
+                <input type="color" id="bg-color" value="#fff7ed" class="w-full h-10 rounded cursor-pointer border-0"
+                    oninput="draw()">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">大小 (Size)</label>
+                <input type="range" id="size" min="20" max="150" value="60"
+                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="draw()">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">间距 (Spacing)</label>
+                <input type="range" id="spacing" min="0" max="100" value="40"
+                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="draw()">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">旋转 (Rotate)</label>
+                <input type="range" id="rotation" min="0" max="360" value="15"
+                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="draw()">
+            </div>
+
+            <button onclick="download()"
+                class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 transition">
+                下载壁纸
+            </button>
+            <div class="text-center mt-2">
+                <a href="./navigation.html" class="text-xs text-gray-400 hover:text-indigo-600">退出</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toggle Button for Mobile -->
+    <button onclick="document.getElementById('controls').classList.toggle('translate-x-full')"
+        class="fixed top-4 right-4 z-30 bg-white p-2 rounded-full shadow-md md:hidden">
+        ⚙️
+    </button>
+
+    <canvas id="canvas" class="w-full h-full absolute inset-0 z-0"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const emojiInput = document.getElementById('emoji-input');
+        const bgColor = document.getElementById('bg-color');
+        const sizeInput = document.getElementById('size');
+        const spacingInput = document.getElementById('spacing');
+        const rotInput = document.getElementById('rotation');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            draw();
+        }
+        window.addEventListener('resize', resize);
+
+        function setEmoji(e) {
+            emojiInput.value = e;
+            draw();
+        }
+
+        function draw() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const emoji = emojiInput.value;
+            const size = parseInt(sizeInput.value);
+            const gap = parseInt(spacingInput.value);
+            const rot = parseInt(rotInput.value) * Math.PI / 180;
+
+            // Background
+            ctx.fillStyle = bgColor.value;
+            ctx.fillRect(0, 0, w, h);
+
+            const step = size + gap;
+            // Calculate enough coverage for rotation
+            const diag = Math.sqrt(w * w + h * h);
+            const cols = Math.ceil(diag / step) + 2;
+            const rows = Math.ceil(diag / step) + 2;
+
+            ctx.save();
+            ctx.translate(w / 2, h / 2);
+            ctx.rotate(rot);
+            ctx.translate(-diag / 2, -diag / 2);
+
+            ctx.font = `${size}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const x = j * step;
+                    const y = i * step;
+
+                    // Stagger rows
+                    const offsetX = (i % 2 === 0) ? 0 : step / 2;
+
+                    ctx.fillText(emoji, x + offsetX, y);
+                }
+            }
+
+            ctx.restore();
+        }
+
+        function download() {
+            const link = document.createElement('a');
+            link.download = `emoji-wallpaper-${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        // Init
+        resize();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unix 时间戳转换器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .mono-font {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-xl border border-slate-100 mt-10">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-slate-700 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-500" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Unix Timestamp
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <!-- Current Time -->
+        <div class="bg-indigo-50 p-6 rounded-xl text-center mb-8 border border-indigo-100">
+            <p class="text-xs font-bold text-indigo-400 uppercase mb-2">当前时间戳 (Current Unix Epoch)</p>
+            <div class="text-4xl font-bold text-indigo-600 mono-font tracking-wide" id="current-ts">
+                Loading...
+            </div>
+            <div class="mt-2 text-sm text-indigo-400 cursor-pointer hover:underline" onclick="pauseResume()"
+                id="timer-ctrl">点击暂停</div>
+        </div>
+
+        <!-- Converter: TS -> Date -->
+        <div class="mb-8">
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">时间戳 转 日期 (Timestamp to Date)</label>
+            <div class="flex gap-2">
+                <input type="number" id="input-ts"
+                    class="flex-1 p-3 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 mono-font"
+                    placeholder="1672531200">
+                <button onclick="tsToDate()"
+                    class="bg-indigo-600 text-white px-6 rounded-lg font-bold hover:bg-indigo-700 transition">转换</button>
+            </div>
+            <div class="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 min-h-[3rem] flex items-center select-all mono-font"
+                id="result-date">
+                Waiting...
+            </div>
+        </div>
+
+        <!-- Converter: Date -> TS -->
+        <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">日期 转 时间戳 (Date to Timestamp)</label>
+            <div class="flex gap-2">
+                <input type="datetime-local" id="input-date"
+                    class="flex-1 p-3 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 mono-font"
+                    step="1">
+                <button onclick="dateToTs()"
+                    class="bg-slate-700 text-white px-6 rounded-lg font-bold hover:bg-slate-800 transition">转换</button>
+            </div>
+            <div class="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 min-h-[3rem] flex items-center select-all mono-font"
+                id="result-ts">
+                Waiting...
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const currentTsEl = document.getElementById('current-ts');
+        const timerCtrl = document.getElementById('timer-ctrl');
+        const inputTs = document.getElementById('input-ts');
+        const resultDate = document.getElementById('result-date');
+        const inputDate = document.getElementById('input-date');
+        const resultTs = document.getElementById('result-ts');
+
+        let isPaused = false;
+        let timer;
+
+        function updateCurrent() {
+            if (!isPaused) {
+                currentTsEl.innerText = Math.floor(Date.now() / 1000);
+            }
+        }
+
+        function pauseResume() {
+            isPaused = !isPaused;
+            timerCtrl.innerText = isPaused ? "点击继续" : "点击暂停";
+            if (!isPaused) updateCurrent();
+        }
+
+        function tsToDate() {
+            let val = inputTs.value.trim();
+            if (!val) return;
+
+            // Auto detect ms (if length > 11, likely ms)
+            let ts = parseInt(val);
+            if (val.length <= 10) ts *= 1000;
+
+            const date = new Date(ts);
+
+            if (isNaN(date.getTime())) {
+                resultDate.innerText = "无效的时间戳";
+            } else {
+                resultDate.innerText = date.toLocaleString('zh-CN', { hour12: false }) + ` (${date.toUTCString()})`;
+            }
+        }
+
+        function dateToTs() {
+            const val = inputDate.value;
+            if (!val) return;
+
+            const date = new Date(val);
+            const ts = Math.floor(date.getTime() / 1000);
+
+            if (isNaN(ts)) {
+                resultTs.innerText = "无效的日期";
+            } else {
+                resultTs.innerText = ts;
+            }
+        }
+
+        // Init
+        timer = setInterval(updateCurrent, 1000);
+        updateCurrent();
+
+        // Set default value for converter
+        inputTs.value = Math.floor(Date.now() / 1000);
+
+        // Set datetime input to now (local string)
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        inputDate.value = now.toISOString().slice(0, 19);
+
+    </script>
+</body>
+
+</html>

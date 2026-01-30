@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS 裁剪路径工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .handle {
+            width: 16px;
+            height: 16px;
+            background: #3b82f6;
+            border: 2px solid white;
+            border-radius: 50%;
+            position: absolute;
+            transform: translate(-50%, -50%);
+            cursor: move;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .handle:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        .preview-box {
+            background-image: url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80');
+            background-size: cover;
+            background-position: center;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col md:flex-row">
+
+    <!-- Editor -->
+    <div class="flex-1 p-8 flex flex-col items-center justify-center bg-gray-200 relative overflow-hidden select-none"
+        id="editor-area">
+
+        <div class="bg-white p-4 absolute top-4 left-4 rounded-lg shadow-sm z-10">
+            <h1 class="font-bold text-gray-800 text-sm mb-1">Clip-Path Maker</h1>
+            <p class="text-xs text-gray-500">拖动蓝点调整形状</p>
+        </div>
+
+        <div class="relative w-[300px] h-[300px] shadow-2xl bg-white" id="container">
+            <!-- The clipped element -->
+            <div class="w-full h-full preview-box transition-all duration-75" id="target"></div>
+
+            <!-- Handles Layer -->
+            <div class="absolute inset-0 pointer-events-none" id="handles-layer">
+                <!-- Handles injected JS -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Sidebar -->
+    <div class="w-full md:w-80 bg-white border-l border-gray-200 p-6 flex flex-col z-20">
+        <header class="flex justify-between items-center mb-8">
+            <h2 class="font-bold text-gray-800">Settings</h2>
+            <a href="./navigation.html" class="text-xs text-blue-600 hover:underline">退出</a>
+        </header>
+
+        <div class="space-y-6 flex-1">
+
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">预设形状</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="setPoints([[50,0],[0,100],[100,100]])"
+                        class="bg-gray-100 hover:bg-gray-200 py-2 rounded text-xs">三角形</button>
+                    <button onclick="setPoints([[0,0],[100,0],[100,100],[0,100]])"
+                        class="bg-gray-100 hover:bg-gray-200 py-2 rounded text-xs">正方形</button>
+                    <button onclick="setPoints([[50,0],[100,50],[50,100],[0,50]])"
+                        class="bg-gray-100 hover:bg-gray-200 py-2 rounded text-xs">菱形</button>
+                    <button onclick="setPoints([[20,0],[80,0],[100,100],[0,100]])"
+                        class="bg-gray-100 hover:bg-gray-200 py-2 rounded text-xs">梯形</button>
+                    <button
+                        onclick="setPoints([[50,0],[61,35],[98,35],[68,57],[79,91],[50,70],[21,91],[32,57],[2,35],[39,35]])"
+                        class="bg-gray-100 hover:bg-gray-200 py-2 rounded text-xs">五角星</button>
+                    <button onclick="setPoints([[0,0],[100,0],[100,75],[50,100],[0,75]])"
+                        class="bg-gray-100 hover:bg-gray-200 py-2 rounded text-xs">徽章</button>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">CSS 代码</label>
+                <textarea id="css-output"
+                    class="w-full h-32 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-pink-600 resize-none outline-none focus:border-blue-500"
+                    readonly></textarea>
+                <button onclick="copyCSS()"
+                    class="mt-2 w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow transition">复制
+                    CSS</button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById('container');
+        const target = document.getElementById('target');
+        const layer = document.getElementById('handles-layer');
+        const output = document.getElementById('css-output');
+
+        // Points in % [x, y]
+        let points = [
+            [50, 0],
+            [100, 100],
+            [0, 100]
+        ];
+
+        let activeIndex = null;
+
+        function setPoints(newPoints) {
+            points = JSON.parse(JSON.stringify(newPoints)); // Deep copy
+            renderHandles();
+            updateClip();
+        }
+
+        function renderHandles() {
+            layer.innerHTML = '';
+            points.forEach((p, i) => {
+                const handle = document.createElement('div');
+                handle.className = 'handle pointer-events-auto';
+                handle.style.left = p[0] + '%';
+                handle.style.top = p[1] + '%';
+
+                handle.addEventListener('mousedown', (e) => startDrag(e, i));
+                handle.addEventListener('touchstart', (e) => startDrag(e, i));
+
+                layer.appendChild(handle);
+            });
+        }
+
+        function updateClip() {
+            const poly = points.map(p => `${p[0].toFixed(0)}% ${p[1].toFixed(0)}%`).join(', ');
+            const val = `clip-path: polygon(${poly});`;
+
+            target.style.clipPath = `polygon(${poly})`;
+            output.value = val;
+        }
+
+        // Drag Logic
+        function startDrag(e, index) {
+            e.preventDefault();
+            e.stopPropagation();
+            activeIndex = index;
+            window.addEventListener('mousemove', drag);
+            window.addEventListener('touchmove', drag);
+            window.addEventListener('mouseup', stopDrag);
+            window.addEventListener('touchend', stopDrag);
+        }
+
+        function drag(e) {
+            if (activeIndex === null) return;
+
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+
+            const rect = container.getBoundingClientRect();
+
+            // Calculate %
+            let x = (clientX - rect.left) / rect.width * 100;
+            let y = (clientY - rect.top) / rect.height * 100;
+
+            // Clamp
+            x = Math.max(0, Math.min(100, x));
+            y = Math.max(0, Math.min(100, y));
+
+            points[activeIndex] = [x, y];
+
+            // Update UI
+            const handle = layer.children[activeIndex];
+            handle.style.left = x + '%';
+            handle.style.top = y + '%';
+
+            updateClip();
+        }
+
+        function stopDrag() {
+            activeIndex = null;
+            window.removeEventListener('mousemove', drag);
+            window.removeEventListener('touchmove', drag);
+            window.removeEventListener('mouseup', stopDrag);
+            window.removeEventListener('touchend', stopDrag);
+        }
+
+        function copyCSS() {
+            output.select();
+            document.execCommand('copy');
+            alert('已复制!');
+        }
+
+        // Init
+        renderHandles();
+        updateClip();
+    </script>
+</body>
+
+</html>

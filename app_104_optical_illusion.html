@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视觉错觉馆</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Scintillating Grid */
+        .scintillating-grid {
+            background-color: black;
+            background-image:
+                linear-gradient(90deg, #333 10px, transparent 10px),
+                linear-gradient(#333 10px, transparent 10px);
+            background-size: 60px 60px;
+            background-position: -5px -5px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .scintillating-dots {
+            background-image: radial-gradient(white 4px, transparent 5px);
+            background-size: 60px 60px;
+            background-position: 0 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Cafe Wall */
+        .cafe-wall {
+            background-color: #888;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 2px;
+        }
+
+        .cafe-row {
+            height: 40px;
+            width: 120%;
+            margin-left: -10%;
+            background-image: linear-gradient(90deg, black 50%, white 50%);
+            background-size: 80px 100%;
+        }
+
+        .cafe-row:nth-child(even) {
+            background-position: 20px 0;
+        }
+
+        .cafe-row:nth-child(4n) {
+            background-position: 40px 0;
+        }
+
+        /* Hering Illusion */
+        .hering {
+            background: repeating-linear-gradient(90deg, transparent, transparent 19px, #ddd 20px),
+                repeating-linear-gradient(0deg, transparent, transparent 19px, #ddd 20px);
+            background-size: 40px 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sunburst {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200%;
+            height: 200%;
+            background: repeating-conic-gradient(#000 0 1deg, #fff 1deg 5deg);
+            opacity: 0.1;
+            z-index: 0;
+        }
+
+        .hering-line {
+            position: absolute;
+            width: 100%;
+            height: 4px;
+            background: red;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <header class="w-full max-w-2xl flex justify-between items-center mb-8">
+        <h1 class="text-2xl font-bold">Optical Illusions</h1>
+        <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+    </header>
+
+    <div class="w-full max-w-2xl space-y-8">
+
+        <!-- Card 1: Scintillating Grid -->
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div class="h-64 relative bg-black">
+                <div class="scintillating-grid absolute inset-0"></div>
+                <div class="scintillating-dots absolute inset-0"></div>
+            </div>
+            <div class="p-6">
+                <h3 class="font-bold text-lg mb-2">闪烁网格 (Scintillating Grid)</h3>
+                <p class="text-sm text-slate-500">盯着看，你会发现白点中心似乎在快速闪烁变黑。这是视网膜侧抑制作用的结果。</p>
+            </div>
+        </div>
+
+        <!-- Card 2: Cafe Wall -->
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div class="h-64 bg-gray-400 flex flex-col justify-center gap-[2px] overflow-hidden">
+                <div class="cafe-row" style="margin-left: 0px"></div>
+                <div class="cafe-row" style="margin-left: 20px"></div>
+                <div class="cafe-row" style="margin-left: 40px"></div>
+                <div class="cafe-row" style="margin-left: 20px"></div>
+                <div class="cafe-row" style="margin-left: 0px"></div>
+                <div class="cafe-row" style="margin-left: 20px"></div>
+            </div>
+            <div class="p-6">
+                <h3 class="font-bold text-lg mb-2">咖啡墙错觉 (Café Wall)</h3>
+                <p class="text-sm text-slate-500">这里的横线看起来是弯曲或倾斜的吗？其实它们是完全平行的直线。可以使用直尺验证。</p>
+            </div>
+        </div>
+
+        <!-- Card 3: Hering -->
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div class="h-64 relative overflow-hidden bg-white flex items-center justify-center">
+                <div class="sunburst"></div>
+                <div class="hering-line" style="top: 35%"></div>
+                <div class="hering-line" style="bottom: 35%"></div>
+            </div>
+            <div class="p-6">
+                <h3 class="font-bold text-lg mb-2">赫林错觉 (Hering Illusion)</h3>
+                <p class="text-sm text-slate-500">两条红线看起来是向外弯曲的吗？其实它们是笔直且平行的。背景的放射线扭曲了你的感知。</p>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="py-8 text-center text-xs text-slate-400">
+        眼见不一定为实 👀
+    </div>
+
+</body>
+
+</html>

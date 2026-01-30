@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cron 表达式生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .cron-segment {
+            transition: all 0.2s;
+        }
+
+        .cron-segment:hover {
+            background-color: #f1f5f9;
+        }
+
+        .active-tab {
+            border-bottom: 2px solid #4f46e5;
+            color: #4f46e5;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex flex-col items-center justify-center p-4 text-slate-700">
+
+    <div class="w-full max-w-4xl bg-white p-8 rounded-2xl shadow-xl border border-gray-200">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-slate-800">Cron Generator</h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <!-- Result Display -->
+        <div class="bg-slate-900 text-green-400 p-6 rounded-xl font-mono text-3xl text-center mb-8 tracking-widest shadow-inner cursor-pointer hover:bg-slate-800 transition"
+            onclick="copyCron()">
+            <span id="cron-result">* * * * *</span>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex flex-col md:flex-row gap-8">
+
+            <!-- Tabs -->
+            <div class="flex md:flex-col gap-2 border-b md:border-b-0 md:border-r border-gray-200 pr-4">
+                <button onclick="setTab('min')" id="tab-min" class="px-4 py-2 text-left active-tab">Minute</button>
+                <button onclick="setTab('hour')" id="tab-hour"
+                    class="px-4 py-2 text-left text-slate-500 hover:text-slate-800">Hour</button>
+                <button onclick="setTab('day')" id="tab-day"
+                    class="px-4 py-2 text-left text-slate-500 hover:text-slate-800">Day (Month)</button>
+                <button onclick="setTab('month')" id="tab-month"
+                    class="px-4 py-2 text-left text-slate-500 hover:text-slate-800">Month</button>
+                <button onclick="setTab('week')" id="tab-week"
+                    class="px-4 py-2 text-left text-slate-500 hover:text-slate-800">Day (Week)</button>
+            </div>
+
+            <!-- Editor Area -->
+            <div class="flex-1 p-2 min-h-[200px]">
+
+                <!-- Common Radios -->
+                <div class="space-y-4" id="editor-container">
+                    <div class="flex items-center gap-2">
+                        <input type="radio" name="mode" value="every" checked onchange="updateMode()">
+                        <span>每 <span id="label-unit">分钟</span></span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input type="radio" name="mode" value="range" onchange="updateMode()">
+                        <span>周期：从 </span>
+                        <input type="number" id="range-start" class="w-16 border rounded px-2" value="0" min="0"
+                            oninput="updateCron()">
+                        <span> 到 </span>
+                        <input type="number" id="range-end" class="w-16 border rounded px-2" value="1" min="0"
+                            oninput="updateCron()">
+                    </div>
+
+                    <div class="flex items-start gap-2">
+                        <input type="radio" name="mode" value="specific" onchange="updateMode()" class="mt-1">
+                        <div class="flex-1">
+                            <span>指定：</span>
+                            <div class="grid grid-cols-6 sm:grid-cols-10 gap-2 mt-2" id="checkbox-grid">
+                                <!-- Checkboxes injected -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const cron = { min: '*', hour: '*', day: '*', month: '*', week: '*' };
+        let currentTab = 'min';
+
+        const limits = { min: 59, hour: 23, day: 31, month: 12, week: 6 };
+        const labels = { min: "分钟", hour: "小时", day: "日", month: "月", week: "星期" };
+
+        function setTab(tab) {
+            currentTab = tab;
+            // Update Tab UI
+            document.querySelectorAll('button[id^="tab-"]').forEach(b => {
+                b.className = "px-4 py-2 text-left text-slate-500 hover:text-slate-800";
+            });
+            document.getElementById(`tab-${tab}`).className = "px-4 py-2 text-left active-tab";
+
+            // Update Label
+            document.getElementById('label-unit').innerText = labels[tab];
+
+            // Re-render Checkboxes
+            renderCheckboxes();
+
+            // Reset Radio to Every (Simple UX) or parse current state? 
+            // For simplicity in this mini app, switching tabs resets mode visualization to "Every" 
+            // but we should keep state. 
+            // Let's reset inputs visually to "Every *" for smoother UX flow in a demo.
+            document.querySelector('input[value="every"]').checked = true;
+        }
+
+        function renderCheckboxes() {
+            const grid = document.getElementById('checkbox-grid');
+            grid.innerHTML = '';
+
+            let max = limits[currentTab];
+            let start = (currentTab === 'day' || currentTab === 'month') ? 1 : 0;
+            if (currentTab === 'week') { start = 0; max = 6; } // 0=Sun
+
+            for (let i = start; i <= max; i++) {
+                const label = document.createElement('label');
+                label.className = "flex items-center gap-1 text-xs cursor-pointer";
+                label.innerHTML = `<input type="checkbox" value="${i}" onclick="updateCron()"> ${i}`;
+                grid.appendChild(label);
+            }
+        }
+
+        function updateMode() {
+            updateCron();
+        }
+
+        function updateCron() {
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            let val = '*';
+
+            if (mode === 'every') {
+                val = '*';
+            } else if (mode === 'range') {
+                const s = document.getElementById('range-start').value;
+                const e = document.getElementById('range-end').value;
+                val = `${s}-${e}`;
+            } else if (mode === 'specific') {
+                const checked = Array.from(document.querySelectorAll('#checkbox-grid input:checked')).map(cb => cb.value);
+                if (checked.length > 0) val = checked.join(',');
+                else val = '*'; // Fallback
+            }
+
+            cron[currentTab] = val;
+
+            document.getElementById('cron-result').innerText = `${cron.min} ${cron.hour} ${cron.day} ${cron.month} ${cron.week}`;
+        }
+
+        function copyCron() {
+            const txt = document.getElementById('cron-result').innerText;
+            navigator.clipboard.writeText(txt);
+            alert("表达式已复制!");
+        }
+
+        // Init
+        renderCheckboxes();
+    </script>
+</body>
+
+</html>

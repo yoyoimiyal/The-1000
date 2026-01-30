@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>经典猜词游戏</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .key-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: white;
+            border: 1px solid #cbd5e1;
+            transition: all 0.1s;
+        }
+
+        .key-btn:hover:not(:disabled) {
+            background: #e2e8f0;
+        }
+
+        .key-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .key-btn.correct {
+            background: #86efac;
+            border-color: #22c55e;
+            color: #14532d;
+        }
+
+        .key-btn.wrong {
+            background: #fca5a5;
+            border-color: #ef4444;
+            color: #7f1d1d;
+        }
+    </style>
+</head>
+
+<body class="bg-stone-100 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-xl p-6 border border-stone-200">
+
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-xl font-bold text-stone-800">Hangman</h1>
+            <a href="./navigation.html" class="text-sm text-stone-400 hover:text-stone-600">退出</a>
+        </header>
+
+        <!-- Canvas for drawing -->
+        <div class="flex justify-center mb-6">
+            <canvas id="hangman" width="200" height="150" class="border-b-2 border-stone-800"></canvas>
+        </div>
+
+        <!-- Word Display -->
+        <div id="word-display"
+            class="flex justify-center gap-2 mb-8 font-mono text-3xl font-bold text-stone-800 min-h-[40px]">
+            <!-- Letters injected -->
+        </div>
+
+        <!-- Keyboard -->
+        <div id="keyboard" class="flex flex-wrap justify-center gap-1 mb-6">
+            <!-- Keys injected -->
+        </div>
+
+        <!-- Status -->
+        <div class="text-center">
+            <p id="status-msg" class="text-stone-500 text-sm h-5"></p>
+            <button onclick="initGame()" id="restart-btn"
+                class="hidden mt-4 bg-stone-800 text-white px-6 py-2 rounded-full font-bold hover:bg-stone-700 transition">再来一局</button>
+        </div>
+
+    </div>
+
+    <script>
+        const words = ["JAVASCRIPT", "PYTHON", "BROWSER", "INTERNET", "COMPUTER", "PROGRAM", "VARIABLE", "FUNCTION", "ARRAY", "OBJECT", "CANVAS", "STYLE", "HTML", "SERVER", "CLIENT", "DATABASE", "NETWORK", "DESIGN", "PIXEL", "VECTOR"];
+
+        let currentWord = "";
+        let guessed = [];
+        let mistakes = 0;
+        const maxMistakes = 6;
+        let isGameOver = false;
+
+        const canvas = document.getElementById('hangman');
+        const ctx = canvas.getContext('2d');
+        const wordDisplay = document.getElementById('word-display');
+        const keyboard = document.getElementById('keyboard');
+        const statusMsg = document.getElementById('status-msg');
+        const restartBtn = document.getElementById('restart-btn');
+
+        function initGame() {
+            currentWord = words[Math.floor(Math.random() * words.length)];
+            guessed = [];
+            mistakes = 0;
+            isGameOver = false;
+
+            statusMsg.innerText = "猜一个编程相关的单词";
+            statusMsg.className = "text-stone-500 text-sm h-5";
+            restartBtn.classList.add('hidden');
+
+            // Clear Canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = "#444";
+            ctx.lineWidth = 3;
+            ctx.lineCap = "round";
+            // Draw base
+            ctx.beginPath();
+            ctx.moveTo(10, 140); ctx.lineTo(190, 140);
+            ctx.moveTo(50, 140); ctx.lineTo(50, 20);
+            ctx.lineTo(120, 20);
+            ctx.lineTo(120, 40);
+            ctx.stroke();
+
+            renderWord();
+            renderKeyboard();
+        }
+
+        function renderWord() {
+            wordDisplay.innerHTML = "";
+            let win = true;
+            for (let char of currentWord) {
+                const span = document.createElement('span');
+                if (guessed.includes(char)) {
+                    span.innerText = char;
+                    span.className = "border-b-2 border-stone-800 w-8 text-center";
+                } else {
+                    span.innerText = "";
+                    span.className = "border-b-2 border-stone-800 w-8 text-center";
+                    win = false;
+                }
+                wordDisplay.appendChild(span);
+            }
+            if (win) endGame(true);
+        }
+
+        function renderKeyboard() {
+            keyboard.innerHTML = "";
+            const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            for (let char of alphabet) {
+                const btn = document.createElement('button');
+                btn.innerText = char;
+                btn.className = "key-btn";
+                btn.onclick = () => handleGuess(char, btn);
+                if (guessed.includes(char)) {
+                    btn.disabled = true;
+                    if (currentWord.includes(char)) btn.classList.add('correct');
+                    else btn.classList.add('wrong');
+                }
+                keyboard.appendChild(btn);
+            }
+        }
+
+        function handleGuess(char, btn) {
+            if (isGameOver || guessed.includes(char)) return;
+
+            guessed.push(char);
+            btn.disabled = true;
+
+            if (currentWord.includes(char)) {
+                btn.classList.add('correct');
+                renderWord();
+            } else {
+                btn.classList.add('wrong');
+                mistakes++;
+                drawHangman(mistakes);
+                if (mistakes >= maxMistakes) {
+                    endGame(false);
+                }
+            }
+        }
+
+        function drawHangman(step) {
+            ctx.beginPath();
+            if (step === 1) { // Head
+                ctx.arc(120, 55, 15, 0, Math.PI * 2);
+            } else if (step === 2) { // Body
+                ctx.moveTo(120, 70); ctx.lineTo(120, 110);
+            } else if (step === 3) { // Left Arm
+                ctx.moveTo(120, 80); ctx.lineTo(100, 95);
+            } else if (step === 4) { // Right Arm
+                ctx.moveTo(120, 80); ctx.lineTo(140, 95);
+            } else if (step === 5) { // Left Leg
+                ctx.moveTo(120, 110); ctx.lineTo(105, 130);
+            } else if (step === 6) { // Right Leg
+                ctx.moveTo(120, 110); ctx.lineTo(135, 130);
+                // Eyes X X
+                ctx.lineWidth = 1;
+                ctx.moveTo(114, 50); ctx.lineTo(118, 54);
+                ctx.moveTo(118, 50); ctx.lineTo(114, 54);
+                ctx.moveTo(122, 50); ctx.lineTo(126, 54);
+                ctx.moveTo(126, 50); ctx.lineTo(122, 54);
+            }
+            ctx.stroke();
+        }
+
+        function endGame(win) {
+            isGameOver = true;
+            restartBtn.classList.remove('hidden');
+            if (win) {
+                statusMsg.innerText = "🎉 恭喜你赢了！";
+                statusMsg.className = "text-green-600 font-bold text-lg h-5";
+            } else {
+                statusMsg.innerText = `💀 游戏结束，单词是: ${currentWord}`;
+                statusMsg.className = "text-red-600 font-bold text-lg h-5";
+                // Reveal word
+                wordDisplay.innerHTML = "";
+                for (let char of currentWord) {
+                    const span = document.createElement('span');
+                    span.innerText = char;
+                    span.className = "border-b-2 border-red-300 text-red-800 w-8 text-center";
+                    wordDisplay.appendChild(span);
+                }
+            }
+        }
+
+        initGame();
+    </script>
+</body>
+
+</html>

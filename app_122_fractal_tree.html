@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分形树生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            background-color: #f0fdf4;
+            cursor: crosshair;
+        }
+    </style>
+</head>
+
+<body class="bg-green-50 min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden">
+
+    <div class="fixed top-4 left-4 z-20">
+        <h1 class="text-green-900 font-bold text-xl opacity-80">Fractal Tree</h1>
+    </div>
+
+    <!-- Controls -->
+    <div
+        class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur p-4 rounded-2xl shadow-xl flex flex-wrap gap-6 items-center z-20 border border-green-100 w-full max-w-3xl justify-center">
+
+        <div class="flex flex-col w-24">
+            <label class="text-[10px] text-green-600 uppercase font-bold mb-1">角度 (Angle)</label>
+            <input type="range" id="angle" min="0" max="90" value="25" class="h-1 bg-green-200 rounded appearance-none"
+                oninput="draw()">
+        </div>
+
+        <div class="flex flex-col w-24">
+            <label class="text-[10px] text-green-600 uppercase font-bold mb-1">分支系数 (Branch)</label>
+            <input type="range" id="branch" min="0.5" max="0.8" step="0.01" value="0.67"
+                class="h-1 bg-green-200 rounded appearance-none" oninput="draw()">
+        </div>
+
+        <div class="flex flex-col w-24">
+            <label class="text-[10px] text-green-600 uppercase font-bold mb-1">深度 (Depth)</label>
+            <input type="range" id="depth" min="4" max="12" value="9" class="h-1 bg-green-200 rounded appearance-none"
+                oninput="draw()">
+        </div>
+
+        <div class="flex flex-col w-24">
+            <label class="text-[10px] text-green-600 uppercase font-bold mb-1">颜色 (Color)</label>
+            <input type="color" id="color" value="#15803d"
+                class="w-full h-4 rounded cursor-pointer border-0 bg-transparent" oninput="draw()">
+        </div>
+
+        <div class="h-8 w-px bg-green-200"></div>
+
+        <button onclick="randomize()"
+            class="text-green-600 hover:text-green-800 text-xs font-bold uppercase transition">随机</button>
+        <button onclick="download()"
+            class="text-green-600 hover:text-green-800 text-xs font-bold uppercase transition">保存</button>
+        <a href="./navigation.html"
+            class="text-gray-400 hover:text-gray-600 text-xs font-bold uppercase transition">退出</a>
+    </div>
+
+    <canvas id="canvas" class="shadow-xl rounded-xl border border-green-100"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+
+        function resize() {
+            width = Math.min(window.innerWidth - 40, 800);
+            height = Math.min(window.innerHeight - 150, 600);
+            canvas.width = width;
+            canvas.height = height;
+            draw();
+        }
+        window.addEventListener('resize', resize);
+
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+
+            const angle = document.getElementById('angle').value;
+            const branchRatio = document.getElementById('branch').value;
+            const depth = document.getElementById('depth').value;
+            const color = document.getElementById('color').value;
+
+            ctx.strokeStyle = color;
+
+            // Start from bottom center
+            ctx.save();
+            ctx.translate(width / 2, height);
+
+            // Initial trunk length relative to canvas height
+            const len = height * 0.25;
+
+            drawBranch(len, angle, branchRatio, depth);
+            ctx.restore();
+        }
+
+        function drawBranch(len, angleDeg, ratio, depth) {
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, -len);
+            ctx.stroke();
+
+            ctx.translate(0, -len);
+
+            if (depth > 0) {
+                const rad = angleDeg * Math.PI / 180;
+
+                // Right
+                ctx.save();
+                ctx.rotate(rad);
+                // Thinner lines for branches
+                ctx.lineWidth = depth * 0.5;
+                // Color variation? 
+                // ctx.strokeStyle = `hsl(${depth*10}, 50%, 50%)`;
+                drawBranch(len * ratio, angleDeg, ratio, depth - 1);
+                ctx.restore();
+
+                // Left
+                ctx.save();
+                ctx.rotate(-rad);
+                ctx.lineWidth = depth * 0.5;
+                drawBranch(len * ratio, angleDeg, ratio, depth - 1);
+                ctx.restore();
+            }
+        }
+
+        function randomize() {
+            document.getElementById('angle').value = Math.floor(Math.random() * 60) + 10;
+            document.getElementById('branch').value = (Math.random() * 0.2 + 0.6).toFixed(2);
+            // Keep depth safe
+            draw();
+        }
+
+        function download() {
+            const link = document.createElement('a');
+            link.download = 'fractal-tree.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        // Init
+        resize();
+    </script>
+</body>
+
+</html>

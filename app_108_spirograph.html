@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>万花尺模拟器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="absolute top-4 left-4 z-10">
+        <h1 class="text-white font-bold text-xl opacity-80">Spirograph</h1>
+    </div>
+
+    <!-- Controls -->
+    <div
+        class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-800/90 backdrop-blur p-6 rounded-2xl shadow-2xl flex flex-wrap gap-6 items-center z-20 border border-gray-700 w-full max-w-2xl justify-center">
+
+        <div class="flex flex-col w-32">
+            <label class="text-[10px] text-gray-400 uppercase font-bold mb-1">Outer Ring (R)</label>
+            <input type="range" id="R" min="50" max="200" value="150" class="h-1 bg-gray-600 rounded appearance-none"
+                oninput="draw()">
+        </div>
+
+        <div class="flex flex-col w-32">
+            <label class="text-[10px] text-gray-400 uppercase font-bold mb-1">Inner Gear (r)</label>
+            <input type="range" id="r" min="10" max="100" value="52" class="h-1 bg-gray-600 rounded appearance-none"
+                oninput="draw()">
+        </div>
+
+        <div class="flex flex-col w-32">
+            <label class="text-[10px] text-gray-400 uppercase font-bold mb-1">Pen Offset (O)</label>
+            <input type="range" id="O" min="10" max="100" value="50" class="h-1 bg-gray-600 rounded appearance-none"
+                oninput="draw()">
+        </div>
+
+        <div class="flex flex-col">
+            <label class="text-[10px] text-gray-400 uppercase font-bold mb-1">Color</label>
+            <input type="color" id="color" value="#f472b6"
+                class="w-8 h-6 rounded cursor-pointer bg-transparent border-0" oninput="draw()">
+        </div>
+
+        <div class="h-8 w-px bg-gray-600"></div>
+
+        <button onclick="animateDraw()"
+            class="text-blue-400 hover:text-blue-300 text-xs font-bold uppercase transition">Animate</button>
+        <button onclick="download()"
+            class="text-indigo-400 hover:text-indigo-300 text-xs font-bold uppercase transition">Save</button>
+        <a href="./navigation.html"
+            class="text-red-400 hover:text-red-300 text-xs font-bold uppercase transition">Exit</a>
+    </div>
+
+    <canvas id="canvas" class="bg-black shadow-2xl rounded-full border border-gray-800"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height, cx, cy;
+        let animationId;
+
+        function resize() {
+            width = Math.min(window.innerWidth, window.innerHeight) - 40;
+            height = width;
+            canvas.width = width;
+            canvas.height = height;
+            cx = width / 2;
+            cy = height / 2;
+            draw();
+        }
+        window.addEventListener('resize', resize);
+
+        function draw(progress = 100) {
+            if (animationId) cancelAnimationFrame(animationId);
+
+            const R = parseInt(document.getElementById('R').value);
+            const r = parseInt(document.getElementById('r').value);
+            const O = parseInt(document.getElementById('O').value);
+            const color = document.getElementById('color').value;
+
+            ctx.clearRect(0, 0, width, height);
+
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.5;
+
+            // Spirograph formula (Hypotrochoid)
+            // x(t) = (R-r)*cos(t) + O*cos(((R-r)/r)*t)
+            // y(t) = (R-r)*sin(t) - O*sin(((R-r)/r)*t)
+
+            // Limit t to ensure loop closure. LCM of r and R determines period.
+            // Using a high fixed iteration count is simpler for UI responsiveness.
+
+            let t = 0;
+            // Move to start
+            const startX = cx + (R - r) * Math.cos(0) + O * Math.cos(((R - r) / r) * 0);
+            const startY = cy + (R - r) * Math.sin(0) - O * Math.sin(((R - r) / r) * 0);
+            ctx.moveTo(startX, startY);
+
+            // Draw loop
+            // Reduce resolution step for smoothness (0.05)
+            // Max iterations based on progress (for animation)
+            const maxIter = 300 * Math.PI * (progress / 100);
+
+            for (t = 0; t < maxIter; t += 0.05) {
+                const x = cx + (R - r) * Math.cos(t) + O * Math.cos(((R - r) / r) * t);
+                const y = cy + (R - r) * Math.sin(t) - O * Math.sin(((R - r) / r) * t);
+                ctx.lineTo(x, y);
+            }
+
+            ctx.stroke();
+        }
+
+        function animateDraw() {
+            let p = 0;
+            function step() {
+                p += 1;
+                draw(p);
+                if (p < 100) {
+                    animationId = requestAnimationFrame(step);
+                }
+            }
+            step();
+        }
+
+        function download() {
+            const link = document.createElement('a');
+            link.download = 'spirograph.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        // Init
+        resize();
+    </script>
+</body>
+
+</html>

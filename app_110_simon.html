@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>西蒙记忆游戏</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .simon-btn {
+            width: 100%;
+            height: 100%;
+            opacity: 0.6;
+            transition: opacity 0.1s, transform 0.1s;
+            cursor: pointer;
+        }
+
+        .simon-btn:active,
+        .simon-btn.active {
+            opacity: 1;
+            transform: scale(0.95);
+            box-shadow: 0 0 30px currentColor;
+        }
+
+        .top-left {
+            border-top-left-radius: 100%;
+            background-color: #ef4444;
+            color: #ef4444;
+        }
+
+        /* Red */
+        .top-right {
+            border-top-right-radius: 100%;
+            background-color: #3b82f6;
+            color: #3b82f6;
+        }
+
+        /* Blue */
+        .bottom-left {
+            border-bottom-left-radius: 100%;
+            background-color: #eab308;
+            color: #eab308;
+        }
+
+        /* Yellow */
+        .bottom-right {
+            border-bottom-right-radius: 100%;
+            background-color: #22c55e;
+            color: #22c55e;
+        }
+
+        /* Green */
+
+        .center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120px;
+            height: 120px;
+            background: #1f2937;
+            border-radius: 50%;
+            border: 8px solid #111827;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-4 select-none">
+
+    <div class="relative w-80 h-80 sm:w-96 sm:h-96 bg-gray-800 rounded-full p-4 shadow-2xl border-4 border-gray-700">
+
+        <div class="w-full h-full grid grid-cols-2 grid-rows-2 gap-2 relative">
+            <div class="simon-btn top-left" id="btn-0" onclick="handleInput(0)"></div>
+            <div class="simon-btn top-right" id="btn-1" onclick="handleInput(1)"></div>
+            <div class="simon-btn bottom-left" id="btn-2" onclick="handleInput(2)"></div>
+            <div class="simon-btn bottom-right" id="btn-3" onclick="handleInput(3)"></div>
+
+            <div class="center-circle text-center">
+                <h1 class="text-white font-bold text-xl mb-1">SIMON</h1>
+                <p class="text-xs text-gray-400 mb-2">Level: <span id="level" class="text-white font-bold">0</span></p>
+                <button onclick="startGame()" id="start-btn"
+                    class="bg-white text-gray-900 px-4 py-1 rounded-full text-xs font-bold hover:bg-gray-200 transition">START</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="mt-12 text-center">
+        <a href="./navigation.html"
+            class="text-sm text-gray-500 hover:text-white border border-gray-600 px-4 py-2 rounded-full transition">退出游戏</a>
+    </div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        const freqs = [329.63, 440, 261.63, 392]; // E4, A4, C4, G4 (Classic Simon tones approx)
+        const sequence = [];
+        let playerSequence = [];
+        let level = 0;
+        let isPlayingSequence = false;
+        let isGameActive = false;
+
+        const levelEl = document.getElementById('level');
+        const startBtn = document.getElementById('start-btn');
+
+        function playTone(idx) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'triangle';
+            osc.frequency.value = freqs[idx];
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const t = audioCtx.currentTime;
+            gain.gain.setValueAtTime(0.3, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+
+            osc.start(t);
+            osc.stop(t + 0.4);
+
+            // Visual
+            const btn = document.getElementById(`btn-${idx}`);
+            btn.classList.add('active');
+            setTimeout(() => btn.classList.remove('active'), 300);
+        }
+
+        function startGame() {
+            if (isPlayingSequence) return;
+            sequence.length = 0;
+            playerSequence.length = 0;
+            level = 0;
+            levelEl.innerText = level;
+            isGameActive = true;
+            startBtn.innerText = "Running";
+            nextRound();
+        }
+
+        function nextRound() {
+            level++;
+            levelEl.innerText = level;
+            playerSequence = [];
+
+            // Add new step
+            sequence.push(Math.floor(Math.random() * 4));
+
+            playSequence();
+        }
+
+        function playSequence() {
+            isPlayingSequence = true;
+            let i = 0;
+            const interval = setInterval(() => {
+                playTone(sequence[i]);
+                i++;
+                if (i >= sequence.length) {
+                    clearInterval(interval);
+                    isPlayingSequence = false;
+                }
+            }, 800);
+        }
+
+        function handleInput(idx) {
+            if (!isGameActive || isPlayingSequence) return;
+
+            playTone(idx);
+            playerSequence.push(idx);
+
+            // Check correctness
+            const currentStep = playerSequence.length - 1;
+
+            if (playerSequence[currentStep] !== sequence[currentStep]) {
+                gameOver();
+                return;
+            }
+
+            if (playerSequence.length === sequence.length) {
+                setTimeout(nextRound, 1000);
+            }
+        }
+
+        function gameOver() {
+            isGameActive = false;
+            startBtn.innerText = "RESTART";
+            alert(`游戏结束! 最终等级: ${level}`);
+
+            // Error sound
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.value = 100;
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+            osc.stop(audioCtx.currentTime + 0.5);
+        }
+    </script>
+</body>
+
+</html>

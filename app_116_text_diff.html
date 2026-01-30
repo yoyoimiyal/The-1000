@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文本去重工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-50 min-h-screen p-6 flex flex-col items-center text-slate-700">
+
+    <div class="w-full max-w-4xl h-[85vh] flex flex-col">
+
+        <header class="flex justify-between items-center mb-6 shrink-0">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                Unique Text
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="flex-1 flex flex-col md:flex-row gap-6">
+
+            <!-- Input -->
+            <div class="flex-1 flex flex-col">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="text-xs font-bold uppercase text-slate-400">输入文本 (每行一条)</label>
+                    <button onclick="document.getElementById('input-text').value=''"
+                        class="text-xs text-red-400 hover:text-red-600">清空</button>
+                </div>
+                <textarea id="input-text"
+                    class="flex-1 w-full p-4 border border-slate-200 rounded-xl resize-none outline-none focus:ring-2 focus:ring-indigo-500 text-sm leading-relaxed"
+                    placeholder="Apple&#10;Banana&#10;Apple&#10;Orange..." oninput="process()"></textarea>
+                <div class="mt-2 text-right text-xs text-slate-400">
+                    行数: <span id="input-count">0</span>
+                </div>
+            </div>
+
+            <!-- Controls (Mobile horizontal, Desktop vertical) -->
+            <div class="flex md:flex-col justify-center gap-2 shrink-0">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3 w-full md:w-40">
+                    <h3 class="font-bold text-xs text-slate-800 uppercase mb-2">选项</h3>
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" id="sort" class="text-indigo-600 rounded focus:ring-indigo-500"
+                            onchange="process()">
+                        <span>排序 (A-Z)</span>
+                    </label>
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" id="trim" class="text-indigo-600 rounded focus:ring-indigo-500" checked
+                            onchange="process()">
+                        <span>去除首尾空格</span>
+                    </label>
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" id="ignore-empty" class="text-indigo-600 rounded focus:ring-indigo-500"
+                            checked onchange="process()">
+                        <span>忽略空行</span>
+                    </label>
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" id="case-sensitive" class="text-indigo-600 rounded focus:ring-indigo-500"
+                            onchange="process()">
+                        <span>区分大小写</span>
+                    </label>
+                </div>
+
+                <button onclick="process()"
+                    class="md:hidden bg-indigo-600 text-white px-4 rounded font-bold">处理</button>
+            </div>
+
+            <!-- Output -->
+            <div class="flex-1 flex flex-col">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="text-xs font-bold uppercase text-slate-400">去重结果</label>
+                    <button onclick="copyResult()"
+                        class="text-xs bg-indigo-50 text-indigo-600 px-3 py-1 rounded hover:bg-indigo-100 font-bold transition">复制结果</button>
+                </div>
+                <textarea id="output-text"
+                    class="flex-1 w-full p-4 border border-slate-200 rounded-xl resize-none outline-none focus:ring-2 focus:ring-green-500 text-sm leading-relaxed bg-slate-50"
+                    readonly></textarea>
+                <div class="mt-2 text-right text-xs text-slate-400 flex justify-between">
+                    <span class="text-red-400">已移除: <span id="removed-count">0</span></span>
+                    <span>结果: <span id="output-count">0</span></span>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const inputEl = document.getElementById('input-text');
+        const outputEl = document.getElementById('output-text');
+        const inCountEl = document.getElementById('input-count');
+        const outCountEl = document.getElementById('output-count');
+        const remCountEl = document.getElementById('removed-count');
+
+        function process() {
+            const raw = inputEl.value;
+            const sort = document.getElementById('sort').checked;
+            const trim = document.getElementById('trim').checked;
+            const ignoreEmpty = document.getElementById('ignore-empty').checked;
+            const caseSensitive = document.getElementById('case-sensitive').checked; // Wait, actually standard Set is case sensitive.
+            // If NOT case sensitive, we need to normalize key for comparison but keep original? 
+            // Usually "Case Insensitive" means "Apple" and "apple" are duplicates. We keep the first one found.
+
+            let lines = raw.split('\n');
+            const total = lines.length;
+            inCountEl.innerText = total;
+
+            if (trim) {
+                lines = lines.map(l => l.trim());
+            }
+
+            if (ignoreEmpty) {
+                lines = lines.filter(l => l !== '');
+            }
+
+            // Deduplicate
+            let uniqueLines = [];
+            let seen = new Set();
+
+            lines.forEach(line => {
+                const key = caseSensitive ? line : line.toLowerCase();
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueLines.push(line);
+                }
+            });
+
+            if (sort) {
+                // Natural sort
+                uniqueLines.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+            }
+
+            outputEl.value = uniqueLines.join('\n');
+
+            outCountEl.innerText = uniqueLines.length;
+            remCountEl.innerText = total - uniqueLines.length; // Approximate, depends on empty line filtering
+        }
+
+        function copyResult() {
+            outputEl.select();
+            document.execCommand('copy');
+            alert("结果已复制!");
+        }
+    </script>
+</body>
+
+</html>

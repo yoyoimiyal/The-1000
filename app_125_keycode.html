@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KeyCode 查询器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .key-card {
+            transition: all 0.2s;
+        }
+
+        .key-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-4xl text-center">
+
+        <header class="mb-12">
+            <h1 class="text-3xl font-bold text-slate-700 mb-2">JavaScript KeyCode Event</h1>
+            <p class="text-slate-400">Press any key on your keyboard</p>
+        </header>
+
+        <!-- Main Display -->
+        <div id="main-display" class="mb-16">
+            <div
+                class="inline-flex flex-col items-center justify-center w-48 h-48 bg-white rounded-3xl shadow-xl border-4 border-indigo-100 relative">
+                <span class="text-8xl font-bold text-indigo-600" id="main-code">?</span>
+                <span
+                    class="absolute bottom-4 text-xs text-slate-400 font-bold uppercase tracking-widest">event.which</span>
+            </div>
+        </div>
+
+        <!-- Detail Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 opacity-50 transition-opacity duration-300" id="details">
+
+            <div class="key-card bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs font-bold text-slate-400 uppercase mb-1">event.key</p>
+                <p class="text-2xl font-bold text-slate-700 break-all" id="detail-key">-</p>
+                <p class="text-xs text-slate-400 mt-2">The value of the key pressed.</p>
+            </div>
+
+            <div class="key-card bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs font-bold text-slate-400 uppercase mb-1">event.code</p>
+                <p class="text-2xl font-bold text-slate-700 break-all" id="detail-code">-</p>
+                <p class="text-xs text-slate-400 mt-2">The physical key on the keyboard.</p>
+            </div>
+
+            <div class="key-card bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs font-bold text-slate-400 uppercase mb-1">event.location</p>
+                <p class="text-2xl font-bold text-slate-700" id="detail-loc">-</p>
+                <p class="text-xs text-slate-400 mt-2">0=Standard, 1=Left, 2=Right, 3=Numpad</p>
+            </div>
+
+        </div>
+
+        <!-- Modifiers -->
+        <div class="mt-8 flex justify-center gap-4 text-sm font-bold text-slate-300">
+            <span id="mod-ctrl" class="px-3 py-1 rounded bg-white shadow-sm border border-slate-200">CTRL</span>
+            <span id="mod-shift" class="px-3 py-1 rounded bg-white shadow-sm border border-slate-200">SHIFT</span>
+            <span id="mod-alt" class="px-3 py-1 rounded bg-white shadow-sm border border-slate-200">ALT</span>
+            <span id="mod-meta" class="px-3 py-1 rounded bg-white shadow-sm border border-slate-200">META</span>
+        </div>
+
+        <div class="mt-12">
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </div>
+
+    </div>
+
+    <script>
+        const mainCode = document.getElementById('main-code');
+        const dKey = document.getElementById('detail-key');
+        const dCode = document.getElementById('detail-code');
+        const dLoc = document.getElementById('detail-loc');
+        const details = document.getElementById('details');
+
+        const modCtrl = document.getElementById('mod-ctrl');
+        const modShift = document.getElementById('mod-shift');
+        const modAlt = document.getElementById('mod-alt');
+        const modMeta = document.getElementById('mod-meta');
+
+        document.addEventListener('keydown', (e) => {
+            e.preventDefault();
+
+            // Activate visuals
+            details.classList.remove('opacity-50');
+
+            mainCode.innerText = e.which || e.keyCode;
+            dKey.innerText = e.key === " " ? "(Space)" : e.key;
+            dCode.innerText = e.code;
+            dLoc.innerText = e.location;
+
+            // Modifiers
+            updateMod(modCtrl, e.ctrlKey);
+            updateMod(modShift, e.shiftKey);
+            updateMod(modAlt, e.altKey);
+            updateMod(modMeta, e.metaKey);
+        });
+
+        document.addEventListener('keyup', (e) => {
+            // Optional: reset modifiers visual state on keyup if desired, 
+            // but usually people want to see what was pressed in the chord.
+            // We just update modifiers live?
+            updateMod(modCtrl, e.ctrlKey);
+            updateMod(modShift, e.shiftKey);
+            updateMod(modAlt, e.altKey);
+            updateMod(modMeta, e.metaKey);
+        });
+
+        function updateMod(el, active) {
+            if (active) {
+                el.classList.add('bg-indigo-600', 'text-white', 'border-indigo-600');
+                el.classList.remove('bg-white', 'text-slate-300', 'border-slate-200');
+            } else {
+                el.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-600');
+                el.classList.add('bg-white', 'text-slate-300', 'border-slate-200');
+            }
+        }
+    </script>
+</body>
+
+</html>

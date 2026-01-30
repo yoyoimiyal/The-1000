@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>渐变文字生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-text {
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            /* Default fallback */
+            background-image: linear-gradient(to right, #4f46e5, #ec4899);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-white">
+
+    <div class="w-full max-w-3xl">
+
+        <header class="flex justify-between items-center mb-10">
+            <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+                <span class="text-3xl">🌈</span> Gradient Text
+            </h1>
+            <a href="./navigation.html" class="text-sm text-gray-400 hover:text-white">退出</a>
+        </header>
+
+        <!-- Preview -->
+        <div
+            class="bg-black/30 p-12 rounded-3xl border border-white/10 text-center mb-8 min-h-[200px] flex items-center justify-center overflow-hidden">
+            <h1 id="preview" class="text-6xl md:text-8xl font-black gradient-text break-words w-full outline-none"
+                contenteditable="true" spellcheck="false">
+                AWESOME
+            </h1>
+        </div>
+
+        <!-- Controls -->
+        <div class="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700 grid grid-cols-1 md:grid-cols-2 gap-8">
+
+            <!-- Colors -->
+            <div>
+                <label class="text-xs font-bold text-gray-400 uppercase mb-4 block">渐变颜色 (Colors)</label>
+                <div class="flex items-center gap-2 mb-4">
+                    <input type="color" id="c1" value="#4f46e5"
+                        class="w-10 h-10 rounded cursor-pointer bg-transparent border-0" oninput="update()">
+                    <span class="text-gray-500">→</span>
+                    <input type="color" id="c2" value="#ec4899"
+                        class="w-10 h-10 rounded cursor-pointer bg-transparent border-0" oninput="update()">
+                    <span class="text-gray-500 hidden md:inline">→</span>
+                    <input type="color" id="c3" value="#f59e0b"
+                        class="w-10 h-10 rounded cursor-pointer bg-transparent border-0 hidden md:block"
+                        oninput="update()"> <!-- Optional 3rd color -->
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="setPreset('#3b82f6', '#10b981')"
+                        class="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-green-500"></button>
+                    <button onclick="setPreset('#f59e0b', '#ef4444')"
+                        class="w-6 h-6 rounded-full bg-gradient-to-r from-amber-500 to-red-500"></button>
+                    <button onclick="setPreset('#ec4899', '#8b5cf6')"
+                        class="w-6 h-6 rounded-full bg-gradient-to-r from-pink-500 to-purple-500"></button>
+                    <button onclick="setPreset('#6366f1', '#14b8a6')"
+                        class="w-6 h-6 rounded-full bg-gradient-to-r from-indigo-500 to-teal-500"></button>
+                    <button onclick="setPreset('#f43f5e', '#fbbf24')"
+                        class="w-6 h-6 rounded-full bg-gradient-to-r from-rose-500 to-amber-400"></button>
+                </div>
+            </div>
+
+            <!-- Direction & Code -->
+            <div class="flex flex-col justify-between">
+                <div>
+                    <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">方向 (Direction): <span
+                            id="deg-val" class="text-white">45deg</span></label>
+                    <input type="range" id="angle" min="0" max="360" value="45"
+                        class="w-full h-1 bg-gray-600 rounded appearance-none cursor-pointer" oninput="update()">
+                </div>
+
+                <div class="mt-6 relative">
+                    <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">CSS Code</label>
+                    <div class="bg-black/50 p-3 rounded-lg text-xs font-mono text-green-400 break-all cursor-pointer hover:bg-black/70 transition"
+                        onclick="copyCSS()">
+                        <span id="css-code">background: linear-gradient(...)</span>
+                    </div>
+                    <div class="absolute right-2 bottom-2 text-[10px] text-gray-500 pointer-events-none">Click to Copy
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const preview = document.getElementById('preview');
+        const c1 = document.getElementById('c1');
+        const c2 = document.getElementById('c2');
+        const c3 = document.getElementById('c3'); // Optional
+        const angle = document.getElementById('angle');
+        const degVal = document.getElementById('deg-val');
+        const cssCode = document.getElementById('css-code');
+
+        function update() {
+            // For simplicity, just use 2 colors for the main logic in this snippet, 
+            // or 3 if user picked one (but UI for enabling/disabling 3rd is complex).
+            // Let's stick to 2 for robust UX in mini app.
+
+            const deg = angle.value;
+            degVal.innerText = deg + 'deg';
+
+            const gradient = `linear-gradient(${deg}deg, ${c1.value}, ${c2.value})`;
+
+            preview.style.backgroundImage = gradient;
+
+            const code = `background: ${gradient};
+-webkit-background-clip: text;
+color: transparent;`;
+
+            cssCode.innerText = code;
+        }
+
+        function setPreset(col1, col2) {
+            c1.value = col1;
+            c2.value = col2;
+            update();
+        }
+
+        function copyCSS() {
+            navigator.clipboard.writeText(cssCode.innerText);
+            alert("CSS 已复制!");
+        }
+
+        // Init
+        update();
+    </script>
+</body>
+
+</html>

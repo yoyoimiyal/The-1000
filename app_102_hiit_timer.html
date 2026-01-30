@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIIT 计时器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center text-white font-sans p-4">
+
+    <div class="w-full max-w-md bg-gray-800 rounded-3xl shadow-2xl overflow-hidden border border-gray-700">
+
+        <!-- Display Area -->
+        <div id="display-area"
+            class="h-64 flex flex-col items-center justify-center relative transition-colors duration-500 bg-gray-800">
+            <div class="text-sm uppercase tracking-widest font-bold text-white/50 mb-2" id="status-label">准备</div>
+            <div class="text-8xl font-bold font-mono tracking-tighter" id="time-display">00:00</div>
+            <div class="mt-4 flex gap-2">
+                <div class="px-3 py-1 bg-white/10 rounded-full text-xs" id="set-display">Set 1/8</div>
+            </div>
+        </div>
+
+        <!-- Setup Form -->
+        <div id="setup-form" class="p-8 space-y-6">
+            <div class="grid grid-cols-3 gap-4 text-center">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-2 font-bold">WORK (秒)</label>
+                    <input type="number" id="work-input" value="30"
+                        class="w-full bg-gray-700 rounded-xl p-3 text-center font-bold text-xl focus:ring-2 focus:ring-green-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-2 font-bold">REST (秒)</label>
+                    <input type="number" id="rest-input" value="10"
+                        class="w-full bg-gray-700 rounded-xl p-3 text-center font-bold text-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-2 font-bold">SETS</label>
+                    <input type="number" id="sets-input" value="8"
+                        class="w-full bg-gray-700 rounded-xl p-3 text-center font-bold text-xl focus:ring-2 focus:ring-purple-500 outline-none">
+                </div>
+            </div>
+
+            <button onclick="startTimer()"
+                class="w-full py-4 bg-green-600 hover:bg-green-500 text-white font-bold rounded-2xl text-xl shadow-lg transition transform active:scale-95">
+                开始训练 GO!
+            </button>
+        </div>
+
+        <!-- Controls (Hidden during setup) -->
+        <div id="active-controls" class="hidden p-8 flex gap-4">
+            <button onclick="togglePause()" id="pause-btn"
+                class="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-bold transition">暂停</button>
+            <button onclick="resetTimer()"
+                class="flex-1 py-3 bg-red-600 hover:bg-red-500 rounded-xl font-bold transition">停止</button>
+        </div>
+
+    </div>
+
+    <div class="mt-8 text-center">
+        <a href="./navigation.html" class="text-gray-500 hover:text-white text-sm">退出</a>
+    </div>
+
+    <script>
+        let workTime, restTime, totalSets;
+        let currentSet = 1;
+        let timeLeft = 0;
+        let isWork = true;
+        let isRunning = false;
+        let timerId = null;
+        let audioCtx;
+
+        const displayArea = document.getElementById('display-area');
+        const timeDisplay = document.getElementById('time-display');
+        const statusLabel = document.getElementById('status-label');
+        const setDisplay = document.getElementById('set-display');
+        const setupForm = document.getElementById('setup-form');
+        const activeControls = document.getElementById('active-controls');
+        const pauseBtn = document.getElementById('pause-btn');
+
+        function playBeep(freq = 800, type = 'sine', duration = 0.1) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = type;
+            osc.frequency.value = freq;
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function startTimer() {
+            workTime = parseInt(document.getElementById('work-input').value);
+            restTime = parseInt(document.getElementById('rest-input').value);
+            totalSets = parseInt(document.getElementById('sets-input').value);
+
+            currentSet = 1;
+            isWork = true;
+            timeLeft = 5; // 5s prep time
+            statusLabel.innerText = "GET READY";
+
+            setupForm.classList.add('hidden');
+            activeControls.classList.remove('hidden');
+
+            isRunning = true;
+            timerId = setInterval(tick, 1000);
+            updateUI();
+        }
+
+        function tick() {
+            if (!isRunning) return;
+
+            if (timeLeft > 0) {
+                timeLeft--;
+                if (timeLeft <= 3 && timeLeft > 0) playBeep(600, 'square');
+                if (timeLeft === 0) playBeep(1200, 'square', 0.5);
+            } else {
+                switchPhase();
+            }
+            updateUI();
+        }
+
+        function switchPhase() {
+            if (statusLabel.innerText === "GET READY") {
+                // Start first work
+                isWork = true;
+                timeLeft = workTime;
+            } else if (isWork) {
+                // Work done, go to rest
+                if (currentSet === totalSets) {
+                    finish();
+                    return;
+                }
+                isWork = false;
+                timeLeft = restTime;
+            } else {
+                // Rest done, go to work
+                isWork = true;
+                currentSet++;
+                timeLeft = workTime;
+            }
+        }
+
+        function updateUI() {
+            const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const secs = (timeLeft % 60).toString().padStart(2, '0');
+            timeDisplay.innerText = `${mins}:${secs}`;
+
+            setDisplay.innerText = `Set ${currentSet}/${totalSets}`;
+
+            if (statusLabel.innerText === "GET READY") {
+                displayArea.className = "h-64 flex flex-col items-center justify-center relative transition-colors duration-500 bg-yellow-600";
+            } else if (isWork) {
+                statusLabel.innerText = "WORK 🔥";
+                displayArea.className = "h-64 flex flex-col items-center justify-center relative transition-colors duration-500 bg-green-600";
+            } else {
+                statusLabel.innerText = "REST 😌";
+                displayArea.className = "h-64 flex flex-col items-center justify-center relative transition-colors duration-500 bg-blue-600";
+            }
+        }
+
+        function togglePause() {
+            isRunning = !isRunning;
+            pauseBtn.innerText = isRunning ? "暂停" : "继续";
+        }
+
+        function resetTimer() {
+            clearInterval(timerId);
+            isRunning = false;
+            setupForm.classList.remove('hidden');
+            activeControls.classList.add('hidden');
+            displayArea.className = "h-64 flex flex-col items-center justify-center relative transition-colors duration-500 bg-gray-800";
+            statusLabel.innerText = "准备";
+            timeDisplay.innerText = "00:00";
+        }
+
+        function finish() {
+            clearInterval(timerId);
+            isRunning = false;
+            statusLabel.innerText = "COMPLETED 🎉";
+            displayArea.className = "h-64 flex flex-col items-center justify-center relative transition-colors duration-500 bg-purple-600";
+            playBeep(800, 'sine', 0.2);
+            setTimeout(() => playBeep(1000, 'sine', 0.4), 200);
+            setTimeout(() => playBeep(1200, 'sine', 0.8), 400);
+        }
+    </script>
+</body>
+
+</html>

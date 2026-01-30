@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neumorphism 生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type=range] {
+            height: 4px;
+            border-radius: 2px;
+            background: #cbd5e1;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col md:flex-row transition-colors duration-300" id="body"
+    style="background-color: #e0e5ec;">
+
+    <!-- Preview Area -->
+    <div class="flex-1 flex flex-col items-center justify-center p-8">
+
+        <div id="preview-box"
+            class="w-64 h-64 rounded-[50px] flex items-center justify-center text-slate-400 font-bold text-2xl transition-all duration-300">
+            Soft UI
+        </div>
+
+    </div>
+
+    <!-- Controls -->
+    <div
+        class="w-full md:w-96 bg-white/50 backdrop-blur border-l border-white/20 p-8 flex flex-col gap-6 shadow-xl z-10 h-auto md:h-screen overflow-y-auto">
+
+        <header class="flex justify-between items-center mb-4">
+            <h1 class="text-xl font-bold text-slate-700">Neumorphism</h1>
+            <a href="./navigation.html" class="text-xs text-slate-400 hover:text-blue-600">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Base Color</label>
+                <div class="flex gap-2 items-center">
+                    <input type="color" id="base-color" value="#e0e5ec"
+                        class="w-full h-10 rounded cursor-pointer border-0" oninput="update()">
+                    <span id="color-val" class="text-xs font-mono text-slate-500">#E0E5EC</span>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Size</label>
+                <input type="range" id="size" min="100" max="400" value="256" class="w-full" oninput="update()">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Distance</label>
+                <input type="range" id="distance" min="5" max="50" value="20" class="w-full" oninput="update()">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Blur</label>
+                <input type="range" id="blur" min="0" max="100" value="60" class="w-full" oninput="update()">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Shape</label>
+                <div class="flex gap-2">
+                    <button onclick="setShape('flat')"
+                        class="flex-1 py-2 bg-white/50 rounded text-xs font-bold text-slate-600 hover:bg-white shadow-sm transition">Flat</button>
+                    <button onclick="setShape('concave')"
+                        class="flex-1 py-2 bg-white/50 rounded text-xs font-bold text-slate-600 hover:bg-white shadow-sm transition">Concave</button>
+                    <button onclick="setShape('convex')"
+                        class="flex-1 py-2 bg-white/50 rounded text-xs font-bold text-slate-600 hover:bg-white shadow-sm transition">Convex</button>
+                    <button onclick="setShape('inset')"
+                        class="flex-1 py-2 bg-white/50 rounded text-xs font-bold text-slate-600 hover:bg-white shadow-sm transition">Inset</button>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 p-4 rounded-xl relative group mt-4">
+                <code id="css-code" class="text-[10px] text-green-400 font-mono break-all block leading-relaxed">
+                    /* CSS Code */
+                </code>
+                <button onclick="copyCSS()"
+                    class="absolute top-2 right-2 text-[10px] bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded">Copy</button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const box = document.getElementById('preview-box');
+        const body = document.getElementById('body');
+        const colorInput = document.getElementById('base-color');
+        const codeEl = document.getElementById('css-code');
+
+        let shape = 'flat';
+
+        function update() {
+            const color = colorInput.value;
+            const size = document.getElementById('size').value;
+            const distance = parseInt(document.getElementById('distance').value);
+            const blur = parseInt(document.getElementById('blur').value);
+
+            // Background update
+            body.style.backgroundColor = color;
+            document.getElementById('color-val').innerText = color.toUpperCase();
+
+            // Box Size
+            box.style.width = size + 'px';
+            box.style.height = size + 'px';
+            box.style.backgroundColor = color; // Base color
+
+            // Calculate Shadow Colors (Lighter and Darker)
+            const lightColor = adjustColor(color, 15);
+            const darkColor = adjustColor(color, -15);
+
+            let shadow = '';
+            let gradient = '';
+
+            if (shape === 'flat') {
+                shadow = `${distance}px ${distance}px ${blur}px ${darkColor}, -${distance}px -${distance}px ${blur}px ${lightColor}`;
+                gradient = `linear-gradient(145deg, ${color}, ${color})`; // No gradient for flat really, or subtle
+            } else if (shape === 'concave') {
+                shadow = `${distance}px ${distance}px ${blur}px ${darkColor}, -${distance}px -${distance}px ${blur}px ${lightColor}`;
+                gradient = `linear-gradient(145deg, ${adjustColor(color, -5)}, ${adjustColor(color, 5)})`;
+            } else if (shape === 'convex') {
+                shadow = `${distance}px ${distance}px ${blur}px ${darkColor}, -${distance}px -${distance}px ${blur}px ${lightColor}`;
+                gradient = `linear-gradient(145deg, ${adjustColor(color, 5)}, ${adjustColor(color, -5)})`;
+            } else if (shape === 'inset') {
+                shadow = `inset ${distance}px ${distance}px ${blur}px ${darkColor}, inset -${distance}px -${distance}px ${blur}px ${lightColor}`;
+                gradient = 'none';
+            }
+
+            box.style.boxShadow = shadow;
+            box.style.background = gradient !== 'none' ? gradient : color;
+
+            codeEl.innerText = `border-radius: 50px;
+background: ${gradient !== 'none' ? gradient : color};
+box-shadow: ${shadow};`;
+        }
+
+        function setShape(s) {
+            shape = s;
+            update();
+        }
+
+        // Helper to lighten/darken hex
+        function adjustColor(hex, amount) {
+            return '#' + hex.replace(/^#/, '').replace(/../g, color => ('0' + Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)).substr(-2));
+        }
+
+        function copyCSS() {
+            navigator.clipboard.writeText(codeEl.innerText);
+            alert("CSS 已复制!");
+        }
+
+        update();
+    </script>
+</body>
+
+</html>

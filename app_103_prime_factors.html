@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>质因数分解器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tree-line {
+            width: 2px;
+            background-color: #cbd5e1;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+
+<body class="bg-indigo-50 min-h-screen flex flex-col items-center p-6 text-slate-700">
+
+    <div class="w-full max-w-xl bg-white p-8 rounded-2xl shadow-xl border border-indigo-100 mt-10">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-indigo-800">Prime Factorizer</h1>
+            <a href="./navigation.html" class="text-sm text-indigo-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="flex gap-4 mb-8">
+            <input type="number" id="input-num"
+                class="flex-1 p-3 border border-indigo-200 rounded-xl text-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="输入整数 (e.g. 120)" onkeypress="if(event.key==='Enter') calculate()">
+            <button onclick="calculate()"
+                class="bg-indigo-600 text-white px-6 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg">分解</button>
+        </div>
+
+        <div id="result-area" class="hidden text-center">
+            <p class="text-slate-400 text-sm mb-2 uppercase font-bold tracking-widest">Result</p>
+            <div class="text-4xl font-mono font-bold text-indigo-600 mb-6 break-words" id="result-str">
+                2 × 2 × 2 × 3 × 5
+            </div>
+
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 inline-block text-left">
+                <span class="text-xs text-slate-400 block mb-1">JSON 格式</span>
+                <code class="text-sm font-mono text-slate-600" id="result-json">{"2": 3, "3": 1, "5": 1}</code>
+            </div>
+        </div>
+
+        <!-- Factor Tree Visualization (Simple CSS) -->
+        <div id="tree-viz" class="mt-8 flex flex-col items-center">
+            <!-- Injected by JS -->
+        </div>
+
+    </div>
+
+    <script>
+        function calculate() {
+            const input = document.getElementById('input-num');
+            let n = parseInt(input.value);
+
+            if (isNaN(n) || n < 2) {
+                alert("请输入大于 1 的整数");
+                return;
+            }
+            if (n > 1000000000000) {
+                alert("数字太大了，请手下留情！");
+                return;
+            }
+
+            const factors = [];
+            const originalN = n;
+
+            // Factorize
+            // Check 2
+            while (n % 2 === 0) {
+                factors.push(2);
+                n /= 2;
+            }
+            // Check odds
+            for (let i = 3; i * i <= n; i += 2) {
+                while (n % i === 0) {
+                    factors.push(i);
+                    n /= i;
+                }
+            }
+            // If n > 2 remaining
+            if (n > 2) {
+                factors.push(n);
+            }
+
+            // Display String
+            document.getElementById('result-str').innerText = factors.join(' × ');
+
+            // Display JSON (Count frequency)
+            const counts = {};
+            factors.forEach(f => {
+                counts[f] = (counts[f] || 0) + 1;
+            });
+            document.getElementById('result-json').innerText = JSON.stringify(counts).replace(/,/g, ', ');
+
+            document.getElementById('result-area').classList.remove('hidden');
+
+            // Simple Tree Viz (Recursive div structure is hard to center perfectly without a library,
+            // we will show a linear step-down list)
+
+            const tree = document.getElementById('tree-viz');
+            tree.innerHTML = '';
+
+            let current = originalN;
+            factors.forEach((f, index) => {
+                if (index === factors.length - 1) return; // Last one is the final leaf
+
+                // Node
+                const node = document.createElement('div');
+                node.className = 'bg-white border border-indigo-200 px-4 py-2 rounded shadow text-lg font-bold mb-1';
+                node.innerText = current;
+                tree.appendChild(node);
+
+                // Split
+                const split = document.createElement('div');
+                split.className = 'flex flex-col items-center my-1';
+                split.innerHTML = `
+                    <div class="h-4 w-px bg-indigo-300"></div>
+                    <div class="flex gap-8 text-sm text-indigo-500 font-bold">
+                        <span>÷ ${f}</span>
+                    </div>
+                    <div class="h-4 w-px bg-indigo-300"></div>
+                `;
+                tree.appendChild(split);
+
+                current /= f;
+            });
+
+            // Final Node
+            const finalNode = document.createElement('div');
+            finalNode.className = 'bg-indigo-100 border border-indigo-300 px-4 py-2 rounded shadow text-lg font-bold text-indigo-700';
+            finalNode.innerText = 1; // Actually math ends at 1 usually in visual trees
+            // Or typically tree shows factors as leaves.
+            // Let's simplify: Show just the equation is best for utility.
+            // The list above is "Division Step Down".
+
+            const endNode = document.createElement('div');
+            endNode.className = 'bg-white border border-indigo-200 px-4 py-2 rounded shadow text-lg font-bold';
+            endNode.innerText = current; // Should be the last factor
+            tree.appendChild(endNode);
+        }
+    </script>
+</body>
+
+</html>

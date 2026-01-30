@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndexedDB 浏览器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-stone-50 min-h-screen p-6 font-sans text-stone-800">
+
+    <div class="w-full max-w-4xl mx-auto">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold flex items-center gap-2 text-stone-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-orange-500" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                </svg>
+                IndexedDB Manager
+            </h1>
+            <a href="./navigation.html" class="text-sm text-stone-400 hover:text-orange-600">退出</a>
+        </header>
+
+        <!-- Form -->
+        <div
+            class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 mb-6 flex flex-col md:flex-row gap-4 items-end">
+            <div class="flex-1 w-full">
+                <label class="text-xs font-bold text-stone-400 uppercase mb-1 block">Name</label>
+                <input type="text" id="input-name"
+                    class="w-full p-2 border border-stone-300 rounded outline-none focus:border-orange-500"
+                    placeholder="Alice">
+            </div>
+            <div class="flex-1 w-full">
+                <label class="text-xs font-bold text-stone-400 uppercase mb-1 block">Email</label>
+                <input type="email" id="input-email"
+                    class="w-full p-2 border border-stone-300 rounded outline-none focus:border-orange-500"
+                    placeholder="alice@example.com">
+            </div>
+            <button onclick="addItem()"
+                class="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded font-bold transition w-full md:w-auto">Add
+                Data</button>
+        </div>
+
+        <!-- Table -->
+        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-stone-100 text-stone-500 font-bold uppercase text-xs">
+                    <tr>
+                        <th class="px-6 py-3">ID</th>
+                        <th class="px-6 py-3">Name</th>
+                        <th class="px-6 py-3">Email</th>
+                        <th class="px-6 py-3 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="db-list" class="divide-y divide-stone-100">
+                    <!-- Rows injected here -->
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 text-center text-stone-400">Loading DB...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+        let db;
+        const dbName = 'MyTestDB';
+        const storeName = 'users';
+
+        // Init DB
+        const request = indexedDB.open(dbName, 1);
+
+        request.onerror = (event) => {
+            console.error("Database error: " + event.target.errorCode);
+        };
+
+        request.onupgradeneeded = (event) => {
+            db = event.target.result;
+            // Create object store with autoIncrement key
+            const objectStore = db.createObjectStore(storeName, { keyPath: "id", autoIncrement: true });
+            objectStore.createIndex("name", "name", { unique: false });
+            objectStore.createIndex("email", "email", { unique: true });
+        };
+
+        request.onsuccess = (event) => {
+            db = event.target.result;
+            loadData();
+        };
+
+        function addItem() {
+            const name = document.getElementById('input-name').value;
+            const email = document.getElementById('input-email').value;
+
+            if (!name || !email) return;
+
+            const transaction = db.transaction([storeName], "readwrite");
+            const objectStore = transaction.objectStore(storeName);
+
+            const request = objectStore.add({ name: name, email: email });
+
+            request.onsuccess = () => {
+                document.getElementById('input-name').value = '';
+                document.getElementById('input-email').value = '';
+                loadData();
+            };
+
+            request.onerror = () => {
+                alert("添加失败，可能是 Email 重复？");
+            };
+        }
+
+        function deleteItem(id) {
+            const transaction = db.transaction([storeName], "readwrite");
+            const objectStore = transaction.objectStore(storeName);
+            const request = objectStore.delete(id);
+
+            request.onsuccess = () => {
+                loadData();
+            };
+        }
+
+        function loadData() {
+            const list = document.getElementById('db-list');
+            list.innerHTML = '';
+
+            const objectStore = db.transaction(storeName).objectStore(storeName);
+
+            objectStore.openCursor().onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-stone-50";
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 font-mono text-xs text-stone-400">#${cursor.key}</td>
+                        <td class="px-6 py-4 font-bold text-stone-700">${cursor.value.name}</td>
+                        <td class="px-6 py-4 text-stone-600">${cursor.value.email}</td>
+                        <td class="px-6 py-4 text-right">
+                            <button onclick="deleteItem(${cursor.key})" class="text-red-400 hover:text-red-600 font-bold text-xs">Delete</button>
+                        </td>
+                    `;
+                    list.appendChild(tr);
+                    cursor.continue();
+                } else {
+                    if (list.children.length === 0) {
+                        list.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-stone-400">暂无数据</td></tr>';
+                    }
+                }
+            };
+        }
+    </script>
+</body>
+
+</html>

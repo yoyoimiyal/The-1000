@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文字转语音朗读</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-orange-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-2xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-orange-700 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+                Text to Speech
+            </h1>
+            <a href="./navigation.html" class="text-sm text-orange-400 hover:text-orange-600">退出</a>
+        </header>
+
+        <div class="bg-white p-6 rounded-2xl shadow-xl border border-orange-100">
+
+            <textarea id="text-input"
+                class="w-full h-40 p-4 bg-orange-50/50 border border-orange-200 rounded-xl resize-none outline-none focus:ring-2 focus:ring-orange-400 text-lg leading-relaxed mb-6 placeholder-orange-300"
+                placeholder="在此输入需要朗读的文字..."></textarea>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- Voice Select -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">选择语音 (Voice)</label>
+                    <select id="voice-select"
+                        class="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm outline-none">
+                        <option>加载中...</option>
+                    </select>
+                </div>
+
+                <!-- Sliders -->
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-1">
+                            <span>语速 (Rate)</span>
+                            <span id="rate-val">1x</span>
+                        </div>
+                        <input type="range" id="rate" min="0.5" max="2" value="1" step="0.1"
+                            class="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                            oninput="updateVal('rate')">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-1">
+                            <span>音调 (Pitch)</span>
+                            <span id="pitch-val">1</span>
+                        </div>
+                        <input type="range" id="pitch" min="0" max="2" value="1" step="0.1"
+                            class="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                            oninput="updateVal('pitch')">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <button onclick="speak()" id="btn-speak"
+                    class="flex-1 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    朗读
+                </button>
+                <button onclick="stop()"
+                    class="w-16 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl transition flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                    </svg>
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const synth = window.speechSynthesis;
+        const textInput = document.getElementById('text-input');
+        const voiceSelect = document.getElementById('voice-select');
+        const rateInput = document.getElementById('rate');
+        const pitchInput = document.getElementById('pitch');
+        const btnSpeak = document.getElementById('btn-speak');
+
+        let voices = [];
+
+        function loadVoices() {
+            voices = synth.getVoices().sort((a, b) => {
+                const aname = a.name.toUpperCase();
+                const bname = b.name.toUpperCase();
+                if (aname < bname) return -1;
+                else if (aname == bname) return 0;
+                else return +1;
+            });
+
+            voiceSelect.innerHTML = '';
+
+            // Prioritize Chinese
+            const zhVoices = voices.filter(v => v.lang.includes('zh'));
+            const otherVoices = voices.filter(v => !v.lang.includes('zh'));
+            const sortedVoices = [...zhVoices, ...otherVoices];
+
+            sortedVoices.forEach(voice => {
+                const option = document.createElement('option');
+                option.textContent = `${voice.name} (${voice.lang})`;
+                option.value = voice.name; // Use name as ID
+                voiceSelect.appendChild(option);
+            });
+        }
+
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = loadVoices;
+        }
+        // Initial load try
+        setTimeout(loadVoices, 100);
+
+        function speak() {
+            if (synth.speaking) {
+                console.error('speechSynthesis.speaking');
+                return;
+            }
+            if (textInput.value !== '') {
+                const utterThis = new SpeechSynthesisUtterance(textInput.value);
+                const selectedOption = voiceSelect.selectedOptions[0].value;
+
+                const selectedVoice = voices.find(v => v.name === selectedOption);
+                if (selectedVoice) utterThis.voice = selectedVoice;
+
+                utterThis.pitch = pitchInput.value;
+                utterThis.rate = rateInput.value;
+
+                utterThis.onstart = () => {
+                    btnSpeak.innerText = "播放中...";
+                    btnSpeak.classList.replace('bg-orange-500', 'bg-orange-400');
+                };
+
+                utterThis.onend = () => {
+                    btnSpeak.innerText = "朗读";
+                    btnSpeak.classList.replace('bg-orange-400', 'bg-orange-500');
+                };
+
+                utterThis.onerror = (e) => {
+                    console.error('Speech synthesis error', e);
+                    btnSpeak.innerText = "朗读";
+                    btnSpeak.classList.replace('bg-orange-400', 'bg-orange-500');
+                };
+
+                synth.speak(utterThis);
+            }
+        }
+
+        function stop() {
+            if (synth.speaking) {
+                synth.cancel();
+            }
+        }
+
+        function updateVal(type) {
+            const val = document.getElementById(type).value;
+            document.getElementById(`${type}-val`).innerText = val + (type === 'rate' ? 'x' : '');
+        }
+    </script>
+</body>
+
+</html>

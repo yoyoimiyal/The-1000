@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高级番茄钟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-red-50 min-h-screen flex p-6 gap-6 font-sans text-slate-800 flex-col md:flex-row">
+
+    <!-- Timer Panel -->
+    <div class="w-full md:w-1/2 flex flex-col items-center justify-center bg-white p-8 rounded-3xl shadow-xl border border-red-100 relative overflow-hidden transition-colors duration-500"
+        id="timer-bg">
+        <div class="absolute inset-0 bg-red-500 opacity-5 pointer-events-none" id="bg-overlay"></div>
+
+        <div class="z-10 text-center">
+            <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4" id="mode-label">Focus Time</h2>
+            <div class="text-8xl font-bold text-slate-700 font-mono mb-8" id="timer">25:00</div>
+
+            <div class="flex gap-4 justify-center">
+                <button onclick="toggleTimer()" id="main-btn"
+                    class="bg-red-500 hover:bg-red-600 text-white px-8 py-3 rounded-full font-bold shadow-lg transition transform active:scale-95 text-lg">开始</button>
+                <button onclick="skip()"
+                    class="bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 px-6 py-3 rounded-full font-bold transition">跳过</button>
+            </div>
+        </div>
+
+        <div class="mt-12 w-full max-w-xs">
+            <p class="text-center text-xs text-slate-400 mb-2">当前任务</p>
+            <div class="bg-white/50 backdrop-blur border border-slate-200 p-3 rounded-xl text-center font-medium truncate"
+                id="current-task-display">
+                (无任务)
+            </div>
+        </div>
+    </div>
+
+    <!-- Task List & Stats -->
+    <div class="w-full md:w-1/2 flex flex-col gap-6">
+
+        <!-- Stats -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm flex justify-between items-center">
+            <div>
+                <p class="text-xs text-slate-400 uppercase font-bold">今日专注</p>
+                <p class="text-2xl font-bold text-red-500"><span id="total-focus">0</span> 分钟</p>
+            </div>
+            <div>
+                <p class="text-xs text-slate-400 uppercase font-bold">完成番茄</p>
+                <p class="text-2xl font-bold text-red-500"><span id="tomatoes">0</span> 个</p>
+            </div>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-red-500 underline">退出</a>
+        </div>
+
+        <!-- Tasks -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm flex-1 flex flex-col min-h-[300px]">
+            <h3 class="font-bold text-slate-700 mb-4">待办事项</h3>
+
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="new-task"
+                    class="flex-1 border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-red-400"
+                    placeholder="添加新任务..." onkeypress="if(event.key==='Enter') addTask()">
+                <button onclick="addTask()"
+                    class="bg-red-100 text-red-600 px-4 py-2 rounded-lg font-bold hover:bg-red-200">+</button>
+            </div>
+
+            <ul id="task-list" class="space-y-2 overflow-y-auto flex-1 pr-2">
+                <!-- Tasks injected here -->
+            </ul>
+        </div>
+
+    </div>
+
+    <script>
+        // State
+        let timeLeft = 25 * 60;
+        let isRunning = false;
+        let isFocusMode = true; // true=focus, false=break
+        let timerId = null;
+        let activeTaskId = null;
+        let tasks = JSON.parse(localStorage.getItem('pomo_tasks') || '[]');
+        let stats = JSON.parse(localStorage.getItem('pomo_stats') || '{"mins":0, "count":0}');
+
+        // UI
+        const timerEl = document.getElementById('timer');
+        const mainBtn = document.getElementById('main-btn');
+        const modeLabel = document.getElementById('mode-label');
+        const timerBg = document.getElementById('timer-bg');
+        const taskListEl = document.getElementById('task-list');
+        const currentTaskEl = document.getElementById('current-task-display');
+        const totalFocusEl = document.getElementById('total-focus');
+        const tomatoesEl = document.getElementById('tomatoes');
+
+        function init() {
+            renderTasks();
+            updateStats();
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const s = (timeLeft % 60).toString().padStart(2, '0');
+            timerEl.innerText = `${m}:${s}`;
+        }
+
+        function toggleTimer() {
+            if (isRunning) {
+                clearInterval(timerId);
+                isRunning = false;
+                mainBtn.innerText = "继续";
+                mainBtn.classList.replace('bg-yellow-500', isFocusMode ? 'bg-red-500' : 'bg-green-500');
+            } else {
+                isRunning = true;
+                mainBtn.innerText = "暂停";
+                mainBtn.classList.replace(isFocusMode ? 'bg-red-500' : 'bg-green-500', 'bg-yellow-500');
+                timerId = setInterval(tick, 1000);
+            }
+        }
+
+        function tick() {
+            if (timeLeft > 0) {
+                timeLeft--;
+                updateDisplay();
+                // Record stats if focus mode
+                if (isFocusMode && timeLeft % 60 === 0) {
+                    stats.mins++;
+                    updateStats();
+                }
+            } else {
+                completePhase();
+            }
+        }
+
+        function completePhase() {
+            clearInterval(timerId);
+            isRunning = false;
+
+            if (isFocusMode) {
+                // Focus done
+                stats.count++;
+                updateStats();
+                alert("专注结束！休息一下吧。");
+                isFocusMode = false;
+                timeLeft = 5 * 60;
+                setTheme('break');
+            } else {
+                // Break done
+                alert("休息结束！准备开始新一轮专注。");
+                isFocusMode = true;
+                timeLeft = 25 * 60;
+                setTheme('focus');
+            }
+            updateDisplay();
+            mainBtn.innerText = "开始";
+        }
+
+        function skip() {
+            clearInterval(timerId);
+            isRunning = false;
+            if (isFocusMode) {
+                isFocusMode = false;
+                timeLeft = 5 * 60;
+                setTheme('break');
+            } else {
+                isFocusMode = true;
+                timeLeft = 25 * 60;
+                setTheme('focus');
+            }
+            updateDisplay();
+            mainBtn.innerText = "开始";
+        }
+
+        function setTheme(mode) {
+            if (mode === 'focus') {
+                modeLabel.innerText = "Focus Time";
+                timerBg.classList.replace('border-green-100', 'border-red-100');
+                document.getElementById('bg-overlay').classList.replace('bg-green-500', 'bg-red-500');
+                mainBtn.classList.remove('bg-green-500', 'hover:bg-green-600', 'bg-yellow-500');
+                mainBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+            } else {
+                modeLabel.innerText = "Break Time";
+                timerBg.classList.replace('border-red-100', 'border-green-100');
+                document.getElementById('bg-overlay').classList.replace('bg-red-500', 'bg-green-500');
+                mainBtn.classList.remove('bg-red-500', 'hover:bg-red-600', 'bg-yellow-500');
+                mainBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+            }
+        }
+
+        function addTask() {
+            const input = document.getElementById('new-task');
+            const text = input.value.trim();
+            if (text) {
+                tasks.push({ id: Date.now(), text: text, done: false });
+                saveData();
+                renderTasks();
+                input.value = '';
+            }
+        }
+
+        function toggleTask(id) {
+            const t = tasks.find(x => x.id === id);
+            if (t) {
+                t.done = !t.done;
+                saveData();
+                renderTasks();
+            }
+        }
+
+        function selectTask(id) {
+            activeTaskId = id;
+            const t = tasks.find(x => x.id === id);
+            currentTaskEl.innerText = t ? t.text : "(无任务)";
+            renderTasks(); // Update highlight
+        }
+
+        function deleteTask(id, e) {
+            e.stopPropagation();
+            tasks = tasks.filter(x => x.id !== id);
+            if (activeTaskId === id) {
+                activeTaskId = null;
+                currentTaskEl.innerText = "(无任务)";
+            }
+            saveData();
+            renderTasks();
+        }
+
+        function renderTasks() {
+            taskListEl.innerHTML = '';
+            tasks.forEach(t => {
+                const li = document.createElement('li');
+                const isActive = t.id === activeTaskId;
+                li.className = `flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-slate-50 transition ${isActive ? 'border-red-400 bg-red-50' : 'border-slate-100'}`;
+                li.onclick = () => selectTask(t.id);
+                li.innerHTML = `
+                    <input type="checkbox" ${t.done ? 'checked' : ''} class="w-4 h-4 text-red-500 rounded focus:ring-0" onclick="event.stopPropagation(); toggleTask(${t.id})">
+                    <span class="flex-1 text-sm ${t.done ? 'line-through text-gray-400' : 'text-gray-700'}">${t.text}</span>
+                    <button class="text-gray-300 hover:text-red-500 px-2" onclick="deleteTask(${t.id}, event)">×</button>
+                `;
+                taskListEl.appendChild(li);
+            });
+        }
+
+        function updateStats() {
+            totalFocusEl.innerText = stats.mins;
+            tomatoesEl.innerText = stats.count;
+            localStorage.setItem('pomo_stats', JSON.stringify(stats));
+        }
+
+        function saveData() {
+            localStorage.setItem('pomo_tasks', JSON.stringify(tasks));
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
