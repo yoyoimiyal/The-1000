@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPS 手速测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .ripple {
+            animation: ripple 0.6s linear;
+        }
+
+        @keyframes ripple {
+            from {
+                transform: scale(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        .shake {
+            animation: shake 0.2s ease-in-out;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-5px);
+            }
+
+            75% {
+                transform: translateX(5px);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800 select-none">
+
+    <div class="w-full max-w-md text-center">
+
+        <header class="mb-10 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-black text-indigo-900 uppercase italic">CPS Test</h1>
+                <p class="text-xs text-slate-500 font-bold">Clicks Per Second</p>
+            </div>
+            <a href="./navigation.html"
+                class="text-xs border border-gray-300 px-3 py-1 rounded text-gray-500 hover:bg-gray-200 transition">EXIT</a>
+        </header>
+
+        <div class="mb-8 flex justify-center gap-8">
+            <div class="bg-white p-4 rounded-2xl shadow-sm w-32 border border-indigo-50">
+                <p class="text-xs font-bold text-slate-400 uppercase">Timer</p>
+                <p class="text-4xl font-mono font-bold text-slate-800" id="time">10.00</p>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm w-32 border border-indigo-50">
+                <p class="text-xs font-bold text-slate-400 uppercase">Score</p>
+                <p class="text-4xl font-mono font-bold text-indigo-600" id="score">0</p>
+            </div>
+        </div>
+
+        <button id="click-area"
+            class="w-64 h-64 bg-indigo-600 rounded-full shadow-2xl flex items-center justify-center text-white font-bold text-2xl relative overflow-hidden active:scale-95 transition-transform mx-auto border-8 border-indigo-100 outline-none"
+            onmousedown="clickBtn(event)">
+            <span class="pointer-events-none relative z-10" id="btn-text">CLICK!</span>
+        </button>
+
+        <div class="mt-10 h-16">
+            <div id="result-area" class="hidden animate-bounce">
+                <p class="text-sm font-bold text-slate-500 uppercase">Result</p>
+                <p class="text-5xl font-black text-green-500"><span id="final-cps">0</span> CPS</p>
+                <button onclick="reset()" class="mt-4 text-xs font-bold text-indigo-500 hover:underline">Try
+                    Again</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const timeEl = document.getElementById('time');
+        const scoreEl = document.getElementById('score');
+        const btn = document.getElementById('click-area');
+        const btnText = document.getElementById('btn-text');
+        const resArea = document.getElementById('result-area');
+        const cpsEl = document.getElementById('final-cps');
+
+        let score = 0;
+        let timeLeft = 10.00;
+        let isRunning = false;
+        let timerId;
+
+        function clickBtn(e) {
+            if (timeLeft <= 0) return;
+
+            if (!isRunning) {
+                start();
+            }
+
+            score++;
+            scoreEl.innerText = score;
+
+            // Visual FX
+            const ripple = document.createElement('div');
+            ripple.className = 'absolute bg-white/30 rounded-full w-20 h-20 pointer-events-none ripple';
+            const rect = btn.getBoundingClientRect();
+            ripple.style.left = (e.clientX - rect.left - 40) + 'px';
+            ripple.style.top = (e.clientY - rect.top - 40) + 'px';
+            btn.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
+        }
+
+        function start() {
+            isRunning = true;
+            score = 0;
+            scoreEl.innerText = 0;
+            btnText.innerText = "GO!";
+            resArea.classList.add('hidden');
+
+            const startTimestamp = Date.now();
+
+            timerId = setInterval(() => {
+                const now = Date.now();
+                const elapsed = (now - startTimestamp) / 1000;
+                timeLeft = Math.max(0, 10 - elapsed);
+
+                timeEl.innerText = timeLeft.toFixed(2);
+
+                if (timeLeft <= 0) {
+                    finish();
+                }
+            }, 10);
+        }
+
+        function finish() {
+            clearInterval(timerId);
+            isRunning = false;
+            timeLeft = 0;
+            timeEl.innerText = "0.00";
+            btnText.innerText = "DONE";
+
+            const cps = (score / 10).toFixed(2);
+            cpsEl.innerText = cps;
+            resArea.classList.remove('hidden');
+
+            btn.classList.add('bg-gray-400', 'border-gray-200');
+            btn.classList.remove('bg-indigo-600', 'border-indigo-100');
+        }
+
+        function reset() {
+            timeLeft = 10.00;
+            score = 0;
+            timeEl.innerText = "10.00";
+            scoreEl.innerText = "0";
+            resArea.classList.add('hidden');
+            btnText.innerText = "CLICK!";
+
+            btn.classList.remove('bg-gray-400', 'border-gray-200');
+            btn.classList.add('bg-indigo-600', 'border-indigo-100');
+        }
+    </script>
+</body>
+
+</html>

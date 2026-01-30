@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>色彩理论生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- TinyColor for easy manipulation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinycolor/1.4.2/tinycolor.min.js"></script>
+    <style>
+        .swatch {
+            transition: transform 0.1s;
+            cursor: pointer;
+        }
+
+        .swatch:hover {
+            transform: scale(1.05);
+            z-index: 10;
+            border: 2px solid white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-3xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-700">
+                <span class="text-2xl">🎨</span> Color Harmony
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <!-- Main Input -->
+        <div
+            class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 flex flex-col items-center text-center">
+            <label class="text-xs font-bold text-slate-400 uppercase mb-2">主色 (Base Color)</label>
+            <div class="relative w-full max-w-xs">
+                <input type="color" id="base-color" value="#4f46e5"
+                    class="w-full h-16 rounded-xl cursor-pointer p-0 border-0" oninput="update()">
+                <p id="base-hex" class="mt-2 font-mono font-bold text-lg text-slate-700">#4F46E5</p>
+            </div>
+            <div id="toast" class="mt-2 text-xs font-bold text-green-600 opacity-0 transition-opacity">已复制到剪贴板</div>
+        </div>
+
+        <!-- Palettes -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- Complementary -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <h3 class="text-xs font-bold text-slate-400 uppercase mb-3">互补色 (Complementary)</h3>
+                <div class="flex h-16 rounded-lg overflow-hidden" id="p-comp"></div>
+            </div>
+
+            <!-- Analogous -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <h3 class="text-xs font-bold text-slate-400 uppercase mb-3">近似色 (Analogous)</h3>
+                <div class="flex h-16 rounded-lg overflow-hidden" id="p-ana"></div>
+            </div>
+
+            <!-- Triadic -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <h3 class="text-xs font-bold text-slate-400 uppercase mb-3">三角色 (Triadic)</h3>
+                <div class="flex h-16 rounded-lg overflow-hidden" id="p-tri"></div>
+            </div>
+
+            <!-- Split Complementary -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <h3 class="text-xs font-bold text-slate-400 uppercase mb-3">分裂互补 (Split-Comp)</h3>
+                <div class="flex h-16 rounded-lg overflow-hidden" id="p-split"></div>
+            </div>
+
+            <!-- Monochromatic -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 md:col-span-2">
+                <h3 class="text-xs font-bold text-slate-400 uppercase mb-3">单色系 (Monochromatic)</h3>
+                <div class="flex h-16 rounded-lg overflow-hidden" id="p-mono"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const baseInput = document.getElementById('base-color');
+        const baseHex = document.getElementById('base-hex');
+        const toast = document.getElementById('toast');
+
+        function update() {
+            const hex = baseInput.value;
+            baseHex.innerText = hex.toUpperCase();
+            const color = tinycolor(hex);
+
+            // Complementary: 180 deg
+            const comp = color.complement().toHexString();
+            renderPalette('p-comp', [hex, comp]);
+
+            // Analogous: +/- 30 deg
+            const ana1 = tinycolor(hex).spin(-30).toHexString();
+            const ana2 = tinycolor(hex).spin(30).toHexString();
+            renderPalette('p-ana', [ana1, hex, ana2]);
+
+            // Triadic: +/- 120 deg
+            const tri1 = tinycolor(hex).spin(120).toHexString();
+            const tri2 = tinycolor(hex).spin(240).toHexString();
+            renderPalette('p-tri', [hex, tri1, tri2]);
+
+            // Split Complementary: 180 +/- 30 deg
+            const split1 = tinycolor(hex).spin(150).toHexString();
+            const split2 = tinycolor(hex).spin(210).toHexString();
+            renderPalette('p-split', [hex, split1, split2]);
+
+            // Monochromatic: Light/Dark variations
+            const m1 = tinycolor(hex).lighten(20).toHexString();
+            const m2 = tinycolor(hex).lighten(40).toHexString();
+            const m3 = tinycolor(hex).darken(20).toHexString();
+            const m4 = tinycolor(hex).darken(40).toHexString();
+            renderPalette('p-mono', [m2, m1, hex, m3, m4]);
+        }
+
+        function renderPalette(id, colors) {
+            const el = document.getElementById(id);
+            el.innerHTML = '';
+            colors.forEach(c => {
+                const div = document.createElement('div');
+                div.className = "flex-1 h-full swatch flex items-center justify-center group relative";
+                div.style.backgroundColor = c;
+                div.onclick = () => copy(c);
+
+                // Tooltip
+                div.innerHTML = `<span class="opacity-0 group-hover:opacity-100 text-[10px] font-bold bg-black/50 text-white px-1 rounded backdrop-blur pointer-events-none">${c.toUpperCase()}</span>`;
+
+                el.appendChild(div);
+            });
+        }
+
+        function copy(text) {
+            navigator.clipboard.writeText(text);
+            toast.style.opacity = '1';
+            setTimeout(() => toast.style.opacity = '0', 1000);
+        }
+
+        // Init
+        update();
+    </script>
+</body>
+
+</html>

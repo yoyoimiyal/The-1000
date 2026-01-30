@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>复古翻页时钟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .flip-card {
+            background-color: #333;
+            width: 100px;
+            height: 120px;
+            border-radius: 10px;
+            font-size: 80px;
+            font-weight: bold;
+            color: #ddd;
+            line-height: 120px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .flip-card::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #111;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body class="bg-stone-900 min-h-screen flex flex-col items-center justify-center select-none">
+
+    <div class="fixed top-4 right-4">
+        <button onclick="toggleFS()"
+            class="text-stone-500 hover:text-white text-xs uppercase font-bold px-4 py-2 border border-stone-700 rounded transition">Fullscreen</button>
+        <a href="./navigation.html"
+            class="text-stone-500 hover:text-white text-xs uppercase font-bold ml-2 px-4 py-2 border border-stone-700 rounded transition">Exit</a>
+    </div>
+
+    <div class="flex gap-4 md:gap-8 scale-75 md:scale-100">
+
+        <!-- Hours -->
+        <div class="flex gap-1">
+            <div class="flip-card" id="h1">0</div>
+            <div class="flip-card" id="h2">0</div>
+        </div>
+
+        <div class="text-6xl font-bold text-stone-600 self-center pb-4">:</div>
+
+        <!-- Minutes -->
+        <div class="flex gap-1">
+            <div class="flip-card" id="m1">0</div>
+            <div class="flip-card" id="m2">0</div>
+        </div>
+
+        <div class="text-6xl font-bold text-stone-600 self-center pb-4">:</div>
+
+        <!-- Seconds -->
+        <div class="flex gap-1">
+            <div class="flip-card" id="s1">0</div>
+            <div class="flip-card" id="s2">0</div>
+        </div>
+
+    </div>
+
+    <p class="mt-12 text-stone-600 text-sm font-mono" id="date-str">Loading...</p>
+
+    <script>
+        function update() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+
+            updateCard('h1', h[0]);
+            updateCard('h2', h[1]);
+            updateCard('m1', m[0]);
+            updateCard('m2', m[1]);
+            updateCard('s1', s[0]);
+            updateCard('s2', s[1]);
+
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('date-str').innerText = now.toLocaleDateString('zh-CN', options);
+        }
+
+        function updateCard(id, val) {
+            const el = document.getElementById(id);
+            if (el.innerText !== val) {
+                // Ideally animate flip here. For MVP, just update.
+                // Simple animation:
+                el.style.transform = 'rotateX(90deg)';
+                el.style.transition = 'transform 0.1s ease-in';
+
+                setTimeout(() => {
+                    el.innerText = val;
+                    el.style.transform = 'rotateX(0deg)';
+                    el.style.transition = 'transform 0.1s ease-out';
+                }, 100);
+            }
+        }
+
+        function toggleFS() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => { });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        setInterval(update, 1000);
+        update();
+    </script>
+</body>
+
+</html>

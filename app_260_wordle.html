@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日猜词 (Wordle)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tile {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: all 0.3s;
+        }
+
+        .tile.filled {
+            border-color: #9ca3af;
+            animation: pop 0.1s;
+        }
+
+        .tile.correct {
+            background-color: #22c55e;
+            border-color: #22c55e;
+            color: white;
+        }
+
+        /* Green */
+        .tile.present {
+            background-color: #eab308;
+            border-color: #eab308;
+            color: white;
+        }
+
+        /* Yellow */
+        .tile.absent {
+            background-color: #64748b;
+            border-color: #64748b;
+            color: white;
+        }
+
+        /* Gray */
+
+        .key-btn {
+            height: 50px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .key-btn.correct {
+            background-color: #22c55e;
+            color: white;
+        }
+
+        .key-btn.present {
+            background-color: #eab308;
+            color: white;
+        }
+
+        .key-btn.absent {
+            background-color: #64748b;
+            color: white;
+        }
+
+        @keyframes pop {
+            50% {
+                transform: scale(1.1);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-white min-h-screen flex flex-col items-center justify-between py-6 select-none">
+
+    <header class="border-b border-gray-100 w-full max-w-md pb-4 flex justify-between items-center px-4">
+        <div class="w-6"></div> <!-- Spacer -->
+        <h1 class="text-3xl font-black tracking-wider">WORDLE</h1>
+        <a href="./navigation.html" class="text-xs text-gray-400 hover:text-black">EXIT</a>
+    </header>
+
+    <div class="flex-1 flex flex-col justify-center gap-1" id="board">
+        <!-- 6 rows x 5 cols injected -->
+    </div>
+
+    <div class="w-full max-w-lg px-2 pb-4">
+        <div class="grid grid-cols-10 gap-1.5 mb-2">
+            <!-- Q W E R T Y U I O P -->
+            <div class="key-btn" data-key="q">Q</div>
+            <div class="key-btn" data-key="w">W</div>
+            <div class="key-btn" data-key="e">E</div>
+            <div class="key-btn" data-key="r">R</div>
+            <div class="key-btn" data-key="t">T</div>
+            <div class="key-btn" data-key="y">Y</div>
+            <div class="key-btn" data-key="u">U</div>
+            <div class="key-btn" data-key="i">I</div>
+            <div class="key-btn" data-key="o">O</div>
+            <div class="key-btn" data-key="p">P</div>
+        </div>
+        <div class="grid grid-cols-9 gap-1.5 mb-2 px-4">
+            <!-- A S D F G H J K L -->
+            <div class="key-btn" data-key="a">A</div>
+            <div class="key-btn" data-key="s">S</div>
+            <div class="key-btn" data-key="d">D</div>
+            <div class="key-btn" data-key="f">F</div>
+            <div class="key-btn" data-key="g">G</div>
+            <div class="key-btn" data-key="h">H</div>
+            <div class="key-btn" data-key="j">J</div>
+            <div class="key-btn" data-key="k">K</div>
+            <div class="key-btn" data-key="l">L</div>
+        </div>
+        <div class="grid grid-cols-[1.5fr_repeat(7,1fr)_1.5fr] gap-1.5">
+            <div class="key-btn text-xs" onclick="enter()">ENTER</div>
+            <div class="key-btn" data-key="z">Z</div>
+            <div class="key-btn" data-key="x">X</div>
+            <div class="key-btn" data-key="c">C</div>
+            <div class="key-btn" data-key="v">V</div>
+            <div class="key-btn" data-key="b">B</div>
+            <div class="key-btn" data-key="n">N</div>
+            <div class="key-btn" data-key="m">M</div>
+            <div class="key-btn text-xs" onclick="del()">⌫</div>
+        </div>
+    </div>
+
+    <script>
+        const words = ["APPLE", "BEACH", "BRAIN", "BREAD", "BRUSH", "CHAIR", "CHEST", "CHORD", "CLICK", "CLOCK", "CLOUD", "DANCE", "DIARY", "DRINK", "DRIVE", "EARTH", "FEAST", "FIELD", "FRUIT", "GLASS", "GRAPE", "GREEN", "GHOST", "HEART", "HOUSE", "IMAGE", "JUICE", "LIGHT", "LEMON", "MELON", "MONEY", "MUSIC", "NIGHT", "OCEAN", "PARTY", "PHONE", "PHOTO", "PIZZA", "PLANT", "POWER", "RADIO", "RIVER", "ROBOT", "SHIRT", "SHOES", "SMILE", "SNAKE", "SPACE", "SPOON", "STORM", "TABLE", "TOAST", "TIGER", "TOOTH", "TOUCH", "TOWEL", "TRUCK", "UNCLE", "VIDEO", "VOICE", "WATER", "WATCH", "WHALE", "WORLD", "WRITE", "YOUTH", "ZEBRA"];
+
+        let secret = words[Math.floor(Math.random() * words.length)];
+        let currentRow = 0;
+        let currentCol = 0;
+        let gameOver = false;
+
+        const rows = 6;
+        const cols = 5;
+        const board = document.getElementById('board');
+
+        // Init Board
+        for (let i = 0; i < rows; i++) {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = "flex gap-1 justify-center";
+            for (let j = 0; j < cols; j++) {
+                const tile = document.createElement('div');
+                tile.className = "tile";
+                tile.id = `tile-${i}-${j}`;
+                rowDiv.appendChild(tile);
+            }
+            board.appendChild(rowDiv);
+        }
+
+        // Keyboard events
+        document.querySelectorAll('.key-btn[data-key]').forEach(btn => {
+            btn.onclick = () => handleKey(btn.dataset.key);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (gameOver) return;
+            const key = e.key.toLowerCase();
+            if (key === 'enter') enter();
+            else if (key === 'backspace') del();
+            else if (/^[a-z]$/.test(key)) handleKey(key);
+        });
+
+        function handleKey(key) {
+            if (currentCol < 5) {
+                const tile = document.getElementById(`tile-${currentRow}-${currentCol}`);
+                tile.innerText = key;
+                tile.classList.add('filled');
+                currentCol++;
+            }
+        }
+
+        function del() {
+            if (currentCol > 0) {
+                currentCol--;
+                const tile = document.getElementById(`tile-${currentRow}-${currentCol}`);
+                tile.innerText = "";
+                tile.classList.remove('filled');
+            }
+        }
+
+        function enter() {
+            if (currentCol < 5) {
+                alert("单词长度不足");
+                return;
+            }
+
+            // Get guess
+            let guess = "";
+            for (let i = 0; i < 5; i++) {
+                guess += document.getElementById(`tile-${currentRow}-${i}`).innerText;
+            }
+            guess = guess.toUpperCase();
+
+            // Check
+            // We use simple logic: Green > Yellow > Gray
+            const secretArr = secret.split('');
+            const guessArr = guess.split('');
+
+            // Mark Correct (Green)
+            const result = new Array(5).fill('absent');
+
+            for (let i = 0; i < 5; i++) {
+                if (guessArr[i] === secretArr[i]) {
+                    result[i] = 'correct';
+                    secretArr[i] = null; // Mark used
+                    guessArr[i] = null;
+                }
+            }
+
+            // Mark Present (Yellow)
+            for (let i = 0; i < 5; i++) {
+                if (guessArr[i] !== null) { // Not matched yet
+                    const idx = secretArr.indexOf(guessArr[i]);
+                    if (idx !== -1) {
+                        result[i] = 'present';
+                        secretArr[idx] = null; // Mark used
+                    }
+                }
+            }
+
+            // Animate & Update
+            result.forEach((status, i) => {
+                setTimeout(() => {
+                    const tile = document.getElementById(`tile-${currentRow}-${i}`);
+                    tile.classList.add(status);
+
+                    // Update Keyboard
+                    const char = tile.innerText.toLowerCase();
+                    const keyBtn = document.querySelector(`.key-btn[data-key="${char}"]`);
+                    if (keyBtn) {
+                        // Priority: correct > present > absent
+                        if (status === 'correct') {
+                            keyBtn.className = `key-btn correct`;
+                        } else if (status === 'present' && !keyBtn.classList.contains('correct')) {
+                            keyBtn.className = `key-btn present`;
+                        } else if (status === 'absent' && !keyBtn.classList.contains('correct') && !keyBtn.classList.contains('present')) {
+                            keyBtn.className = `key-btn absent`;
+                        }
+                    }
+
+                }, i * 200); // Stagger animation
+            });
+
+            if (guess === secret) {
+                setTimeout(() => alert("🎉 恭喜猜中！"), 1500);
+                gameOver = true;
+            } else if (currentRow === 5) {
+                setTimeout(() => alert(`游戏结束！答案是: ${secret}`), 1500);
+                gameOver = true;
+            } else {
+                currentRow++;
+                currentCol = 0;
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -26,7 +26,6 @@
 
         <canvas id="gameCanvas" width="320" height="480"></canvas>
 
-        <!-- UI -->
         <div id="ui-layer"
             class="absolute inset-0 pointer-events-none flex flex-col items-center justify-center text-center">
 
@@ -143,14 +142,14 @@
                 ctx.fillRect(0, canvas.height - this.h, canvas.width, 12);
                 // Striped pattern
                 ctx.fillStyle = "#9ce659";
+                ctx.beginPath();
                 for (let i = this.x % 20; i < canvas.width; i += 20) {
-                    ctx.beginPath();
                     ctx.moveTo(i, canvas.height - this.h);
                     ctx.lineTo(i + 10, canvas.height - this.h);
                     ctx.lineTo(i - 5, canvas.height - this.h + 12);
                     ctx.lineTo(i - 15, canvas.height - this.h + 12);
-                    ctx.fill();
                 }
+                ctx.fill();
             },
             update: function () {
                 if (state.current == state.game) {
@@ -175,7 +174,9 @@
                 for (let i = 0; i < this.position.length; i++) {
                     let p = this.position[i];
                     let topY = p.y;
-                    let bottomY = p.y + this.h + this.gap;
+
+                    // --- 修复点：确保绘制坐标与碰撞坐标一致 ---
+                    let bottomY = p.y + this.gap;
 
                     // Top Pipe
                     ctx.fillRect(p.x, 0, this.w, topY);
@@ -207,16 +208,17 @@
                     let p = this.position[i];
                     p.x -= this.dx;
 
-                    // Collision
-                    // Top pipe box: p.x, 0, w, p.y
-                    // Bottom pipe box: p.x, p.y + gap + h, w, ...
-
+                    // --- 碰撞判定修复 ---
                     let bottomPipeY = p.y + this.gap;
 
+                    // 容错处理 (保留之前优化的手感)
+                    let tolerance = 4;
+                    let hitRadius = bird.radius - tolerance;
+
                     // Horizontal hit
-                    if (bird.x + bird.radius > p.x && bird.x - bird.radius < p.x + this.w) {
+                    if (bird.x + hitRadius > p.x && bird.x - hitRadius < p.x + this.w) {
                         // Vertical hit (Top or Bottom)
-                        if (bird.y - bird.radius < p.y || bird.y + bird.radius > bottomPipeY) {
+                        if (bird.y - hitRadius < p.y || bird.y + hitRadius > bottomPipeY) {
                             state.current = state.over;
                             gameOver();
                         }

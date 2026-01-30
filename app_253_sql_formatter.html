@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL 格式化工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        textarea {
+            font-family: 'Consolas', 'Monaco', monospace;
+            white-space: pre;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-4xl h-[90vh] flex flex-col">
+
+        <header class="flex justify-between items-center mb-6 shrink-0">
+            <h1 class="text-xl font-bold text-slate-700 flex items-center gap-2">
+                <span class="bg-blue-600 text-white px-2 py-1 rounded text-xs">SQL</span> Formatter
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-blue-600">退出</a>
+        </header>
+
+        <div class="flex-1 flex flex-col md:flex-row gap-6 overflow-hidden">
+
+            <!-- Input -->
+            <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200">
+                <div
+                    class="p-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase flex justify-between items-center">
+                    <span>输入 SQL</span>
+                    <div class="flex gap-2">
+                        <button onclick="loadSample()" class="text-blue-500 hover:underline">示例</button>
+                        <button onclick="clearAll()" class="text-red-400 hover:text-red-600">清空</button>
+                    </div>
+                </div>
+                <textarea id="input" class="flex-1 w-full p-4 resize-none outline-none text-sm text-slate-600"
+                    placeholder="SELECT * FROM table WHERE id=1..."></textarea>
+            </div>
+
+            <!-- Controls (Mobile) -->
+            <div class="md:hidden">
+                <button onclick="format()" class="w-full py-3 bg-blue-600 text-white font-bold rounded-lg shadow">格式化
+                    &rarr;</button>
+            </div>
+
+            <!-- Controls (Desktop Vertical) -->
+            <div class="hidden md:flex flex-col justify-center shrink-0">
+                <button onclick="format()"
+                    class="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition transform active:scale-95"
+                    title="Format">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Output -->
+            <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200">
+                <div
+                    class="p-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase flex justify-between items-center">
+                    <span>格式化结果</span>
+                    <button onclick="copyResult()" class="text-blue-500 hover:underline font-bold">Copy</button>
+                </div>
+                <textarea id="output"
+                    class="flex-1 w-full p-4 resize-none outline-none text-sm text-blue-800 bg-slate-50/50"
+                    readonly></textarea>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const input = document.getElementById('input');
+        const output = document.getElementById('output');
+
+        function loadSample() {
+            input.value = "select id, name, email from users where active = 1 and (role = 'admin' or role = 'super') order by created_at desc limit 10";
+            format();
+        }
+
+        function clearAll() {
+            input.value = "";
+            output.value = "";
+        }
+
+        function format() {
+            let sql = input.value.trim();
+            if (!sql) return;
+
+            // Basic SQL Formatter logic
+            // 1. Normalize whitespace
+            sql = sql.replace(/\s+/g, ' ');
+
+            // 2. Keywords to uppercase and newline
+            const keywords = ["SELECT", "FROM", "WHERE", "AND", "OR", "ORDER BY", "GROUP BY", "HAVING", "LIMIT", "INSERT INTO", "VALUES", "UPDATE", "SET", "DELETE", "JOIN", "LEFT JOIN", "RIGHT JOIN", "INNER JOIN", "ON", "UNION"];
+
+            // Sort keywords by length desc to avoid replacing partials (e.g. ORDER vs ORDER BY)
+            // But here we can just use regex boundary \b
+
+            let formatted = sql;
+
+            // Helper to add newlines before main keywords
+            const mainKeywords = ["SELECT", "FROM", "WHERE", "ORDER BY", "GROUP BY", "HAVING", "LIMIT", "INSERT INTO", "VALUES", "UPDATE", "SET", "DELETE", "UNION"];
+
+            // Replace logic:
+            // First case-insensitive replace to Upper
+            // Then add newlines
+
+            // Simple approach: tokenizing is better but complex. 
+            // Regex approach:
+
+            // Uppercase keywords
+            keywords.forEach(kw => {
+                const regex = new RegExp(`\\b${kw}\\b`, 'gi');
+                formatted = formatted.replace(regex, kw);
+            });
+
+            // Add newlines before main keywords
+            mainKeywords.forEach(kw => {
+                const regex = new RegExp(`\\b${kw}\\b`, 'g');
+                formatted = formatted.replace(regex, `\n${kw}`);
+            });
+
+            // Special handling for SELECT columns (comma separation)
+            // Only if line starts with SELECT
+            // This is getting tricky with regex.
+            // Let's do a simple indentation:
+            // Add newline after comma
+            formatted = formatted.replace(/,/g, ',\n   ');
+
+            // Add newline after AND/OR if inside WHERE (heuristic: if line is long?)
+            // Just indent AND/OR
+            formatted = formatted.replace(/\s+(AND|OR)\s+/g, '\n  $1 ');
+
+            // Fix joins
+            formatted = formatted.replace(/\s+(JOIN|LEFT JOIN|RIGHT JOIN|INNER JOIN)\s+/g, '\n$1 ');
+
+            // Trim empty lines at start
+            formatted = formatted.trim();
+
+            output.value = formatted;
+        }
+
+        function copyResult() {
+            output.select();
+            document.execCommand('copy');
+            alert("已复制!");
+        }
+    </script>
+</body>
+
+</html>

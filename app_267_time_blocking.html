@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一日时间块</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .time-block {
+            transition: background-color 0.1s;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .time-block:hover {
+            filter: brightness(0.95);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-xl bg-white shadow-xl rounded-3xl overflow-hidden flex flex-col h-[90vh]">
+
+        <header class="p-6 border-b border-gray-200 flex justify-between items-center bg-white shrink-0">
+            <div>
+                <h1 class="text-xl font-bold text-slate-800">Time Blocking</h1>
+                <p class="text-xs text-slate-400" id="date-display">Today</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="clearAll()" class="text-xs text-red-400 hover:text-red-600 px-2">清空</button>
+                <a href="./navigation.html" class="text-xs text-slate-400 hover:text-slate-600 px-2">退出</a>
+            </div>
+        </header>
+
+        <!-- Palette -->
+        <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-center gap-4 shrink-0">
+            <button class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 shadow-sm"
+                onclick="setMode('work')">
+                <div class="w-3 h-3 rounded-full bg-blue-400"></div> <span class="text-xs font-bold">工作</span>
+            </button>
+            <button class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 shadow-sm"
+                onclick="setMode('study')">
+                <div class="w-3 h-3 rounded-full bg-yellow-400"></div> <span class="text-xs font-bold">学习</span>
+            </button>
+            <button class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 shadow-sm"
+                onclick="setMode('life')">
+                <div class="w-3 h-3 rounded-full bg-green-400"></div> <span class="text-xs font-bold">生活</span>
+            </button>
+            <button class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 shadow-sm"
+                onclick="setMode('empty')">
+                <div class="w-3 h-3 rounded-full bg-white border border-slate-300"></div> <span
+                    class="text-xs font-bold">空白</span>
+            </button>
+        </div>
+
+        <div class="bg-indigo-50 p-2 text-center text-xs text-indigo-600 font-bold shrink-0" id="current-mode-display">
+            当前模式: 工作 (点击下方格子填色)
+        </div>
+
+        <!-- Scrollable List -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-1" id="blocks-container">
+            <!-- 06:00 to 24:00 -->
+        </div>
+
+    </div>
+
+    <script>
+        const container = document.getElementById('blocks-container');
+        const modeDisplay = document.getElementById('current-mode-display');
+        const dateDisplay = document.getElementById('date-display');
+
+        let currentMode = 'work';
+        let blocks = {}; // { "08:00": "work", ... }
+
+        const colors = {
+            'work': 'bg-blue-100 border-l-4 border-blue-400 text-blue-800',
+            'study': 'bg-yellow-100 border-l-4 border-yellow-400 text-yellow-800',
+            'life': 'bg-green-100 border-l-4 border-green-400 text-green-800',
+            'empty': 'bg-white border-l-4 border-transparent text-slate-300'
+        };
+        const labels = {
+            'work': '工作 Work', 'study': '学习 Study', 'life': '生活 Life', 'empty': '空闲 Empty'
+        };
+
+        function init() {
+            dateDisplay.innerText = new Date().toLocaleDateString();
+
+            // Load
+            const saved = localStorage.getItem('time_blocks');
+            if (saved) blocks = JSON.parse(saved);
+
+            render();
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            modeDisplay.innerText = `当前模式: ${labels[mode]} (点击格子填色)`;
+        }
+
+        function toggleBlock(time) {
+            if (currentMode === 'empty') {
+                delete blocks[time];
+            } else {
+                blocks[time] = currentMode;
+            }
+            save();
+            renderBlock(time); // Optimised re-render
+        }
+
+        function save() {
+            localStorage.setItem('time_blocks', JSON.stringify(blocks));
+        }
+
+        function clearAll() {
+            if (confirm("确定清空日程吗？")) {
+                blocks = {};
+                save();
+                render();
+            }
+        }
+
+        function renderBlock(time) {
+            const el = document.getElementById(`block-${time}`);
+            const type = blocks[time] || 'empty';
+            el.className = `time-block p-3 rounded shadow-sm text-sm flex items-center justify-between ${colors[type]}`;
+
+            // Update content inside if needed, though structure is static
+            // Maybe add icon?
+            const icon = type === 'work' ? '💼' : (type === 'study' ? '📚' : (type === 'life' ? '☕' : ''));
+            el.innerHTML = `<span class="font-mono font-bold">${time}</span> <span>${icon}</span>`;
+        }
+
+        function render() {
+            container.innerHTML = '';
+
+            // 6:00 to 23:30, 30 min intervals
+            const startHour = 6;
+            const endHour = 24;
+
+            for (let h = startHour; h < endHour; h++) {
+                ['00', '30'].forEach(m => {
+                    const time = `${h.toString().padStart(2, '0')}:${m}`;
+                    const div = document.createElement('div');
+                    div.id = `block-${time}`;
+                    div.onclick = () => toggleBlock(time);
+
+                    const type = blocks[time] || 'empty';
+                    div.className = `time-block p-3 rounded shadow-sm text-sm flex items-center justify-between ${colors[type]}`;
+
+                    const icon = type === 'work' ? '💼' : (type === 'study' ? '📚' : (type === 'life' ? '☕' : ''));
+                    div.innerHTML = `<span class="font-mono font-bold">${time}</span> <span>${icon}</span>`;
+
+                    container.appendChild(div);
+                });
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

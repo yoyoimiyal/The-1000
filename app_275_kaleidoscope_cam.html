@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>万花筒相机</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+
+<body>
+
+    <video id="video" autoplay playsinline class="hidden"></video>
+    <canvas id="canvas"></canvas>
+
+    <div class="controls">
+        <button onclick="startCam()" id="start-btn"
+            class="bg-white text-black px-4 py-1 rounded-full text-xs font-bold hover:bg-gray-200">开启相机</button>
+
+        <div class="flex items-center gap-2 px-2 border-l border-white/20">
+            <span class="text-white text-xs font-bold">Slices</span>
+            <input type="range" id="slices" min="4" max="24" step="2" value="12"
+                class="w-24 h-1 bg-white/30 rounded appearance-none cursor-pointer">
+        </div>
+
+        <a href="./navigation.html" class="text-white/50 text-xs font-bold hover:text-white px-2">Exit</a>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const slicesInput = document.getElementById('slices');
+        const startBtn = document.getElementById('start-btn');
+
+        let width, height;
+        let isRunning = false;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        async function startCam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480 } // Lower res is fine for kaleidoscope
+                });
+                video.srcObject = stream;
+                isRunning = true;
+                startBtn.innerText = "Running";
+                startBtn.classList.add('bg-green-500', 'text-white');
+                startBtn.classList.remove('bg-white', 'text-black');
+                draw();
+            } catch (e) {
+                alert("无法访问摄像头: " + e.message);
+            }
+        }
+
+        function draw() {
+            if (!isRunning) return;
+
+            const slices = parseInt(slicesInput.value);
+            const angle = (Math.PI * 2) / slices;
+            const cx = width / 2;
+            const cy = height / 2;
+
+            // Radius to cover screen corners
+            const radius = Math.sqrt(cx * cx + cy * cy);
+
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.save();
+            ctx.translate(cx, cy);
+
+            for (let i = 0; i < slices; i++) {
+                ctx.save();
+                ctx.rotate(i * angle);
+
+                // Draw clipped triangle segment
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, radius, -angle / 2 - 0.01, angle / 2 + 0.01); // Slight overlap
+                ctx.closePath();
+                ctx.clip();
+
+                // Transform video to fit segment
+                // If i is odd, mirror? Kaleidoscope usually mirrors adjacent slices.
+                if (i % 2 !== 0) {
+                    ctx.scale(1, -1);
+                }
+
+                // Map video texture
+                // We want the center of video at (0,0) of canvas, 
+                // but rotated.
+                // Simple mapping: Rotate, then draw video centered.
+                // Or map video coord to polar.
+
+                // Simple cool effect: 
+                // Draw video centered at some offset relative to 0,0
+                // Rotate video slightly over time?
+                const time = Date.now() / 2000;
+                ctx.rotate(time);
+
+                const scale = (radius * 1.5) / Math.min(video.videoWidth, video.videoHeight);
+                ctx.scale(scale, scale);
+                ctx.drawImage(video, -video.videoWidth / 2, -video.videoHeight / 2);
+
+                ctx.restore();
+            }
+
+            ctx.restore();
+
+            requestAnimationFrame(draw);
+        }
+    </script>
+</body>
+
+</html>

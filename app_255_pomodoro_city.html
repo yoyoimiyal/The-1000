@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>番茄城市</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .city-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 10px;
+            width: 100%;
+            height: 100%;
+            align-content: start;
+        }
+
+        .house {
+            animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes pop {
+            0% {
+                transform: scale(0);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-sky-100 min-h-screen flex flex-col h-screen overflow-hidden">
+
+    <header class="bg-white p-4 shadow-sm border-b border-sky-200 flex justify-between items-center z-10 shrink-0">
+        <h1 class="text-xl font-bold text-sky-800 flex items-center gap-2">
+            <span class="text-2xl">🏘️</span> Pomodoro City
+        </h1>
+        <div class="flex gap-4 items-center">
+            <div class="text-xs text-sky-500 font-bold bg-sky-50 px-3 py-1 rounded-full">
+                建筑: <span id="house-count">0</span>
+            </div>
+            <a href="./navigation.html" class="text-sm text-gray-400 hover:text-sky-600">退出</a>
+        </div>
+    </header>
+
+    <div class="flex-1 flex flex-col md:flex-row relative">
+
+        <!-- City View -->
+        <div class="flex-1 bg-sky-50 p-6 overflow-y-auto relative">
+            <div class="city-grid" id="city-container">
+                <!-- Houses -->
+            </div>
+            <!-- Ground -->
+            <div class="fixed bottom-0 left-0 w-full h-16 bg-green-200 border-t-4 border-green-300 -z-10"></div>
+            <!-- Clouds -->
+            <div class="absolute top-10 left-10 text-6xl opacity-40 text-white">☁️</div>
+            <div class="absolute top-20 right-20 text-6xl opacity-60 text-white">☁️</div>
+        </div>
+
+        <!-- Timer Panel -->
+        <div
+            class="w-full md:w-80 bg-white shadow-xl border-l border-sky-100 p-8 flex flex-col items-center justify-center shrink-0 z-20">
+
+            <div class="mb-8 text-center">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2" id="status-text">Ready to
+                    Build?</p>
+                <div class="text-6xl font-black text-slate-800 font-mono" id="timer">25:00</div>
+            </div>
+
+            <div class="space-y-4 w-full">
+                <button onclick="toggleTimer()" id="btn-main"
+                    class="w-full py-4 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-2xl shadow-lg transition transform active:scale-95 text-lg flex items-center justify-center gap-2">
+                    <span>▶</span> 开始专注
+                </button>
+                <button onclick="resetTimer()"
+                    class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl transition text-sm">
+                    放弃 / 重置
+                </button>
+            </div>
+
+            <div class="mt-8 bg-sky-50 p-4 rounded-xl text-center">
+                <p class="text-xs text-sky-600 font-bold mb-2">即将建造...</p>
+                <div class="text-4xl">🏠</div>
+                <p class="text-[10px] text-sky-400 mt-2">完成 25 分钟专注可获得一座房子</p>
+            </div>
+
+            <button onclick="clearCity()" class="mt-auto text-xs text-red-300 hover:text-red-500 underline">重建城市
+                (清空数据)</button>
+
+        </div>
+
+    </div>
+
+    <script>
+        const timerEl = document.getElementById('timer');
+        const btnMain = document.getElementById('btn-main');
+        const statusText = document.getElementById('status-text');
+        const cityContainer = document.getElementById('city-container');
+        const countEl = document.getElementById('house-count');
+
+        let timeLeft = 25 * 60;
+        let isRunning = false;
+        let timerId = null;
+        let houses = JSON.parse(localStorage.getItem('pomo_city_houses') || '[]');
+
+        function init() {
+            renderCity();
+        }
+
+        function renderCity() {
+            cityContainer.innerHTML = '';
+            houses.forEach(h => {
+                const div = document.createElement('div');
+                div.className = 'house flex items-center justify-center text-4xl';
+                div.innerText = h.type;
+                div.title = new Date(h.date).toLocaleString();
+                cityContainer.appendChild(div);
+            });
+            countEl.innerText = houses.length;
+
+            // Scroll to bottom
+            // cityContainer.scrollTop = cityContainer.scrollHeight; 
+            // Grid fills top down usually.
+        }
+
+        function updateDisplay() {
+            const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const s = (timeLeft % 60).toString().padStart(2, '0');
+            timerEl.innerText = `${m}:${s}`;
+        }
+
+        function toggleTimer() {
+            if (isRunning) {
+                clearInterval(timerId);
+                isRunning = false;
+                btnMain.innerHTML = "<span>▶</span> 继续";
+                btnMain.classList.replace('bg-yellow-500', 'bg-sky-600');
+                btnMain.classList.replace('hover:bg-yellow-400', 'hover:bg-sky-500');
+                statusText.innerText = "Paused";
+            } else {
+                isRunning = true;
+                btnMain.innerHTML = "<span>⏸</span> 暂停";
+                btnMain.classList.replace('bg-sky-600', 'bg-yellow-500');
+                btnMain.classList.replace('hover:bg-sky-500', 'hover:bg-yellow-400');
+                statusText.innerText = "Building in progress...";
+
+                timerId = setInterval(() => {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                        updateDisplay();
+                    } else {
+                        complete();
+                    }
+                }, 1000); // 1s real time
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timerId);
+            isRunning = false;
+            timeLeft = 25 * 60;
+            updateDisplay();
+            btnMain.innerHTML = "<span>▶</span> 开始专注";
+            btnMain.classList.remove('bg-yellow-500');
+            btnMain.classList.add('bg-sky-600');
+            statusText.innerText = "Ready to Build?";
+        }
+
+        function complete() {
+            clearInterval(timerId);
+            isRunning = false;
+
+            // Add House
+            const types = ['🏠', '🏡', '🏢', '🏫', '🏦', '🏨', '🏰'];
+            // Rare chance for castle
+            let type = types[Math.floor(Math.random() * (types.length - 1))];
+            if (Math.random() > 0.95) type = types[types.length - 1]; // 5% Castle
+
+            houses.push({ type: type, date: Date.now() });
+            localStorage.setItem('pomo_city_houses', JSON.stringify(houses));
+            renderCity();
+
+            alert("恭喜！你建成了一座房子！");
+            resetTimer();
+        }
+
+        function clearCity() {
+            if (confirm("确定要拆除所有建筑吗？此操作不可撤销。")) {
+                houses = [];
+                localStorage.setItem('pomo_city_houses', '[]');
+                renderCity();
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

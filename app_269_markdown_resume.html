@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown 简历生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* Resume Styles */
+        .resume-content h1 {
+            font-size: 2.25rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #1f2937;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+        }
+
+        .resume-content h2 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #374151;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.25rem;
+        }
+
+        .resume-content h3 {
+            font-size: 1.125rem;
+            font-weight: bold;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: #4b5563;
+        }
+
+        .resume-content p {
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+            color: #4b5563;
+        }
+
+        .resume-content ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            color: #4b5563;
+        }
+
+        .resume-content li {
+            margin-bottom: 0.25rem;
+        }
+
+        .resume-content strong {
+            color: #1f2937;
+        }
+
+        .resume-content a {
+            color: #2563eb;
+            text-decoration: underline;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+
+            #resume-preview,
+            #resume-preview * {
+                visibility: visible;
+            }
+
+            #resume-preview {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                box-shadow: none;
+                border: none;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex flex-col h-screen overflow-hidden text-slate-800">
+
+    <header class="bg-white border-b border-slate-200 p-4 flex justify-between items-center shrink-0 z-20">
+        <h1 class="text-lg font-bold flex items-center gap-2 text-indigo-700">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            MD Resume
+        </h1>
+        <div class="flex gap-3">
+            <button onclick="window.print()"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded text-sm font-bold shadow transition">打印
+                / PDF</button>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600 px-2 py-1.5">退出</a>
+        </div>
+    </header>
+
+    <div class="flex-1 flex flex-col md:flex-row h-full overflow-hidden">
+
+        <!-- Editor -->
+        <div class="w-full md:w-1/2 flex flex-col border-r border-slate-200 bg-white">
+            <div
+                class="p-2 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-400 uppercase flex justify-between">
+                <span>Markdown Input</span>
+                <button onclick="loadTemplate()" class="text-indigo-500 hover:underline">加载模板</button>
+            </div>
+            <textarea id="editor" class="flex-1 p-6 resize-none outline-none font-mono text-sm leading-relaxed"
+                oninput="render()" placeholder="# 姓名..."></textarea>
+        </div>
+
+        <!-- Preview -->
+        <div class="w-full md:w-1/2 bg-slate-200 overflow-y-auto p-8 flex justify-center">
+            <div id="resume-preview" class="bg-white w-[210mm] min-h-[297mm] p-[20mm] shadow-xl text-sm resume-content">
+                <!-- Content -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const editor = document.getElementById('editor');
+        const preview = document.getElementById('resume-preview');
+
+        const template = `# 张三 (Zhang San)
+前端工程师 | 138-0000-0000 | email@example.com
+
+## 个人简介
+热衷于 Web 开发，拥有 3 年前端经验。擅长 Vue.js 和 Tailwind CSS。追求极致的用户体验和代码质量。
+
+## 工作经历
+
+### 高级前端开发 | 某某科技有限公司
+*2021.06 - 至今*
+- 负责公司核心 SaaS 平台的前端架构重构，性能提升 50%。
+- 带领 5 人团队完成组件库的开发与文档编写。
+- 引入自动化测试流程，减少 30% 的线上 Bug。
+
+### 初级前端开发 | 某某初创公司
+*2019.07 - 2021.05*
+- 独立负责公司官网的开发与维护。
+- 使用 React Native 开发跨平台移动应用。
+
+## 项目经验
+
+**个人博客系统**
+- 使用 Next.js + Notion API 构建的静态博客。
+- 实现 ISR 增量静态再生，SEO 评分满分。
+
+## 技能清单
+- **语言**: JavaScript (ES6+), TypeScript, HTML5, CSS3
+- **框架**: React, Vue, Next.js
+- **工具**: Git, Webpack, Vite, Docker
+
+## 教育背景
+**计算机科学与技术 (本科)** | 某某大学 | *2015 - 2019*
+`;
+
+        function loadTemplate() {
+            editor.value = template;
+            render();
+        }
+
+        function render() {
+            const md = editor.value;
+            preview.innerHTML = marked.parse(md);
+        }
+
+        // Init
+        loadTemplate();
+    </script>
+</body>
+
+</html>

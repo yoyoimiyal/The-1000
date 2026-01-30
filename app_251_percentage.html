@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全能百分比计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body class="bg-blue-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-2xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-blue-800 flex items-center gap-2">
+                <span class="text-2xl">%</span> Percentage Calc
+            </h1>
+            <a href="./navigation.html" class="text-sm text-blue-500 hover:underline">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <!-- Case 1: What is X% of Y? -->
+            <div
+                class="bg-white p-6 rounded-2xl shadow-sm border border-blue-100 flex flex-col md:flex-row gap-4 items-center">
+                <div class="flex-1 flex gap-2 items-center w-full">
+                    <span class="font-bold text-slate-400">求</span>
+                    <input type="number" id="c1-n1"
+                        class="flex-1 p-2 border border-slate-300 rounded font-bold text-center outline-none focus:border-blue-500"
+                        placeholder="20" oninput="calc1()">
+                    <span class="font-bold text-slate-400">% 的</span>
+                    <input type="number" id="c1-n2"
+                        class="flex-1 p-2 border border-slate-300 rounded font-bold text-center outline-none focus:border-blue-500"
+                        placeholder="100" oninput="calc1()">
+                </div>
+                <div
+                    class="text-blue-600 font-bold text-xl md:w-24 text-center border-t md:border-t-0 md:border-l border-slate-100 pt-2 md:pt-0 md:pl-4 w-full">
+                    <span id="c1-res">20</span>
+                </div>
+            </div>
+
+            <!-- Case 2: X is what % of Y? -->
+            <div
+                class="bg-white p-6 rounded-2xl shadow-sm border border-blue-100 flex flex-col md:flex-row gap-4 items-center">
+                <div class="flex-1 flex gap-2 items-center w-full">
+                    <input type="number" id="c2-n1"
+                        class="flex-1 p-2 border border-slate-300 rounded font-bold text-center outline-none focus:border-blue-500"
+                        placeholder="20" oninput="calc2()">
+                    <span class="font-bold text-slate-400">是</span>
+                    <input type="number" id="c2-n2"
+                        class="flex-1 p-2 border border-slate-300 rounded font-bold text-center outline-none focus:border-blue-500"
+                        placeholder="100" oninput="calc2()">
+                    <span class="font-bold text-slate-400">的多少%?</span>
+                </div>
+                <div
+                    class="text-blue-600 font-bold text-xl md:w-24 text-center border-t md:border-t-0 md:border-l border-slate-100 pt-2 md:pt-0 md:pl-4 w-full">
+                    <span id="c2-res">20%</span>
+                </div>
+            </div>
+
+            <!-- Case 3: Increase X by Y% -->
+            <div
+                class="bg-white p-6 rounded-2xl shadow-sm border border-blue-100 flex flex-col md:flex-row gap-4 items-center">
+                <div class="flex-1 flex gap-2 items-center w-full">
+                    <input type="number" id="c3-n1"
+                        class="flex-1 p-2 border border-slate-300 rounded font-bold text-center outline-none focus:border-blue-500"
+                        placeholder="100" oninput="calc3()">
+                    <span class="font-bold text-slate-400">增加</span>
+                    <input type="number" id="c3-n2"
+                        class="flex-1 p-2 border border-slate-300 rounded font-bold text-center outline-none focus:border-blue-500"
+                        placeholder="20" oninput="calc3()">
+                    <span class="font-bold text-slate-400">%</span>
+                </div>
+                <div
+                    class="text-blue-600 font-bold text-xl md:w-24 text-center border-t md:border-t-0 md:border-l border-slate-100 pt-2 md:pt-0 md:pl-4 w-full">
+                    <span id="c3-res">120</span>
+                </div>
+            </div>
+
+            <!-- Case 4: Decrease X by Y% -->
+            <div
+                class="bg-white p-6 rounded-2xl shadow-sm border border-blue-100 flex flex-col md:flex-row gap-4 items-center">
+                <div class="flex-1 flex gap-2 items-center w-full">
+                    <input type="number" id="c4-n1"
+                        class="flex-1 p-2 border border-slate-300 rounded font-bold text-center outline-none focus:border-blue-500"
+                        placeholder="100" oninput="calc4()">
+                    <span class="font-bold text-slate-400">减少</span>
+                    <input type="number" id="c4-n2"
+                        class="flex-1 p-2 border border-slate-300 rounded font-bold text-center outline-none focus:border-blue-500"
+                        placeholder="20" oninput="calc4()">
+                    <span class="font-bold text-slate-400">%</span>
+                </div>
+                <div
+                    class="text-blue-600 font-bold text-xl md:w-24 text-center border-t md:border-t-0 md:border-l border-slate-100 pt-2 md:pt-0 md:pl-4 w-full">
+                    <span id="c4-res">80</span>
+                </div>
+            </div>
+
+            <!-- Case 5: Change from X to Y is what %? -->
+            <div
+                class="bg-white p-6 rounded-2xl shadow-sm border border-blue-100 flex flex-col md:flex-row gap-4 items-center">
+                <div class="flex-1 flex gap-2 items-center w-full">
+                    <span class="font-bold text-slate-400">从</span>
+                    <input type="number" id="c5-n1"
+                        class="flex-1 p-2 border border-slate-300 rounded font-bold text-center outline-none focus:border-blue-500"
+                        placeholder="100" oninput="calc5()">
+                    <span class="font-bold text-slate-400">变成</span>
+                    <input type="number" id="c5-n2"
+                        class="flex-1 p-2 border border-slate-300 rounded font-bold text-center outline-none focus:border-blue-500"
+                        placeholder="120" oninput="calc5()">
+                </div>
+                <div
+                    class="text-blue-600 font-bold text-xl md:w-24 text-center border-t md:border-t-0 md:border-l border-slate-100 pt-2 md:pt-0 md:pl-4 w-full">
+                    <span id="c5-res">+20%</span>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="mt-8 text-center">
+            <button onclick="clearAll()"
+                class="text-xs text-slate-400 hover:text-red-500 font-bold bg-white border border-slate-200 px-4 py-2 rounded-full shadow-sm transition">清空所有输入</button>
+        </div>
+
+    </div>
+
+    <script>
+        function calc1() {
+            const n1 = parseFloat(document.getElementById('c1-n1').value);
+            const n2 = parseFloat(document.getElementById('c1-n2').value);
+            const res = (n1 / 100) * n2;
+            document.getElementById('c1-res').innerText = isNaN(res) ? '-' : +res.toFixed(4);
+        }
+
+        function calc2() {
+            const n1 = parseFloat(document.getElementById('c2-n1').value);
+            const n2 = parseFloat(document.getElementById('c2-n2').value);
+            const res = (n1 / n2) * 100;
+            document.getElementById('c2-res').innerText = isNaN(res) || !isFinite(res) ? '-' : +res.toFixed(4) + '%';
+        }
+
+        function calc3() {
+            const n1 = parseFloat(document.getElementById('c3-n1').value);
+            const n2 = parseFloat(document.getElementById('c3-n2').value);
+            const res = n1 * (1 + n2 / 100);
+            document.getElementById('c3-res').innerText = isNaN(res) ? '-' : +res.toFixed(4);
+        }
+
+        function calc4() {
+            const n1 = parseFloat(document.getElementById('c4-n1').value);
+            const n2 = parseFloat(document.getElementById('c4-n2').value);
+            const res = n1 * (1 - n2 / 100);
+            document.getElementById('c4-res').innerText = isNaN(res) ? '-' : +res.toFixed(4);
+        }
+
+        function calc5() {
+            const n1 = parseFloat(document.getElementById('c5-n1').value);
+            const n2 = parseFloat(document.getElementById('c5-n2').value);
+            const res = ((n2 - n1) / n1) * 100;
+            const sign = res > 0 ? '+' : '';
+            document.getElementById('c5-res').innerText = isNaN(res) || !isFinite(res) ? '-' : sign + res.toFixed(4) + '%';
+        }
+
+        function clearAll() {
+            document.querySelectorAll('input').forEach(i => i.value = '');
+            document.querySelectorAll('[id$="-res"]').forEach(s => s.innerText = '-');
+        }
+    </script>
+</body>
+
+</html>

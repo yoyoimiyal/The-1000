@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简看板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .column {
+            min-height: 200px;
+        }
+
+        .card {
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s;
+            touch-action: none;
+        }
+
+        .card:active {
+            cursor: grabbing;
+            transform: rotate(2deg);
+        }
+
+        .card.dragging {
+            opacity: 0.5;
+        }
+
+        .drag-over {
+            background-color: #f1f5f9;
+            border-style: dashed;
+            border-color: #94a3b8;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen p-6 flex flex-col text-slate-800 font-sans">
+
+    <header class="flex justify-between items-center mb-8">
+        <h1 class="text-2xl font-bold flex items-center gap-2 text-slate-700">
+            <span class="bg-indigo-600 text-white px-2 py-1 rounded text-sm">KB</span> Kanban Board
+        </h1>
+        <div class="flex gap-4">
+            <button onclick="clearBoard()" class="text-sm text-red-400 hover:text-red-600 font-bold">清空</button>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </div>
+    </header>
+
+    <!-- Input -->
+    <div class="mb-8 flex gap-2 max-w-xl mx-auto w-full">
+        <input type="text" id="new-task"
+            class="flex-1 p-3 border border-slate-300 rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="添加新任务..." onkeypress="if(event.key==='Enter') addTask()">
+        <button onclick="addTask()"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 rounded-xl font-bold transition shadow-md">Add</button>
+    </div>
+
+    <!-- Board -->
+    <div class="flex flex-col md:flex-row gap-6 items-start overflow-x-auto pb-4 flex-1">
+
+        <!-- Todo -->
+        <div class="flex-1 bg-white p-4 rounded-2xl shadow-sm border border-slate-200 min-w-[280px] w-full">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+                <h2 class="font-bold text-slate-600 flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-slate-400"></div> To Do
+                </h2>
+                <span class="bg-slate-100 text-slate-500 text-xs px-2 py-1 rounded-full font-mono"
+                    id="count-todo">0</span>
+            </div>
+            <div id="col-todo" class="column space-y-3" ondragover="allowDrop(event)" ondrop="drop(event, 'todo')"
+                ondragleave="leaveDrop(event)">
+                <!-- Cards -->
+            </div>
+        </div>
+
+        <!-- Doing -->
+        <div class="flex-1 bg-white p-4 rounded-2xl shadow-sm border border-blue-200 min-w-[280px] w-full">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-blue-50">
+                <h2 class="font-bold text-blue-600 flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></div> Doing
+                </h2>
+                <span class="bg-blue-50 text-blue-600 text-xs px-2 py-1 rounded-full font-mono"
+                    id="count-doing">0</span>
+            </div>
+            <div id="col-doing" class="column space-y-3" ondragover="allowDrop(event)" ondrop="drop(event, 'doing')"
+                ondragleave="leaveDrop(event)">
+                <!-- Cards -->
+            </div>
+        </div>
+
+        <!-- Done -->
+        <div class="flex-1 bg-white p-4 rounded-2xl shadow-sm border border-green-200 min-w-[280px] w-full">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-green-50">
+                <h2 class="font-bold text-green-600 flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-green-500"></div> Done
+                </h2>
+                <span class="bg-green-50 text-green-600 text-xs px-2 py-1 rounded-full font-mono"
+                    id="count-done">0</span>
+            </div>
+            <div id="col-done" class="column space-y-3" ondragover="allowDrop(event)" ondrop="drop(event, 'done')"
+                ondragleave="leaveDrop(event)">
+                <!-- Cards -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('kanban_tasks') || '[]');
+        let draggedId = null;
+
+        function init() {
+            render();
+        }
+
+        function addTask() {
+            const input = document.getElementById('new-task');
+            const text = input.value.trim();
+            if (text) {
+                tasks.push({
+                    id: Date.now(),
+                    text: text,
+                    status: 'todo',
+                    date: new Date().toLocaleDateString()
+                });
+                input.value = '';
+                save();
+                render();
+            }
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            save();
+            render();
+        }
+
+        function clearBoard() {
+            if (confirm("确定清空所有任务吗？")) {
+                tasks = [];
+                save();
+                render();
+            }
+        }
+
+        function save() {
+            localStorage.setItem('kanban_tasks', JSON.stringify(tasks));
+        }
+
+        function render() {
+            ['todo', 'doing', 'done'].forEach(status => {
+                const col = document.getElementById(`col-${status}`);
+                col.innerHTML = '';
+                const items = tasks.filter(t => t.status === status);
+
+                document.getElementById(`count-${status}`).innerText = items.length;
+
+                items.forEach(t => {
+                    const card = document.createElement('div');
+                    card.className = "card bg-white p-3 rounded-lg border border-slate-200 shadow-sm hover:shadow-md flex justify-between items-start group";
+                    if (status === 'done') card.classList.add('opacity-70', 'bg-slate-50');
+                    if (status === 'doing') card.classList.add('border-l-4', 'border-l-blue-400');
+
+                    card.draggable = true;
+                    card.id = `card-${t.id}`;
+
+                    card.innerHTML = `
+                        <div>
+                            <p class="text-sm font-medium ${status === 'done' ? 'line-through text-slate-500' : 'text-slate-700'}">${t.text}</p>
+                            <p class="text-[10px] text-slate-400 mt-1">${t.date}</p>
+                        </div>
+                        <button onclick="deleteTask(${t.id})" class="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition px-1">×</button>
+                    `;
+
+                    // Drag Events
+                    card.addEventListener('dragstart', (e) => {
+                        draggedId = t.id;
+                        e.target.classList.add('dragging');
+                    });
+                    card.addEventListener('dragend', (e) => {
+                        e.target.classList.remove('dragging');
+                        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+                    });
+
+                    col.appendChild(card);
+                });
+            });
+        }
+
+        function allowDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function leaveDrop(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function drop(e, status) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+
+            if (draggedId) {
+                const task = tasks.find(t => t.id === draggedId);
+                if (task && task.status !== status) {
+                    task.status = status;
+                    save();
+                    render();
+                }
+                draggedId = null;
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>利萨茹曲线生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            border: 1px solid #333;
+        }
+    </style>
+</head>
+
+<body class="bg-black min-h-screen flex flex-col items-center justify-center p-6 text-white">
+
+    <div class="fixed top-6 left-6 pointer-events-none z-10">
+        <h1 class="text-2xl font-bold tracking-widest text-cyan-400">Lissajous</h1>
+        <p class="text-xs text-gray-500 font-mono">x = A sin(at + δ), y = B sin(bt)</p>
+    </div>
+
+    <!-- Controls -->
+    <div
+        class="fixed bottom-8 bg-gray-900/80 backdrop-blur p-6 rounded-2xl border border-gray-700 flex flex-wrap gap-8 items-center justify-center w-full max-w-4xl z-10">
+
+        <div class="flex flex-col w-32">
+            <div class="flex justify-between text-xs text-gray-400 font-bold mb-1">
+                <span>Freq X (a)</span><span id="val-a">3</span>
+            </div>
+            <input type="range" id="a" min="1" max="20" step="1" value="3"
+                class="w-full h-1 bg-gray-700 rounded appearance-none cursor-pointer accent-cyan-400"
+                oninput="update()">
+        </div>
+
+        <div class="flex flex-col w-32">
+            <div class="flex justify-between text-xs text-gray-400 font-bold mb-1">
+                <span>Freq Y (b)</span><span id="val-b">2</span>
+            </div>
+            <input type="range" id="b" min="1" max="20" step="1" value="2"
+                class="w-full h-1 bg-gray-700 rounded appearance-none cursor-pointer accent-pink-400"
+                oninput="update()">
+        </div>
+
+        <div class="flex flex-col w-32">
+            <div class="flex justify-between text-xs text-gray-400 font-bold mb-1">
+                <span>Phase (δ)</span><span id="val-p">90°</span>
+            </div>
+            <input type="range" id="delta" min="0" max="360" step="1" value="90"
+                class="w-full h-1 bg-gray-700 rounded appearance-none cursor-pointer accent-yellow-400"
+                oninput="update()">
+        </div>
+
+        <div class="flex items-center gap-2 border-l border-gray-700 pl-8">
+            <button onclick="toggleAnim()" id="btn-anim"
+                class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-bold transition border border-gray-600">Auto
+                Phase: OFF</button>
+        </div>
+
+        <a href="./navigation.html" class="text-xs text-gray-600 hover:text-white ml-auto">EXIT</a>
+
+    </div>
+
+    <canvas id="canvas" class="bg-gray-900"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const btnAnim = document.getElementById('btn-anim');
+
+        let width, height, cx, cy;
+        let a = 3, b = 2, delta = Math.PI / 2;
+        let isAnimating = false;
+        let animationId;
+
+        function resize() {
+            const size = Math.min(window.innerWidth, window.innerHeight) - 40;
+            canvas.width = size;
+            canvas.height = size;
+            width = size;
+            height = size;
+            cx = width / 2;
+            cy = height / 2;
+            draw();
+        }
+        window.addEventListener('resize', resize);
+
+        function update() {
+            a = parseInt(document.getElementById('a').value);
+            b = parseInt(document.getElementById('b').value);
+            // Delta from slider only if not animating
+            if (!isAnimating) {
+                const deg = parseInt(document.getElementById('delta').value);
+                delta = deg * Math.PI / 180;
+            }
+
+            document.getElementById('val-a').innerText = a;
+            document.getElementById('val-b').innerText = b;
+            document.getElementById('val-p').innerText = Math.round(delta * 180 / Math.PI) + '°';
+
+            draw();
+        }
+
+        function draw() {
+            ctx.fillStyle = 'rgba(17, 24, 39, 0.2)'; // Trail if animating? No, clean redraw for slider.
+            if (isAnimating) ctx.fillRect(0, 0, width, height); // Fade
+            else ctx.clearRect(0, 0, width, height);
+
+            ctx.beginPath();
+            ctx.lineWidth = 3;
+            // Gradient Stroke
+            const grad = ctx.createLinearGradient(0, 0, width, height);
+            grad.addColorStop(0, '#22d3ee'); // cyan
+            grad.addColorStop(0.5, '#f472b6'); // pink
+            grad.addColorStop(1, '#facc15'); // yellow
+            ctx.strokeStyle = grad;
+
+            const scale = (width / 2) - 20;
+            const step = 0.01;
+
+            // Loop t from 0 to 2*PI (or LCM periods)
+            // To ensure closed loop, period is 2*PI usually? 
+            // If a/b is rational, it closes. Since sliders are ints, it always closes in 2*PI.
+
+            const maxT = 2 * Math.PI;
+
+            for (let t = 0; t <= maxT; t += step) {
+                const x = cx + Math.sin(a * t + delta) * scale;
+                const y = cy + Math.sin(b * t) * scale;
+                if (t === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+
+            // Close the gap visually
+            const x = cx + Math.sin(a * 0 + delta) * scale;
+            const y = cy + Math.sin(b * 0) * scale;
+            ctx.lineTo(x, y);
+
+            ctx.stroke();
+        }
+
+        function toggleAnim() {
+            isAnimating = !isAnimating;
+            btnAnim.innerText = `Auto Phase: ${isAnimating ? 'ON' : 'OFF'}`;
+            btnAnim.className = `px-4 py-2 rounded-lg text-xs font-bold transition border border-gray-600 ${isAnimating ? 'bg-cyan-900 text-cyan-200 border-cyan-700' : 'bg-gray-800 text-white hover:bg-gray-700'}`;
+
+            if (isAnimating) animateLoop();
+            else {
+                cancelAnimationFrame(animationId);
+                // Sync slider back
+                document.getElementById('delta').value = Math.round(delta * 180 / Math.PI) % 360;
+                draw();
+            }
+        }
+
+        function animateLoop() {
+            delta += 0.01;
+            document.getElementById('val-p').innerText = Math.round(delta * 180 / Math.PI) % 360 + '°';
+            draw();
+            if (isAnimating) animationId = requestAnimationFrame(animateLoop);
+        }
+
+        resize();
+    </script>
+</body>
+
+</html>

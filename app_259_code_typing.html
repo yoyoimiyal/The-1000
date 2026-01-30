@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代码打字练习</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        .code-font {
+            font-family: 'Fira Code', monospace;
+            line-height: 1.6;
+        }
+
+        .cursor {
+            border-right: 2px solid #22c55e;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                border-color: #22c55e;
+            }
+
+            50% {
+                border-color: transparent;
+            }
+        }
+
+        .correct {
+            color: #86efac;
+        }
+
+        /* green-300 */
+        .wrong {
+            color: #fca5a5;
+            background-color: #7f1d1d;
+        }
+
+        /* red-300 on red-900 */
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-gray-300"
+    onkeydown="handleKey(event)">
+
+    <div class="w-full max-w-4xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-green-400 flex items-center gap-2">
+                <span class="text-2xl">⌨️</span> Code Typer
+            </h1>
+            <div class="text-sm font-bold flex gap-6">
+                <span>WPM: <span id="wpm" class="text-white">0</span></span>
+                <span>ACC: <span id="acc" class="text-white">100%</span></span>
+            </div>
+        </header>
+
+        <!-- Code Display -->
+        <div class="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 relative overflow-hidden min-h-[200px]"
+            onclick="document.body.focus()">
+            <pre class="code-font text-lg whitespace-pre-wrap break-all relative z-10" id="display"></pre>
+
+            <div class="absolute top-4 right-4 text-xs text-gray-500" id="lang-tag">JS</div>
+            <div id="finish-overlay"
+                class="absolute inset-0 bg-gray-900/90 flex flex-col items-center justify-center z-20 hidden">
+                <h2 class="text-3xl font-bold text-white mb-2">Complete!</h2>
+                <div class="text-center mb-6">
+                    <p class="text-gray-400">Final WPM: <span class="text-green-400 font-bold text-xl"
+                            id="final-wpm">0</span></p>
+                    <p class="text-gray-400">Accuracy: <span class="text-green-400 font-bold text-xl"
+                            id="final-acc">0%</span></p>
+                </div>
+                <div class="flex gap-4">
+                    <button onclick="initGame()"
+                        class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold transition">Next
+                        Snippet</button>
+                    <a href="./navigation.html"
+                        class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-bold transition">Exit</a>
+                </div>
+            </div>
+        </div>
+
+        <p class="mt-6 text-center text-xs text-gray-500">
+            按任意键开始 • 支持回车和退格
+        </p>
+
+    </div>
+
+    <script>
+        const snippets = [
+            { lang: 'JS', code: `function hello(name) {\n  console.log("Hello, " + name);\n  return true;\n}` },
+            { lang: 'CSS', code: `.container {\n  display: flex;\n  justify-content: center;\n  align-items: center;\n}` },
+            { lang: 'HTML', code: `<div class="card">\n  <h1>Title</h1>\n  <p>Content goes here...</p>\n</div>` },
+            { lang: 'JS', code: `const array = [1, 2, 3];\nconst doubled = array.map(x => x * 2);\nconsole.log(doubled);` },
+            { lang: 'JS', code: `async function fetchData() {\n  const res = await fetch('/api/data');\n  const json = await res.json();\n}` }
+        ];
+
+        const display = document.getElementById('display');
+        const wpmEl = document.getElementById('wpm');
+        const accEl = document.getElementById('acc');
+        const overlay = document.getElementById('finish-overlay');
+        const finalWpmEl = document.getElementById('final-wpm');
+        const finalAccEl = document.getElementById('final-acc');
+        const langTag = document.getElementById('lang-tag');
+
+        let currentSnippet = "";
+        let currentIndex = 0;
+        let startTime = null;
+        let errors = 0;
+        let isFinished = false;
+
+        function initGame() {
+            const rand = snippets[Math.floor(Math.random() * snippets.length)];
+            currentSnippet = rand.code;
+            langTag.innerText = rand.lang;
+            currentIndex = 0;
+            startTime = null;
+            errors = 0;
+            isFinished = false;
+            overlay.classList.add('hidden');
+            render();
+            updateStats();
+        }
+
+        function render() {
+            let html = "";
+            for (let i = 0; i < currentSnippet.length; i++) {
+                const char = currentSnippet[i];
+                if (i < currentIndex) {
+                    html += `<span class="correct">${escapeHtml(char)}</span>`;
+                } else if (i === currentIndex) {
+                    html += `<span class="bg-gray-600 text-white cursor">${escapeHtml(char)}</span>`;
+                } else {
+                    html += `<span class="text-gray-500">${escapeHtml(char)}</span>`;
+                }
+            }
+            // Handle cursor at end
+            if (currentIndex === currentSnippet.length) {
+                html += `<span class="cursor">&nbsp;</span>`;
+            }
+            display.innerHTML = html;
+        }
+
+        function handleKey(e) {
+            if (isFinished) return;
+
+            // Ignore modifiers
+            if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') return;
+
+            if (!startTime) startTime = Date.now();
+
+            if (e.key === 'Backspace') {
+                if (currentIndex > 0) currentIndex--;
+            } else if (e.key.length === 1 || e.key === 'Enter') {
+                const targetChar = currentSnippet[currentIndex];
+                const inputChar = e.key === 'Enter' ? '\n' : e.key;
+
+                // Simple check: strictly require correct char to advance? 
+                // Or allow wrong char but mark red?
+                // Let's require correct char to advance (Standard coding practice flow), 
+                // or just block.
+                // Or flash red if wrong.
+
+                if (inputChar === targetChar) {
+                    currentIndex++;
+                } else {
+                    errors++;
+                    // Flash red
+                    const cursor = document.querySelector('.cursor');
+                    if (cursor) {
+                        cursor.classList.add('wrong');
+                        setTimeout(() => cursor.classList.remove('wrong'), 100);
+                    }
+                }
+            }
+
+            render();
+            updateStats();
+
+            if (currentIndex >= currentSnippet.length) {
+                finish();
+            }
+        }
+
+        function updateStats() {
+            if (!startTime) {
+                wpmEl.innerText = 0;
+                accEl.innerText = "100%";
+                return;
+            }
+            const timeMins = (Date.now() - startTime) / 60000;
+            const wpm = Math.round((currentIndex / 5) / timeMins); // Standard: 5 chars = 1 word
+            const acc = Math.round(((currentIndex - errors) / currentIndex) * 100);
+
+            wpmEl.innerText = isFinite(wpm) ? wpm : 0;
+            accEl.innerText = (isNaN(acc) || acc < 0) ? "100%" : acc + "%";
+        }
+
+        function finish() {
+            isFinished = true;
+            finalWpmEl.innerText = wpmEl.innerText;
+            finalAccEl.innerText = accEl.innerText;
+            overlay.classList.remove('hidden');
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        initGame();
+    </script>
+</body>
+
+</html>

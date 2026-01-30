@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>摄像头扫码器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        .scanner-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: #22c55e;
+            box-shadow: 0 0 4px #22c55e;
+            top: 0;
+            left: 0;
+            animation: scan 2s linear infinite;
+        }
+
+        @keyframes scan {
+            0% {
+                top: 0;
+            }
+
+            100% {
+                top: 100%;
+            }
+        }
+
+        canvas {
+            transform: scaleX(-1);
+            /* Mirror for user experience */
+            object-fit: cover;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-md relative">
+
+        <header class="flex justify-between items-center mb-6 text-white z-10 relative">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM5 4h4v4H5V4zm0 11h4v4H5v-4zm11-11h4v4h-4V4zM9 9H5v4h4V9zm11 0h-4v4h4V9z" />
+                </svg>
+                QR Scanner
+            </h1>
+            <a href="./navigation.html"
+                class="text-xs border border-gray-600 px-3 py-1 rounded hover:bg-gray-800 transition">退出</a>
+        </header>
+
+        <!-- Camera View -->
+        <div class="relative bg-black rounded-2xl overflow-hidden shadow-2xl border-2 border-gray-700 aspect-[3/4]">
+            <canvas id="canvas" class="w-full h-full object-cover"></canvas>
+
+            <div id="loading-msg" class="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
+                等待摄像头权限...
+            </div>
+
+            <!-- Overlay Guide -->
+            <div class="absolute inset-0 p-8 flex flex-col items-center justify-center pointer-events-none"
+                id="scan-ui">
+                <div class="w-64 h-64 border-2 border-green-500/50 rounded-lg relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-green-500"></div>
+                    <div class="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-green-500"></div>
+                    <div class="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-green-500"></div>
+                    <div class="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-green-500"></div>
+                    <div class="scanner-line"></div>
+                </div>
+                <p class="text-white/70 text-xs mt-4 bg-black/50 px-3 py-1 rounded">将二维码放入框内</p>
+            </div>
+        </div>
+
+        <!-- Result -->
+        <div id="result-card"
+            class="mt-6 bg-white p-6 rounded-2xl shadow-lg hidden transition-all duration-300 transform translate-y-4">
+            <p class="text-xs font-bold text-gray-400 uppercase mb-1">扫描结果</p>
+            <p id="result-text" class="text-gray-800 font-mono break-all mb-4 text-sm font-medium">...</p>
+
+            <div class="flex gap-3">
+                <button onclick="copyResult()"
+                    class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg text-sm font-bold transition">复制</button>
+                <a id="link-btn" href="#" target="_blank"
+                    class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-bold text-center transition hidden">
+                    打开链接
+                </a>
+            </div>
+            <button onclick="resumeScan()" class="w-full mt-3 text-xs text-blue-500 hover:underline">继续扫描</button>
+        </div>
+
+        <button onclick="startScan()" id="btn-start"
+            class="mt-6 bg-green-600 hover:bg-green-500 text-white px-8 py-3 rounded-full font-bold shadow-lg transition hidden">
+            开启摄像头
+        </button>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const resultCard = document.getElementById('result-card');
+        const resultText = document.getElementById('result-text');
+        const linkBtn = document.getElementById('link-btn');
+        const loadingMsg = document.getElementById('loading-msg');
+        const scanUI = document.getElementById('scan-ui');
+        const startBtn = document.getElementById('btn-start');
+
+        let video = document.createElement('video');
+        let isScanning = false;
+        let animationId;
+
+        // Try auto start
+        navigator.mediaDevices ? startScan() : (loadingMsg.innerText = "浏览器不支持摄像头访问");
+
+        function startScan() {
+            loadingMsg.innerText = "正在请求摄像头...";
+            startBtn.classList.add('hidden');
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(function (stream) {
+                    video.srcObject = stream;
+                    video.setAttribute("playsinline", true);
+                    video.play();
+                    isScanning = true;
+                    scanUI.style.opacity = '1';
+                    requestAnimationFrame(tick);
+                })
+                .catch(function (err) {
+                    loadingMsg.innerText = "无法访问摄像头 (请检查权限)";
+                    startBtn.classList.remove('hidden');
+                    startBtn.innerText = "重试";
+                });
+        }
+
+        function tick() {
+            if (!isScanning) return;
+
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                loadingMsg.style.display = 'none';
+                canvas.height = video.videoHeight;
+                canvas.width = video.videoWidth;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert",
+                });
+
+                if (code) {
+                    // Found
+                    foundCode(code.data);
+                } else {
+                    animationId = requestAnimationFrame(tick);
+                }
+            } else {
+                animationId = requestAnimationFrame(tick);
+            }
+        }
+
+        function foundCode(data) {
+            isScanning = false;
+            scanUI.style.opacity = '0.2'; // Dim UI
+
+            // Beep?
+
+            resultText.innerText = data;
+            resultCard.classList.remove('hidden');
+            resultCard.classList.remove('translate-y-4');
+
+            if (data.startsWith('http')) {
+                linkBtn.href = data;
+                linkBtn.classList.remove('hidden');
+            } else {
+                linkBtn.classList.add('hidden');
+            }
+        }
+
+        function resumeScan() {
+            resultCard.classList.add('hidden');
+            resultCard.classList.add('translate-y-4');
+            scanUI.style.opacity = '1';
+            isScanning = true;
+            requestAnimationFrame(tick);
+        }
+
+        function copyResult() {
+            navigator.clipboard.writeText(resultText.innerText);
+            alert("已复制");
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>欧姆定律可视化</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type=range] {
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #4f46e5;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+        }
+
+        .pipe {
+            transition: height 0.2s, background-color 0.2s;
+        }
+
+        .electron {
+            width: 8px;
+            height: 8px;
+            background: #fbbf24;
+            border-radius: 50%;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 5px #fbbf24;
+        }
+    </style>
+</head>
+
+<body class="bg-indigo-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div
+        class="w-full max-w-4xl bg-white p-8 rounded-3xl shadow-xl border border-indigo-100 flex flex-col md:flex-row gap-12">
+
+        <!-- Controls -->
+        <div class="flex-1 space-y-8">
+            <header class="mb-8">
+                <h1 class="text-2xl font-bold text-indigo-900 flex items-center gap-2">
+                    <span class="text-3xl">⚡</span> Ohm's Law
+                </h1>
+                <p class="text-sm text-slate-500 font-mono mt-1">V = I × R</p>
+            </header>
+
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <label class="font-bold text-indigo-600 uppercase text-sm">电压 Voltage (V)</label>
+                    <span class="font-mono font-bold text-xl" id="val-v">5.0 V</span>
+                </div>
+                <input type="range" id="slider-v" min="1" max="10" step="0.1" value="5" class="w-full"
+                    oninput="update()">
+            </div>
+
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <label class="font-bold text-orange-600 uppercase text-sm">电阻 Resistance (R)</label>
+                    <span class="font-mono font-bold text-xl" id="val-r">100 Ω</span>
+                </div>
+                <input type="range" id="slider-r" min="10" max="1000" step="10" value="100" class="w-full"
+                    oninput="update()">
+            </div>
+
+            <div class="bg-indigo-50 p-6 rounded-2xl border border-indigo-200 text-center">
+                <p class="text-xs font-bold text-indigo-400 uppercase mb-1">电流 Current (I)</p>
+                <p class="text-5xl font-black text-indigo-800 tracking-tight" id="val-i">0.050 A</p>
+                <p class="text-xs text-indigo-400 mt-2 font-mono" id="val-i-ma">50 mA</p>
+            </div>
+
+            <div class="text-right">
+                <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+            </div>
+        </div>
+
+        <!-- Visual -->
+        <div class="w-full md:w-64 bg-slate-100 rounded-2xl border border-slate-200 relative overflow-hidden flex flex-col items-center py-4 shadow-inner"
+            style="min-height: 400px;">
+            <p class="text-xs font-bold text-slate-400 uppercase absolute top-4">Circuit Visual</p>
+
+            <!-- Resistor (Neck) -->
+            <div class="mt-12 relative w-16 bg-orange-200 border-2 border-orange-400 transition-all duration-300 flex items-center justify-center overflow-hidden"
+                id="resistor-neck" style="height: 200px;">
+                <!-- Moving Electrons -->
+                <div id="electron-container" class="absolute inset-0 w-full h-full"></div>
+            </div>
+
+            <div class="mt-4 text-center text-xs text-slate-500 max-w-[150px]">
+                <p>电压(V) 推动电子</p>
+                <p>电阻(R) 阻碍流动</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const sliderV = document.getElementById('slider-v');
+        const sliderR = document.getElementById('slider-r');
+        const valV = document.getElementById('val-v');
+        const valR = document.getElementById('val-r');
+        const valI = document.getElementById('val-i');
+        const valIma = document.getElementById('val-i-ma');
+
+        const neck = document.getElementById('resistor-neck');
+        const eContainer = document.getElementById('electron-container');
+
+        let electrons = [];
+        let animationId;
+
+        function update() {
+            const v = parseFloat(sliderV.value);
+            const r = parseInt(sliderR.value);
+
+            const i = v / r;
+
+            valV.innerText = v.toFixed(1) + " V";
+            valR.innerText = r + " Ω";
+            valI.innerText = i.toFixed(3) + " A";
+            valIma.innerText = (i * 1000).toFixed(0) + " mA";
+
+            // Visual Mapping
+            // Resistance affects width of pipe (narrower = higher R)
+            // Voltage affects speed of electrons
+
+            // Map R (10-1000) to Width (60px to 10px)
+            // Inverse relationship visual: High R -> Narrow pipe
+            const width = 70 - (r / 1000 * 60);
+            neck.style.width = width + 'px';
+
+            // Speed factor
+            const speed = v * 0.5; // Base speed
+
+            updateElectrons(speed);
+        }
+
+        function updateElectrons(speed) {
+            // Speed is global for animation loop
+            window.currentSpeed = speed;
+        }
+
+        function loop() {
+            // Add electrons if needed (density proportional to current? or fixed count, variable speed?)
+            // I = Speed * Density.
+            // Let's keep density fixed visually, just change speed.
+
+            // Spawn
+            if (Math.random() > 0.8) {
+                const el = document.createElement('div');
+                el.className = 'electron';
+                el.style.top = '-10px';
+                eContainer.appendChild(el);
+                electrons.push({ el: el, y: -10 });
+            }
+
+            // Move
+            for (let i = electrons.length - 1; i >= 0; i--) {
+                const e = electrons[i];
+                e.y += window.currentSpeed;
+                e.el.style.top = e.y + 'px';
+
+                if (e.y > 210) {
+                    e.el.remove();
+                    electrons.splice(i, 1);
+                }
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        // Init
+        window.currentSpeed = 2;
+        update();
+        loop();
+    </script>
+</body>
+
+</html>

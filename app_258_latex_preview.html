@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaTeX 公式预览</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MathJax -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        textarea {
+            font-family: monospace;
+            white-space: pre;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex flex-col items-center p-6 text-gray-800">
+
+    <div class="w-full max-w-3xl h-[85vh] flex flex-col">
+
+        <header class="flex justify-between items-center mb-6 shrink-0">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <span class="font-serif italic text-2xl">f(x)</span> LaTeX Preview
+            </h1>
+            <a href="./navigation.html" class="text-sm text-gray-400 hover:text-black">退出</a>
+        </header>
+
+        <div class="flex-1 flex flex-col md:flex-row gap-6 overflow-hidden">
+
+            <!-- Input -->
+            <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200">
+                <div
+                    class="p-3 bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase flex justify-between items-center">
+                    <span>LaTeX Code</span>
+                    <div class="flex gap-2">
+                        <button onclick="insertSample(1)" class="hover:text-blue-600">Sample 1</button>
+                        <button onclick="insertSample(2)" class="hover:text-blue-600">Sample 2</button>
+                    </div>
+                </div>
+                <textarea id="input" class="flex-1 w-full p-4 resize-none outline-none text-sm text-gray-700 bg-white"
+                    placeholder="\sum_{i=0}^n i^2 = \frac{(n^2+n)(2n+1)}{6}" oninput="render()"></textarea>
+            </div>
+
+            <!-- Preview -->
+            <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200">
+                <div class="p-3 bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase">
+                    Render Result
+                </div>
+                <div class="flex-1 p-6 flex items-center justify-center overflow-auto text-2xl" id="output">
+                    <!-- MathJax output -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Cheat Sheet -->
+        <div class="mt-6 flex flex-wrap gap-2 justify-center text-xs text-gray-500 font-mono">
+            <span class="bg-white border px-2 py-1 rounded cursor-pointer hover:border-blue-400"
+                onclick="insertSymbol('\\alpha')">\alpha</span>
+            <span class="bg-white border px-2 py-1 rounded cursor-pointer hover:border-blue-400"
+                onclick="insertSymbol('\\beta')">\beta</span>
+            <span class="bg-white border px-2 py-1 rounded cursor-pointer hover:border-blue-400"
+                onclick="insertSymbol('\\sum')">\sum</span>
+            <span class="bg-white border px-2 py-1 rounded cursor-pointer hover:border-blue-400"
+                onclick="insertSymbol('\\int')">\int</span>
+            <span class="bg-white border px-2 py-1 rounded cursor-pointer hover:border-blue-400"
+                onclick="insertSymbol('\\frac{a}{b}')">\frac</span>
+            <span class="bg-white border px-2 py-1 rounded cursor-pointer hover:border-blue-400"
+                onclick="insertSymbol('\\sqrt{x}')">\sqrt</span>
+            <span class="bg-white border px-2 py-1 rounded cursor-pointer hover:border-blue-400"
+                onclick="insertSymbol('x^2')">^2</span>
+            <span class="bg-white border px-2 py-1 rounded cursor-pointer hover:border-blue-400"
+                onclick="insertSymbol('x_i')">_i</span>
+            <span class="bg-white border px-2 py-1 rounded cursor-pointer hover:border-blue-400"
+                onclick="insertSymbol('\\infty')">\infty</span>
+        </div>
+
+    </div>
+
+    <script>
+        const input = document.getElementById('input');
+        const output = document.getElementById('output');
+
+        function render() {
+            // We use standard TeX delimiters for display math
+            const tex = input.value;
+            output.innerText = `$$${tex}$$`;
+
+            // Trigger MathJax typeset
+            if (window.MathJax) {
+                MathJax.typesetPromise([output]).catch((err) => console.log(err));
+            }
+        }
+
+        function insertSample(id) {
+            if (id === 1) {
+                input.value = `x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}`;
+            } else {
+                input.value = `\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}`;
+            }
+            render();
+        }
+
+        function insertSymbol(sym) {
+            // Insert at cursor position or append
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            const text = input.value;
+            input.value = text.substring(0, start) + sym + text.substring(end);
+            input.focus();
+            input.selectionStart = input.selectionEnd = start + sym.length;
+            render();
+        }
+
+        // Init
+        input.value = `E = mc^2`;
+        // Delay initial render to allow MathJax load
+        setTimeout(render, 1000);
+    </script>
+</body>
+
+</html>

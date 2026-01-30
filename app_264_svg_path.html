@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG 路径可视化</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .grid-bg {
+            background-size: 20px 20px;
+            background-image: linear-gradient(to right, #f1f5f9 1px, transparent 1px), linear-gradient(to bottom, #f1f5f9 1px, transparent 1px);
+        }
+    </style>
+</head>
+
+<body class="bg-white min-h-screen flex flex-col p-6 text-slate-800">
+
+    <header class="flex justify-between items-center mb-6 shrink-0">
+        <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-700">
+            <span class="bg-indigo-100 px-2 py-1 rounded text-xs font-mono">&lt;path&gt;</span> Visualizer
+        </h1>
+        <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+    </header>
+
+    <div class="flex-1 flex flex-col md:flex-row gap-6 h-[85vh]">
+
+        <!-- Controls -->
+        <div class="w-full md:w-1/3 flex flex-col gap-4">
+
+            <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex-1 flex flex-col">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Path Data (d)</label>
+                <textarea id="path-input"
+                    class="flex-1 w-full p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm resize-none"
+                    placeholder="M 10 10 H 90 V 90 H 10 Z" oninput="render()"></textarea>
+
+                <div class="flex gap-2 mt-4">
+                    <button onclick="loadSample(1)"
+                        class="text-xs bg-slate-100 px-3 py-1 rounded hover:bg-slate-200">Rect</button>
+                    <button onclick="loadSample(2)"
+                        class="text-xs bg-slate-100 px-3 py-1 rounded hover:bg-slate-200">Circle</button>
+                    <button onclick="loadSample(3)"
+                        class="text-xs bg-slate-100 px-3 py-1 rounded hover:bg-slate-200">Wave</button>
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">ViewBox</label>
+                <div class="flex gap-2">
+                    <input type="number" id="vb-w" value="100" class="w-1/2 p-2 border rounded text-center font-mono"
+                        oninput="render()">
+                    <span class="self-center">x</span>
+                    <input type="number" id="vb-h" value="100" class="w-1/2 p-2 border rounded text-center font-mono"
+                        oninput="render()">
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="show-points" class="rounded text-indigo-600" checked onchange="render()">
+                    <span class="text-sm font-bold text-slate-600">显示端点 (Points)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer mt-2">
+                    <input type="checkbox" id="fill-path" class="rounded text-indigo-600" onchange="render()">
+                    <span class="text-sm font-bold text-slate-600">填充 (Fill)</span>
+                </label>
+            </div>
+
+        </div>
+
+        <!-- Preview -->
+        <div
+            class="flex-1 bg-white border border-slate-200 rounded-xl shadow-sm relative overflow-hidden flex items-center justify-center p-4">
+            <div class="grid-bg w-full h-full absolute inset-0"></div>
+
+            <svg id="svg-preview"
+                class="w-full h-full max-h-[80vh] border border-dashed border-slate-300 bg-white shadow-lg"
+                viewBox="0 0 100 100" overflow="visible">
+                <path id="path-el" d="" fill="none" stroke="#4f46e5" stroke-width="1"
+                    vector-effect="non-scaling-stroke"></path>
+                <g id="points-group"></g>
+            </svg>
+
+            <div class="absolute bottom-4 right-4 text-xs text-slate-400 bg-white/80 px-2 py-1 rounded">
+                <span id="info-len">Length: 0</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const input = document.getElementById('path-input');
+        const pathEl = document.getElementById('path-el');
+        const svg = document.getElementById('svg-preview');
+        const pointsGroup = document.getElementById('points-group');
+        const infoLen = document.getElementById('info-len');
+
+        function loadSample(id) {
+            if (id === 1) input.value = "M 10 10 H 90 V 90 H 10 Z";
+            if (id === 2) input.value = "M 50 10 A 40 40 0 1 0 50 90 A 40 40 0 1 0 50 10 Z";
+            if (id === 3) input.value = "M 0 50 Q 25 10 50 50 T 100 50";
+            render();
+        }
+
+        function render() {
+            const d = input.value;
+            const w = document.getElementById('vb-w').value || 100;
+            const h = document.getElementById('vb-h').value || 100;
+            const showP = document.getElementById('show-points').checked;
+            const fill = document.getElementById('fill-path').checked;
+
+            svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+            pathEl.setAttribute('d', d);
+            pathEl.setAttribute('fill', fill ? 'rgba(99, 102, 241, 0.2)' : 'none');
+
+            // Update stats
+            try {
+                const len = pathEl.getTotalLength();
+                infoLen.innerText = `Length: ${len.toFixed(2)}`;
+            } catch (e) {
+                infoLen.innerText = "Invalid Path";
+            }
+
+            // Draw points (Start/End of commands)
+            // Parsing manually is hard, but we can sample the path
+            pointsGroup.innerHTML = '';
+            if (showP) {
+                // Simple visualization: Sample 10 points along path? 
+                // Or try to regex match coords? Regex is brittle for SVG d.
+                // Let's sample start, mid, end.
+                // Or better: Just put start and end markers.
+
+                try {
+                    const len = pathEl.getTotalLength();
+                    const pStart = pathEl.getPointAtLength(0);
+                    const pEnd = pathEl.getPointAtLength(len);
+
+                    addDot(pStart.x, pStart.y, '#22c55e'); // Green Start
+                    addDot(pEnd.x, pEnd.y, '#ef4444'); // Red End
+                } catch (e) { }
+            }
+        }
+
+        function addDot(x, y, color) {
+            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            circle.setAttribute("cx", x);
+            circle.setAttribute("cy", y);
+            // r should be relative to viewbox size to be visible but small.
+            // vector-effect doesn't work on r.
+            // Assume 100x100 base, r=2.
+            const w = document.getElementById('vb-w').value;
+            const r = w / 50;
+            circle.setAttribute("r", r);
+            circle.setAttribute("fill", color);
+            pointsGroup.appendChild(circle);
+        }
+
+        loadSample(3);
+    </script>
+</body>
+
+</html>

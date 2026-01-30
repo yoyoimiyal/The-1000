@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雨声合成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type=range] {
+            height: 4px;
+            border-radius: 2px;
+            background: #374151;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #60a5fa;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-white overflow-hidden relative">
+
+    <!-- Rain Visual Background -->
+    <canvas id="rain-canvas" class="absolute inset-0 w-full h-full opacity-30 pointer-events-none"></canvas>
+
+    <div class="w-full max-w-md bg-gray-800/80 backdrop-blur p-8 rounded-3xl shadow-2xl border border-gray-700 z-10">
+
+        <header class="flex justify-between items-center mb-10">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <span class="text-3xl">🌧️</span> Rain Synth
+            </h1>
+            <a href="./navigation.html"
+                class="text-xs text-gray-500 hover:text-white border border-gray-600 px-3 py-1 rounded">退出</a>
+        </header>
+
+        <div class="space-y-8">
+
+            <button onclick="togglePlay()" id="play-btn"
+                class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl shadow-lg transition text-lg flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                播放雨声
+            </button>
+
+            <!-- Controls -->
+            <div class="space-y-6 opacity-50 pointer-events-none transition-opacity duration-300" id="controls">
+                <div>
+                    <div class="flex justify-between text-xs font-bold text-gray-400 mb-2 uppercase">
+                        <span>Volume (音量)</span>
+                        <span id="vol-val">50%</span>
+                    </div>
+                    <input type="range" id="vol" min="0" max="1" step="0.01" value="0.5" class="w-full"
+                        oninput="updateParams()">
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs font-bold text-gray-400 mb-2 uppercase">
+                        <span>Tone (音色/低通)</span>
+                        <span id="tone-val">800 Hz</span>
+                    </div>
+                    <input type="range" id="tone" min="200" max="2000" step="10" value="800" class="w-full"
+                        oninput="updateParams()">
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Audio
+        let audioCtx;
+        let pinkNoise;
+        let gainNode;
+        let filterNode;
+        let isPlaying = false;
+
+        // Visual
+        const canvas = document.getElementById('rain-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let drops = [];
+        let rainAnimId;
+
+        // UI
+        const btn = document.getElementById('play-btn');
+        const controls = document.getElementById('controls');
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Audio Logic: Pink Noise is best for rain
+        function createPinkNoise() {
+            const bufferSize = 4096;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            let b0, b1, b2, b3, b4, b5, b6;
+            b0 = b1 = b2 = b3 = b4 = b5 = b6 = 0.0;
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                b0 = 0.99886 * b0 + white * 0.0555179;
+                b1 = 0.99332 * b1 + white * 0.0750759;
+                b2 = 0.96900 * b2 + white * 0.1538520;
+                b3 = 0.86650 * b3 + white * 0.3104856;
+                b4 = 0.55000 * b4 + white * 0.5329522;
+                b5 = -0.7616 * b5 - white * 0.0168980;
+                data[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+                data[i] *= 0.11; // Compensate for gain
+                b6 = white * 0.115926;
+            }
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            noise.loop = true;
+            return noise;
+        }
+
+        function togglePlay() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            if (isPlaying) {
+                stop();
+            } else {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                start();
+            }
+        }
+
+        function start() {
+            pinkNoise = createPinkNoise();
+            filterNode = audioCtx.createBiquadFilter();
+            filterNode.type = 'lowpass';
+
+            gainNode = audioCtx.createGain();
+
+            pinkNoise.connect(filterNode);
+            filterNode.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            // Initial params
+            updateParams();
+
+            pinkNoise.start();
+            isPlaying = true;
+
+            // UI
+            btn.innerText = "停止播放";
+            btn.classList.replace('bg-blue-600', 'bg-red-600');
+            btn.classList.replace('hover:bg-blue-500', 'hover:bg-red-500');
+            controls.classList.remove('opacity-50', 'pointer-events-none');
+
+            // Visuals
+            rainLoop();
+        }
+
+        function stop() {
+            if (pinkNoise) pinkNoise.stop();
+            isPlaying = false;
+
+            btn.innerText = "播放雨声";
+            btn.classList.replace('bg-red-600', 'bg-blue-600');
+            btn.classList.replace('hover:bg-red-500', 'hover:bg-blue-500');
+            controls.classList.add('opacity-50', 'pointer-events-none');
+
+            cancelAnimationFrame(rainAnimId);
+            ctx.clearRect(0, 0, width, height);
+        }
+
+        function updateParams() {
+            if (!isPlaying) return;
+            const vol = parseFloat(document.getElementById('vol').value);
+            const tone = parseInt(document.getElementById('tone').value);
+
+            document.getElementById('vol-val').innerText = Math.round(vol * 100) + '%';
+            document.getElementById('tone-val').innerText = tone + ' Hz';
+
+            gainNode.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.1);
+            filterNode.frequency.setTargetAtTime(tone, audioCtx.currentTime, 0.1);
+        }
+
+        // Visuals
+        function rainLoop() {
+            // Add drops
+            if (Math.random() > 0.5) {
+                drops.push({
+                    x: Math.random() * width,
+                    y: -10,
+                    l: Math.random() * 20 + 10,
+                    v: Math.random() * 10 + 10
+                });
+            }
+
+            ctx.clearRect(0, 0, width, height);
+            ctx.strokeStyle = 'rgba(100, 150, 255, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+
+            for (let i = drops.length - 1; i >= 0; i--) {
+                const d = drops[i];
+                d.y += d.v;
+                ctx.moveTo(d.x, d.y);
+                ctx.lineTo(d.x, d.y + d.l);
+
+                if (d.y > height) {
+                    drops.splice(i, 1);
+                }
+            }
+            ctx.stroke();
+
+            if (isPlaying) rainAnimId = requestAnimationFrame(rainLoop);
+        }
+    </script>
+</body>
+
+</html>

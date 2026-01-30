@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>正则查找替换</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .highlight {
+            background-color: #fef08a;
+            color: #854d0e;
+            border-radius: 2px;
+        }
+
+        .replaced {
+            background-color: #bbf7d0;
+            color: #166534;
+            border-radius: 2px;
+            text-decoration: underline;
+        }
+
+        .editor {
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-5xl h-[90vh] flex flex-col">
+
+        <header class="flex justify-between items-center mb-6 shrink-0">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-700">
+                <span class="bg-indigo-100 px-2 py-1 rounded text-xs font-mono">.*</span> Regex Replace
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <!-- Controls -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 shrink-0">
+            <div class="flex flex-col md:flex-row gap-4 mb-4">
+                <div class="flex-1 flex gap-2 items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                    <span class="text-slate-400 font-bold">/</span>
+                    <input type="text" id="regex"
+                        class="flex-1 bg-transparent outline-none font-mono text-indigo-600 font-bold"
+                        placeholder="pattern" value="\b\w{4}\b" oninput="update()">
+                    <span class="text-slate-400 font-bold">/</span>
+                    <input type="text" id="flags"
+                        class="w-12 bg-transparent outline-none font-mono text-green-600 font-bold" placeholder="g"
+                        value="g" oninput="update()">
+                </div>
+
+                <div class="flex-1 flex gap-2 items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                    <span class="text-slate-400 font-bold text-xs uppercase">Replace</span>
+                    <input type="text" id="replace" class="flex-1 bg-transparent outline-none font-mono text-slate-700"
+                        placeholder="replacement" value="****" oninput="update()">
+                </div>
+            </div>
+            <div class="text-xs text-red-500 font-mono h-4" id="error-msg"></div>
+        </div>
+
+        <!-- Main Area -->
+        <div class="flex-1 flex flex-col md:flex-row gap-6 overflow-hidden">
+
+            <!-- Source Input -->
+            <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200">
+                <div
+                    class="p-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase flex justify-between">
+                    <span>原始文本 (Source)</span>
+                    <span id="match-count" class="text-indigo-500">0 matches</span>
+                </div>
+                <div class="relative flex-1 overflow-hidden">
+                    <textarea id="input"
+                        class="absolute inset-0 w-full h-full p-4 resize-none outline-none bg-transparent z-10 text-transparent caret-slate-800 editor"
+                        spellcheck="false" oninput="update()" onscroll="syncScroll()">This is a simple test text.
+Here are some four letter words:
+Code, Data, Node, Java, Test.
+Try to replace them!</textarea>
+                    <!-- Highlight Layer -->
+                    <div id="highlight-layer"
+                        class="absolute inset-0 w-full h-full p-4 editor text-slate-400 overflow-hidden pointer-events-none z-0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Result Output -->
+            <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200">
+                <div
+                    class="p-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase flex justify-between">
+                    <span>替换结果 (Result)</span>
+                    <button onclick="copyResult()" class="text-indigo-500 hover:underline">Copy</button>
+                </div>
+                <div class="flex-1 p-4 overflow-auto bg-slate-50/30 editor text-slate-700" id="output"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const regexIn = document.getElementById('regex');
+        const flagsIn = document.getElementById('flags');
+        const replaceIn = document.getElementById('replace');
+        const input = document.getElementById('input');
+        const highlightLayer = document.getElementById('highlight-layer');
+        const output = document.getElementById('output');
+        const errorMsg = document.getElementById('error-msg');
+        const matchCount = document.getElementById('match-count');
+
+        function update() {
+            const text = input.value;
+            const pattern = regexIn.value;
+            const flags = flagsIn.value;
+            const replacement = replaceIn.value;
+
+            errorMsg.innerText = "";
+
+            if (!pattern) {
+                highlightLayer.innerText = text;
+                output.innerText = text;
+                matchCount.innerText = "0 matches";
+                return;
+            }
+
+            try {
+                const re = new RegExp(pattern, flags);
+
+                // Highlight matches in input
+                // Escape HTML
+                const safeText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+                let matches = 0;
+
+                // If global flag is not set, replace only first.
+                // highlight logic
+                const highlighted = safeText.replace(re, (match) => {
+                    matches++;
+                    return `<span class="highlight">${match}</span>`;
+                });
+
+                // We need to preserve newlines visually in div
+                highlightLayer.innerHTML = highlighted.replace(/\n/g, '<br>');
+
+                // If no global flag, count will be 1 max effectively for replace, 
+                // but highlighting might behave diff if re-created.
+                // RegExp.exec loop to count real matches if 'g' is missing?
+                // Text.replace behavior matches Regex behavior.
+
+                // Note: The count logic above inside replace callback only works if 'g' is set or only 1 match.
+                // If 'g' is missing, replace only runs once.
+
+                if (!flags.includes('g') && text.match(re)) matches = 1;
+                matchCount.innerText = `${matches} match${matches !== 1 ? 'es' : ''}`;
+
+                // Output Result
+                const result = text.replace(re, replacement);
+
+                // Highlight changes in output?
+                // Just showing text is fine.
+                // Let's highlight replaced parts if possible? Hard without diff.
+                // Just simple output.
+                output.innerText = result;
+
+            } catch (e) {
+                errorMsg.innerText = e.message;
+                highlightLayer.innerText = text;
+                output.innerText = text;
+                matchCount.innerText = "Error";
+            }
+        }
+
+        function syncScroll() {
+            highlightLayer.scrollTop = input.scrollTop;
+            highlightLayer.scrollLeft = input.scrollLeft;
+        }
+
+        function copyResult() {
+            const range = document.createRange();
+            range.selectNode(output);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            alert("结果已复制");
+        }
+
+        // Init
+        update();
+    </script>
+</body>
+
+</html>

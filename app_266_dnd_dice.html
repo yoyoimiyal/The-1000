@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D 跑团骰子</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .dice-btn {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            transition: all 0.1s;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .dice-btn:active {
+            transform: scale(0.95);
+            background: #f3f4f6;
+        }
+
+        .dice-btn:hover {
+            border-color: #6366f1;
+            color: #6366f1;
+        }
+
+        .roll-anim {
+            animation: roll 0.5s ease-out;
+        }
+
+        @keyframes roll {
+            0% {
+                transform: rotate(0deg) scale(0.8);
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: rotate(180deg) scale(1.1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: rotate(360deg) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .history-item {
+            animation: slideIn 0.2s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen p-6 flex flex-col items-center text-slate-800">
+
+    <div class="w-full max-w-2xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold flex items-center gap-2 text-indigo-800">
+                <span class="text-3xl">🎲</span> D&D Dice Roller
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="flex flex-col md:flex-row gap-8">
+
+            <!-- Dice Grid -->
+            <div class="flex-1">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+                    <div class="grid grid-cols-3 gap-4">
+                        <button class="dice-btn" onclick="roll(4)">
+                            <span class="text-2xl font-black">4</span>
+                            <span class="text-xs text-slate-400">D4</span>
+                        </button>
+                        <button class="dice-btn" onclick="roll(6)">
+                            <span class="text-2xl font-black">6</span>
+                            <span class="text-xs text-slate-400">D6</span>
+                        </button>
+                        <button class="dice-btn" onclick="roll(8)">
+                            <span class="text-2xl font-black">8</span>
+                            <span class="text-xs text-slate-400">D8</span>
+                        </button>
+                        <button class="dice-btn" onclick="roll(10)">
+                            <span class="text-2xl font-black">10</span>
+                            <span class="text-xs text-slate-400">D10</span>
+                        </button>
+                        <button class="dice-btn" onclick="roll(12)">
+                            <span class="text-2xl font-black">12</span>
+                            <span class="text-xs text-slate-400">D12</span>
+                        </button>
+                        <button class="dice-btn border-indigo-200 bg-indigo-50 hover:bg-indigo-100" onclick="roll(20)">
+                            <span class="text-2xl font-black text-indigo-700">20</span>
+                            <span class="text-xs text-indigo-400">D20</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Custom Roll -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex gap-2">
+                    <input type="number" id="custom-sides" placeholder="Sides"
+                        class="w-20 p-2 border rounded text-center outline-none focus:border-indigo-500" value="100">
+                    <button onclick="rollCustom()"
+                        class="flex-1 bg-slate-800 text-white rounded font-bold hover:bg-slate-700 transition">Roll
+                        Custom</button>
+                </div>
+            </div>
+
+            <!-- Result & History -->
+            <div class="w-full md:w-64 flex flex-col gap-6">
+
+                <!-- Big Result -->
+                <div
+                    class="bg-indigo-600 text-white p-8 rounded-2xl shadow-lg text-center flex flex-col items-center justify-center h-48 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-white/5 opacity-50 text-[10rem] font-bold flex items-center justify-center pointer-events-none select-none"
+                        id="bg-num">?</div>
+                    <div class="relative z-10">
+                        <p class="text-xs uppercase font-bold text-indigo-200 mb-2" id="res-label">Ready</p>
+                        <h2 class="text-7xl font-black tracking-tighter" id="res-val">--</h2>
+                    </div>
+                </div>
+
+                <!-- History -->
+                <div
+                    class="bg-white rounded-xl shadow-sm border border-slate-200 flex-1 overflow-hidden flex flex-col max-h-64">
+                    <div class="p-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                        <span class="text-xs font-bold text-slate-500 uppercase">History</span>
+                        <button onclick="clearHistory()" class="text-xs text-red-400 hover:text-red-600">Clear</button>
+                    </div>
+                    <div id="history-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+                        <!-- Items -->
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const resVal = document.getElementById('res-val');
+        const resLabel = document.getElementById('res-label');
+        const bgNum = document.getElementById('bg-num');
+        const list = document.getElementById('history-list');
+
+        function roll(sides) {
+            // Animation effect
+            let i = 0;
+            const duration = 400;
+            const interval = 30;
+
+            resLabel.innerText = `Rolling D${sides}...`;
+
+            const timer = setInterval(() => {
+                const temp = Math.floor(Math.random() * sides) + 1;
+                resVal.innerText = temp;
+                i += interval;
+                if (i >= duration) {
+                    clearInterval(timer);
+                    finishRoll(sides);
+                }
+            }, interval);
+        }
+
+        function rollCustom() {
+            const sides = parseInt(document.getElementById('custom-sides').value) || 100;
+            roll(sides);
+        }
+
+        function finishRoll(sides) {
+            const result = Math.floor(Math.random() * sides) + 1;
+            resVal.innerText = result;
+            bgNum.innerText = result;
+            resLabel.innerText = `Result (D${sides})`;
+
+            // Re-trigger animation class
+            resVal.classList.remove('roll-anim');
+            void resVal.offsetWidth;
+            resVal.classList.add('roll-anim');
+
+            // Add to history
+            addToHistory(sides, result);
+        }
+
+        function addToHistory(sides, result) {
+            const div = document.createElement('div');
+            div.className = "history-item flex justify-between items-center p-2 rounded hover:bg-slate-50 border border-transparent hover:border-slate-100";
+
+            const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' });
+
+            // Critical hit highlight
+            let valClass = "font-bold text-slate-700";
+            if (result === sides) valClass = "font-bold text-green-600";
+            if (result === 1) valClass = "font-bold text-red-500";
+
+            div.innerHTML = `
+                <span class="text-xs text-slate-400 font-mono">${time}</span>
+                <div class="flex gap-2 items-center">
+                    <span class="text-xs bg-slate-100 px-1.5 rounded text-slate-500">D${sides}</span>
+                    <span class="${valClass} w-6 text-right">${result}</span>
+                </div>
+            `;
+            list.prepend(div);
+
+            if (list.children.length > 20) list.lastElementChild.remove();
+        }
+
+        function clearHistory() {
+            list.innerHTML = '';
+        }
+    </script>
+</body>
+
+</html>
