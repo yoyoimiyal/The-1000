@@ -41,7 +41,6 @@ def generate_nav():
     # 3. 生成 HTML 内容
     total = len(apps)
     
-    # 注意：这里生成的已经是 index.html 了
     html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -81,8 +80,6 @@ def generate_nav():
             background-color: #ef4444; width: 8px; height: 8px; border-radius: 50%;
             margin: 6px;
         }}
-        /* Return to Home Button Style for sub-pages */
-        /* This CSS is prepared for future integration if needed */
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
@@ -130,7 +127,6 @@ def generate_nav():
         
         display_id = f"{app_id:03d}"
         
-        # 注意：这里所有的链接都是相对路径 ./filename，这在 GitHub Pages 上完美工作
         html += f'''            <a href="./{filename}" class="{classes}" data-search="{title.lower()} {app_id}">
                 {indicator}
                 <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">{display_id}</span>
@@ -168,19 +164,17 @@ def generate_nav():
 </html>
 """
 
-    # 5. 写入文件 (注意文件名变为 index.html)
+    # 5. 写入文件
     try:
+        # 写入 index.html (供 GitHub Pages 默认访问)
         with open('index.html', 'w', encoding='utf-8') as f:
             f.write(html)
         print(f"✅ Successfully generated index.html with {total} apps!")
-        
-        # 可选：如果存在旧的 navigation.html，可以删除它以免混淆
-        if os.path.exists('navigation.html'):
-            try:
-                os.remove('navigation.html')
-                print("🗑️  Removed old navigation.html")
-            except:
-                pass
+
+        # 写入 navigation.html (供旧的小程序返回链接访问，内容与 index.html 完全一致)
+        with open('navigation.html', 'w', encoding='utf-8') as f:
+            f.write(html)
+        print(f"✅ Successfully generated navigation.html (Compatibility Mode)!")
                 
     except Exception as e:
         print(f"❌ Error writing file: {e}")
