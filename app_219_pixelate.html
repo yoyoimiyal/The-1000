@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片像素化工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Force nearest neighbor interpolation for sharp pixels */
+        canvas {
+            image-rendering: pixelated;
+        }
+    </style>
+</head>
+
+<body class="bg-pink-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-4xl flex flex-col gap-6 h-[90vh]">
+
+        <header class="flex justify-between items-center mb-2 shrink-0">
+            <h1 class="text-2xl font-bold text-pink-600 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Pixelate Tool
+            </h1>
+            <a href="./navigation.html" class="text-sm text-pink-400 hover:text-pink-600">退出</a>
+        </header>
+
+        <!-- Controls -->
+        <div
+            class="bg-white p-4 rounded-2xl shadow-sm border border-pink-100 flex flex-col md:flex-row gap-4 items-center shrink-0">
+            <label
+                class="cursor-pointer bg-pink-600 hover:bg-pink-700 text-white px-6 py-2 rounded-lg font-bold transition shadow-md">
+                📂 上传图片
+                <input type="file" class="hidden" accept="image/*" onchange="loadImage(event)">
+            </label>
+
+            <div class="h-8 w-px bg-slate-200 hidden md:block"></div>
+
+            <div class="flex items-center gap-4 flex-1 w-full">
+                <span class="text-xs font-bold text-slate-400 uppercase">像素大小 (Block Size)</span>
+                <input type="range" id="block-size" min="1" max="100" value="10"
+                    class="flex-1 h-2 bg-pink-200 rounded-lg appearance-none cursor-pointer accent-pink-600"
+                    oninput="update()">
+                <span id="val-size" class="text-sm font-bold text-pink-600 w-8 text-center">10</span>
+            </div>
+
+            <button onclick="download()"
+                class="text-sm font-bold text-slate-500 hover:text-pink-600 border border-slate-200 px-4 py-2 rounded-lg hover:bg-pink-50 transition">下载</button>
+        </div>
+
+        <!-- Editor -->
+        <div
+            class="flex-1 bg-gray-900 rounded-2xl shadow-inner overflow-hidden relative flex items-center justify-center border-4 border-white">
+            <p id="placeholder" class="text-gray-600 font-bold">请先上传图片</p>
+            <canvas id="canvas" class="max-w-full max-h-full object-contain"></canvas>
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const sizeInput = document.getElementById('block-size');
+        const valDisplay = document.getElementById('val-size');
+        const placeholder = document.getElementById('placeholder');
+
+        let img = new Image();
+        let isLoaded = false;
+
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                    isLoaded = true;
+                    placeholder.style.display = 'none';
+                    update();
+                };
+                img.src = url;
+            }
+        }
+
+        function update() {
+            if (!isLoaded) return;
+
+            const size = parseInt(sizeInput.value);
+            valDisplay.innerText = size;
+
+            // Percentage size relative to image? 
+            // Better: Percent scaling down then up
+            // scale factor = 1 / size (if size is block pixel width? no range 1-100 is too small for big img)
+            // Let's interpret slider as % scale down (100 = 1% size -> huge blocks, 1 = 100% size -> normal)
+            // Actually usually "Block Size" in px is preferred.
+
+            // Algorithm:
+            // 1. Draw image to small canvas (w * factor)
+            // 2. Draw small canvas back to large canvas (w)
+            // factor = 1 / (size / 10 * scale?) 
+            // Let's say slider 10 means blocks are 10px wide roughly.
+            // factor = 1 / sliderVal
+
+            const factor = Math.max(0.01, 1 / size);
+
+            const w = img.width;
+            const h = img.height;
+
+            // Scaled dimensions
+            const sw = Math.floor(w * factor);
+            const sh = Math.floor(h * factor);
+
+            // We need an offscreen canvas or just draw twice on same?
+            // Draw small
+            // We can just use the same canvas but resizing clears it.
+
+            // 1. Set canvas to small size
+            canvas.width = sw;
+            canvas.height = sh;
+            ctx.drawImage(img, 0, 0, sw, sh);
+
+            // 2. Get data URL or createImageBitmap? 
+            // Simpler: Draw small canvas onto a second pass.
+            // But to display it big and pixelated, we rely on CSS image-rendering: pixelated.
+            // However, to DOWNLOAD it pixelated, we must physically scale up the pixels on the canvas.
+
+            // So: 
+            // 1. Draw small to temp canvas
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = sw;
+            tempCanvas.height = sh;
+            const tCtx = tempCanvas.getContext('2d');
+            tCtx.drawImage(img, 0, 0, sw, sh);
+
+            // 2. Draw temp canvas to main canvas (scaled up)
+            canvas.width = w;
+            canvas.height = h;
+
+            // Disable smoothing for pixelation
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(tempCanvas, 0, 0, sw, sh, 0, 0, w, h);
+        }
+
+        function download() {
+            if (!isLoaded) return;
+            const link = document.createElement('a');
+            link.download = 'pixelated.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+
+</html>

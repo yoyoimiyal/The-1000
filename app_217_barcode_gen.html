@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>条形码生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-3xl shadow-xl border border-gray-200">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold flex items-center gap-2 text-slate-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM5 4h4v4H5V4zm0 11h4v4H5v-4zm11-11h4v4h-4V4zM9 9H5v4h4V9zm11 0h-4v4h4V9z" />
+                </svg>
+                Barcode Gen
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-blue-600">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">内容 (Content)</label>
+                <input type="text" id="input"
+                    class="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-mono text-lg"
+                    placeholder="12345678" value="12345678" oninput="generate()">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">格式 (Format)</label>
+                <select id="format" class="w-full p-3 border border-gray-300 rounded-lg outline-none bg-white"
+                    onchange="generate()">
+                    <option value="CODE128">CODE128 (通用)</option>
+                    <option value="EAN13">EAN-13 (商品)</option>
+                    <option value="UPC">UPC (北美商品)</option>
+                    <option value="CODE39">CODE39</option>
+                    <option value="ITF14">ITF-14</option>
+                    <option value="MSI">MSI</option>
+                    <option value="pharmacode">Pharmacode</option>
+                </select>
+            </div>
+
+            <div class="flex gap-4">
+                <div class="flex-1">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">宽度</label>
+                    <input type="range" id="width" min="1" max="4" value="2" step="0.5"
+                        class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="generate()">
+                </div>
+                <div class="flex-1">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">高度</label>
+                    <input type="range" id="height" min="30" max="150" value="100"
+                        class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="generate()">
+                </div>
+            </div>
+
+            <div class="flex gap-2 items-center">
+                <input type="checkbox" id="display-value" checked class="w-4 h-4 text-blue-600 rounded"
+                    onchange="generate()">
+                <span class="text-sm font-bold text-slate-600">显示文本 (Show Text)</span>
+            </div>
+
+            <!-- Result -->
+            <div
+                class="bg-white border-2 border-dashed border-gray-200 rounded-xl p-8 flex items-center justify-center min-h-[160px] overflow-hidden">
+                <svg id="barcode"></svg>
+            </div>
+
+            <button onclick="download()"
+                class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg transition">下载
+                SVG</button>
+
+        </div>
+
+    </div>
+
+    <script>
+        function generate() {
+            const input = document.getElementById('input').value;
+            const format = document.getElementById('format').value;
+            const width = document.getElementById('width').value;
+            const height = document.getElementById('height').value;
+            const displayValue = document.getElementById('display-value').checked;
+
+            try {
+                JsBarcode("#barcode", input, {
+                    format: format,
+                    lineColor: "#000",
+                    width: width,
+                    height: height,
+                    displayValue: displayValue,
+                    margin: 10,
+                    background: "#ffffff"
+                });
+            } catch (e) {
+                // If invalid input for format (e.g. letters in EAN), JsBarcode might throw
+                // We can't easily catch visual errors but it usually blanks out or keeps old
+            }
+        }
+
+        function download() {
+            const svg = document.getElementById('barcode');
+            const serializer = new XMLSerializer();
+            const source = serializer.serializeToString(svg);
+            const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `barcode.svg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Init
+        generate();
+    </script>
+</body>
+
+</html>

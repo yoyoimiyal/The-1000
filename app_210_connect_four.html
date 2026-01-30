@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>四子棋</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .board {
+            background-color: #1e40af;
+            /* blue-800 */
+            padding: 10px;
+            border-radius: 10px;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            width: fit-content;
+            margin: 0 auto;
+        }
+
+        .cell {
+            width: 40px;
+            height: 40px;
+            background-color: #eff6ff;
+            /* blue-50 */
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .cell::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.2);
+            pointer-events: none;
+        }
+
+        .piece {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            transform: scale(0);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .piece.show {
+            transform: scale(1);
+        }
+
+        .piece.p1 {
+            background-color: #ef4444;
+            box-shadow: inset -2px -2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Red */
+        .piece.p2 {
+            background-color: #eab308;
+            box-shadow: inset -2px -2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Yellow */
+
+        .col-hover:hover .cell {
+            background-color: #dbeafe;
+        }
+
+        /* Slight highlight on col hover */
+    </style>
+</head>
+
+<body class="bg-blue-50 min-h-screen flex flex-col items-center justify-center p-4 select-none">
+
+    <header class="mb-8 text-center">
+        <h1 class="text-3xl font-black text-blue-900 mb-2">CONNECT FOUR</h1>
+        <div class="flex justify-center gap-4 text-sm font-bold">
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-red-500 rounded-full"></div> 玩家 1
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-yellow-500 rounded-full"></div> 玩家 2
+            </div>
+        </div>
+        <div id="status" class="mt-4 text-lg font-bold text-slate-700 h-8">红方回合 (Red)</div>
+    </header>
+
+    <div id="game-board" class="board shadow-2xl">
+        <!-- Cells injected here -->
+    </div>
+
+    <div class="mt-8 flex gap-4">
+        <button onclick="initGame()"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-bold shadow-lg transition">重置游戏</button>
+        <a href="./navigation.html"
+            class="bg-white hover:bg-slate-50 text-slate-600 px-6 py-2 rounded-full font-bold shadow transition">退出</a>
+    </div>
+
+    <script>
+        const rows = 6;
+        const cols = 7;
+        const boardEl = document.getElementById('game-board');
+        const statusEl = document.getElementById('status');
+
+        let board = [];
+        let currPlayer = 1; // 1=Red, 2=Yellow
+        let gameOver = false;
+
+        function initGame() {
+            board = Array(rows).fill().map(() => Array(cols).fill(0));
+            currPlayer = 1;
+            gameOver = false;
+            statusEl.innerText = "红方回合 (Red)";
+            statusEl.className = "mt-4 text-lg font-bold text-red-600 h-8";
+
+            renderBoard();
+        }
+
+        function renderBoard() {
+            boardEl.innerHTML = '';
+            // Render columns as interaction targets? 
+            // Standard CSS grid renders cells. We need to handle click on any cell in a column.
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.col = c; // Store col index
+                    cell.onclick = () => dropPiece(c);
+
+                    // Render piece if exists
+                    if (board[r][c] !== 0) {
+                        const piece = document.createElement('div');
+                        piece.className = `piece show p${board[r][c]}`;
+                        cell.appendChild(piece);
+                    }
+
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        function dropPiece(col) {
+            if (gameOver) return;
+
+            // Find lowest empty row in this col
+            for (let r = rows - 1; r >= 0; r--) {
+                if (board[r][col] === 0) {
+                    board[r][col] = currPlayer;
+                    animateDrop(r, col);
+                    if (checkWin(r, col)) {
+                        statusEl.innerText = `🎉 ${currPlayer === 1 ? '红方' : '黄方'} 获胜!`;
+                        statusEl.className = `mt-4 text-xl font-bold ${currPlayer === 1 ? 'text-red-600' : 'text-yellow-600'} h-8 animate-bounce`;
+                        gameOver = true;
+                    } else if (checkDraw()) {
+                        statusEl.innerText = "平局!";
+                        statusEl.className = "mt-4 text-xl font-bold text-slate-600 h-8";
+                        gameOver = true;
+                    } else {
+                        currPlayer = currPlayer === 1 ? 2 : 1;
+                        statusEl.innerText = `${currPlayer === 1 ? '红方' : '黄方'} 回合`;
+                        statusEl.className = `mt-4 text-lg font-bold ${currPlayer === 1 ? 'text-red-600' : 'text-yellow-600'} h-8`;
+                    }
+                    return;
+                }
+            }
+            // Column full, ignore
+        }
+
+        function animateDrop(r, c) {
+            // Re-render whole board is simplest, but for animation we only update the target cell
+            // Find the cell div
+            // Index in flat list = r * cols + c
+            const index = r * cols + c;
+            const cell = boardEl.children[index];
+
+            const piece = document.createElement('div');
+            piece.className = `piece p${currPlayer}`;
+            cell.appendChild(piece);
+
+            // Force reflow
+            void piece.offsetWidth;
+            piece.classList.add('show');
+        }
+
+        function checkWin(r, c) {
+            const p = board[r][c];
+
+            // Directions: Horizontal, Vertical, Diag1, Diag2
+            return checkDir(r, c, 0, 1, p) || checkDir(r, c, 1, 0, p) || checkDir(r, c, 1, 1, p) || checkDir(r, c, 1, -1, p);
+        }
+
+        function checkDir(r, c, dr, dc, p) {
+            let count = 0;
+            // Check forward and backward
+            for (let i = -3; i <= 3; i++) {
+                const nr = r + i * dr;
+                const nc = c + i * dc;
+                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc] === p) {
+                    count++;
+                    if (count >= 4) return true;
+                } else {
+                    count = 0;
+                }
+            }
+            return false;
+        }
+
+        function checkDraw() {
+            // If top row is full
+            return board[0].every(cell => cell !== 0);
+        }
+
+        initGame();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWT 解码器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .code-box {
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 0.8rem;
+        }
+
+        /* JWT Color Coding */
+        .jwt-header {
+            color: #ef4444;
+        }
+
+        /* Red */
+        .jwt-payload {
+            color: #a855f7;
+        }
+
+        /* Purple */
+        .jwt-signature {
+            color: #3b82f6;
+        }
+
+        /* Blue */
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-5xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-700">
+                <span class="bg-indigo-100 px-2 py-1 rounded text-xs font-mono">{}</span> JWT Debugger
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-6">
+
+            <!-- Input -->
+            <div class="flex-1 flex flex-col">
+                <label class="text-xs font-bold text-slate-400 uppercase mb-2">Encoded Token</label>
+                <textarea id="jwt-input"
+                    class="w-full h-48 lg:h-[60vh] p-4 border border-slate-300 rounded-xl resize-none outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm break-all leading-relaxed"
+                    placeholder="Paste JWT here..." oninput="decode()"></textarea>
+
+                <div class="mt-4 p-4 bg-white rounded-xl border border-slate-200 text-xs">
+                    <p class="font-bold text-slate-500 mb-2">Color Legend:</p>
+                    <div class="flex gap-4">
+                        <span class="text-red-500 font-bold">● Header</span>
+                        <span class="text-purple-500 font-bold">● Payload</span>
+                        <span class="text-blue-500 font-bold">● Signature</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Output -->
+            <div class="flex-1 flex flex-col gap-4">
+
+                <!-- Header -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden h-1/3">
+                    <div
+                        class="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-bold text-red-500 uppercase">
+                        Header</div>
+                    <pre id="output-header" class="p-4 code-box overflow-auto text-slate-700 flex-1">{}</pre>
+                </div>
+
+                <!-- Payload -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden flex-1">
+                    <div
+                        class="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-bold text-purple-500 uppercase">
+                        Payload</div>
+                    <pre id="output-payload" class="p-4 code-box overflow-auto text-slate-700 flex-1">{}</pre>
+                </div>
+
+                <!-- Signature -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden h-24">
+                    <div
+                        class="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-bold text-blue-500 uppercase">
+                        Signature (Hex)</div>
+                    <div id="output-sig" class="p-4 code-box overflow-auto text-slate-400 break-all">...</div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const input = document.getElementById('jwt-input');
+        const outHeader = document.getElementById('output-header');
+        const outPayload = document.getElementById('output-payload');
+        const outSig = document.getElementById('output-sig');
+
+        function decode() {
+            const token = input.value.trim();
+            if (!token) {
+                reset();
+                return;
+            }
+
+            const parts = token.split('.');
+
+            // Colorize Input
+            // Note: textarea doesn't support rich text color. 
+            // We could use a contenteditable div, but for simplicity we keep textarea and color the outputs.
+
+            if (parts.length !== 3) {
+                outHeader.innerText = "Error: Invalid JWT structure (must have 3 parts)";
+                outPayload.innerText = "";
+                outSig.innerText = "";
+                return;
+            }
+
+            try {
+                const header = JSON.parse(base64UrlDecode(parts[0]));
+                const payload = JSON.parse(base64UrlDecode(parts[1]));
+                const signature = parts[2];
+
+                outHeader.innerText = JSON.stringify(header, null, 2);
+                outPayload.innerText = JSON.stringify(payload, null, 2);
+                outSig.innerText = signature;
+            } catch (e) {
+                outHeader.innerText = "Error decoding Base64 or parsing JSON: " + e.message;
+            }
+        }
+
+        function base64UrlDecode(str) {
+            // Add padding if needed
+            let output = str.replace(/-/g, "+").replace(/_/g, "/");
+            switch (output.length % 4) {
+                case 0: break;
+                case 2: output += "=="; break;
+                case 3: output += "="; break;
+                default: throw "Illegal base64url string!";
+            }
+
+            // Decode
+            try {
+                return decodeURIComponent(atob(output).split('').map(function (c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+            } catch (e) {
+                return atob(output); // Fallback for non-utf8
+            }
+        }
+
+        function reset() {
+            outHeader.innerText = "{}";
+            outPayload.innerText = "{}";
+            outSig.innerText = "...";
+        }
+    </script>
+</body>
+
+</html>

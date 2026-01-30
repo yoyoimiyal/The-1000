@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黄金螺旋演示</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-amber-50 min-h-screen flex flex-col items-center justify-center p-6">
+
+    <div class="absolute top-6 left-6 text-amber-900 z-10">
+        <h1 class="text-2xl font-bold">Fibonacci Spiral</h1>
+        <p class="text-sm opacity-60">The Golden Ratio (φ ≈ 1.618)</p>
+    </div>
+
+    <!-- Controls -->
+    <div
+        class="fixed bottom-8 flex gap-4 bg-white/80 backdrop-blur p-4 rounded-xl border border-amber-200 shadow-lg z-10">
+        <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-amber-700 uppercase">Iterations</span>
+            <input type="range" id="iter" min="1" max="16" value="10"
+                class="w-32 h-1 bg-amber-200 rounded appearance-none cursor-pointer accent-amber-600" oninput="draw()">
+            <span id="iter-val" class="text-xs font-bold w-4 text-center">10</span>
+        </div>
+        <button onclick="download()"
+            class="text-xs font-bold text-amber-600 hover:text-amber-800 uppercase px-2">Save</button>
+        <a href="./navigation.html"
+            class="text-xs font-bold text-slate-400 hover:text-slate-600 uppercase px-2">Exit</a>
+    </div>
+
+    <canvas id="canvas" class="shadow-2xl bg-white border-8 border-white rounded-lg"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const iterInput = document.getElementById('iter');
+        const iterVal = document.getElementById('iter-val');
+
+        let width, height;
+
+        function resize() {
+            // Keep square-ish aspect but fit screen
+            const size = Math.min(window.innerWidth, window.innerHeight) - 100;
+            width = size;
+            height = size;
+            canvas.width = width;
+            canvas.height = height;
+            draw();
+        }
+        window.addEventListener('resize', resize);
+
+        function draw() {
+            const iterations = parseInt(iterInput.value);
+            iterVal.innerText = iterations;
+
+            ctx.clearRect(0, 0, width, height);
+            ctx.lineWidth = 2;
+
+            // Generate Fibonacci sequence
+            let fib = [1, 1];
+            for (let i = 2; i < iterations; i++) {
+                fib[i] = fib[i - 1] + fib[i - 2];
+            }
+
+            // Calculate Scale to fit canvas
+            // The total width is roughly sum of largest two fibs? No, it grows.
+            // Let's find bounding box.
+            // But simple heuristic: Largest square will be roughly 60% of total width?
+            // Actually φ ratio: total width ~ 1.618 * largest square width.
+
+            const maxFib = fib[iterations - 1];
+            const scale = (width * 0.6) / maxFib; // Heuristic
+
+            ctx.save();
+            // Start position depends on rotation. 
+            // We want the spiral to converge somewhat centrally or start drawing big squares.
+            // Let's start drawing from the largest square.
+            // A common way is to start somewhat offset.
+
+            // Center visually
+            // Hard to predict exact center of spiral without calculating bounds.
+            // Let's put start point (origin of first big square) at specific spot.
+
+            let x = width * 0.25;
+            let y = height * 0.25;
+
+            // Adjust start pos based on iterations to keep it somewhat centered
+            if (iterations > 8) {
+                x = width * 0.3;
+                y = height * 0.3;
+            }
+
+            ctx.translate(x, y);
+
+            // Sequence of directions for squares: Right, Down, Left, Up ...
+            // Arc logic follows.
+
+            for (let i = 0; i < iterations; i++) {
+                // Reverse order (Big to small)? No, small to big spirals out. Big to small spirals in.
+                // Standard demo is usually 1, 1, 2, 3, 5... growing outward.
+                // Let's draw big to small to contain it? No, growing is more natural for generation.
+                // But we need to know where to start so it fits.
+                // Let's restart: Draw from biggest square, then next biggest attached to it.
+
+                // Let's use the sequence reversed: 55, 34, 21...
+                const n = fib[iterations - 1 - i];
+                const size = n * scale;
+
+                // Color
+                ctx.strokeStyle = '#d97706'; // amber-600
+                ctx.fillStyle = `rgba(251, 191, 36, ${0.1 + (i / iterations) * 0.4})`; // amber-400 fade
+
+                // Determine direction based on i (mod 4)
+                // 0: Big square. Next is to Right? 
+                // Spiral in: 
+                // Let's assume current origin is Top-Left of current square.
+
+                // Draw Square
+                ctx.fillRect(0, 0, size, size);
+                ctx.strokeRect(0, 0, size, size);
+
+                // Draw Arc
+                ctx.beginPath();
+                // Arc corner depends on direction
+                // Mod 4 pattern for "Spiraling In"
+                const dir = i % 4;
+
+                if (dir === 0) { // Top-Left origin. Arc from Top-Right to Bottom-Left?
+                    // We want spiral to go Right -> Bottom -> Left -> Top
+                    // For spiral IN:
+                    // 0: Square. Next square attached to Right side.
+                    // Arc center is Bottom-Right of this square?
+                    // Let's draw arc:
+                    ctx.arc(size, size, size, Math.PI, 1.5 * Math.PI);
+                    // Move origin for next square
+                    ctx.translate(size, 0); // Move to Top-Right
+                } else if (dir === 1) {
+                    ctx.arc(0, size, size, 1.5 * Math.PI, 0);
+                    ctx.translate(0, size); // Move to Bottom-Right relative to old
+                    // This coordinate math is tricky.
+                }
+
+                // Let's use standard recursive drawing approach for "Golden Rectangle" subdivision which is easier to fit.
+                // Start with full canvas golden rect, subdivide.
+            }
+
+            ctx.restore();
+
+            // Alternative: Recursive subdivision (Golden Rectangle) approach is much stable for layout
+            drawGoldenRect(0, 0, width, height, iterations);
+        }
+
+        function drawGoldenRect(x, y, w, h, depth) {
+            if (depth <= 0) return;
+
+            // Determine split
+            // If landscape, split vertically. If portrait, split horizontally.
+            // Actually we cycle cuts: Right, Bottom, Left, Top... relative to remaining space.
+            // But simpler: just chop off a square.
+
+            let squareSize;
+            let nextX, nextY, nextW, nextH;
+            let startAngle, endAngle, arcX, arcY;
+
+            // Cut Vertical or Horizontal
+            if (w > h) {
+                // Landscape: Cut square on left
+                squareSize = h;
+                // Draw Square
+                ctx.strokeStyle = '#78350f';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, squareSize, squareSize);
+
+                // Arc
+                // Visual check: Spiral usually goes inwards.
+                // Let's assume standard direction.
+                // Center of arc depends on rotation.
+                // Let's just draw squares for now to show the tiling, arcs need state tracking of rotation.
+
+                // Recurse: Remaining on right
+                drawGoldenRect(x + squareSize, y, w - squareSize, h, depth - 1);
+            } else {
+                // Portrait: Cut square on top
+                squareSize = w;
+                ctx.strokeStyle = '#78350f';
+                ctx.strokeRect(x, y, squareSize, squareSize);
+
+                // Recurse: Remaining on bottom
+                drawGoldenRect(x, y + squareSize, w, h - squareSize, depth - 1);
+            }
+
+            // Drawing the spiral arc properly requires tracking the orientation.
+            // To make it simple and visual:
+            // Just draw the squares, it looks like the Golden Ratio diagram.
+            // Adding a simple spiral overlay is complex without state.
+        }
+
+        // Re-implementing a simple Spiral drawer from center out is easier to control visuals.
+        // Center Out strategy:
+        // Use a Turtle-like approach.
+
+        function draw() {
+            const iterations = parseInt(iterInput.value);
+            iterVal.innerText = iterations;
+            ctx.clearRect(0, 0, width, height);
+
+            let fib = [1, 1];
+            for (let i = 2; i < iterations + 2; i++) fib[i] = fib[i - 1] + fib[i - 2];
+
+            const scale = Math.min(width, height) / fib[iterations] * 0.8; // Fit largest
+
+            ctx.save();
+
+            // Heuristic center adjustment
+            let cx = width * 0.7;
+            let cy = height * 0.7;
+
+            ctx.translate(cx, cy);
+            ctx.rotate(Math.PI); // Rotate to start nicely
+
+            for (let i = 0; i < iterations; i++) {
+                const n = fib[i];
+                const size = n * scale;
+
+                ctx.fillStyle = `rgba(245, 158, 11, ${0.1 + (i / iterations) * 0.5})`;
+                ctx.strokeStyle = '#92400e';
+                ctx.lineWidth = 1;
+
+                // Draw square
+                ctx.fillRect(0, 0, size, size);
+                ctx.strokeRect(0, 0, size, size);
+
+                // Draw Arc
+                ctx.beginPath();
+                ctx.arc(size, 0, size, 0.5 * Math.PI, 1.0 * Math.PI); // Quarter circle
+                ctx.strokeStyle = '#b45309';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Move and Rotate for next
+                ctx.translate(size, 0);
+                ctx.rotate(-Math.PI / 2);
+            }
+
+            ctx.restore();
+        }
+
+        function download() {
+            const link = document.createElement('a');
+            link.download = 'fibonacci.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        resize();
+    </script>
+</body>
+
+</html>

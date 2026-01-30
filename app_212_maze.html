@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>迷宫生成与探索</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            touch-action: none;
+            image-rendering: pixelated;
+        }
+    </style>
+</head>
+
+<body class="bg-stone-900 min-h-screen flex flex-col items-center justify-center p-4 select-none">
+
+    <div class="mb-4 flex justify-between items-center w-full max-w-[400px] text-stone-300">
+        <div>
+            <h1 class="text-xl font-bold text-white">MAZE</h1>
+            <p class="text-xs">Use Arrow Keys / Swipe</p>
+        </div>
+        <button onclick="generateMaze()"
+            class="bg-stone-700 hover:bg-stone-600 text-white px-4 py-2 rounded font-bold text-xs transition">New
+            Map</button>
+    </div>
+
+    <canvas id="canvas" class="bg-stone-800 rounded shadow-2xl border border-stone-700" width="400"
+        height="400"></canvas>
+
+    <div class="mt-8">
+        <a href="./navigation.html"
+            class="text-xs text-stone-500 hover:text-white border border-stone-700 px-3 py-1 rounded">退出</a>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div class="mt-6 grid grid-cols-3 gap-2 md:hidden">
+        <div></div>
+        <button class="w-12 h-12 bg-stone-700 rounded flex items-center justify-center text-white active:bg-stone-600"
+            onclick="move(0, -1)">▲</button>
+        <div></div>
+        <button class="w-12 h-12 bg-stone-700 rounded flex items-center justify-center text-white active:bg-stone-600"
+            onclick="move(-1, 0)">◀</button>
+        <button class="w-12 h-12 bg-stone-700 rounded flex items-center justify-center text-white active:bg-stone-600"
+            onclick="move(0, 1)">▼</button>
+        <button class="w-12 h-12 bg-stone-700 rounded flex items-center justify-center text-white active:bg-stone-600"
+            onclick="move(1, 0)">▶</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Config
+        const cellSize = 20;
+        const cols = 20; // 400 / 20
+        const rows = 20;
+
+        // State
+        let maze = []; // 2D array: cell object
+        let player = { x: 0, y: 0 };
+        let goal = { x: cols - 1, y: rows - 1 };
+
+        // Cell Class
+        class Cell {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.walls = [true, true, true, true]; // Top, Right, Bottom, Left
+                this.visited = false;
+            }
+
+            draw() {
+                const x = this.x * cellSize;
+                const y = this.y * cellSize;
+
+                ctx.strokeStyle = "#a8a29e"; // stone-400
+                ctx.lineWidth = 2;
+
+                if (this.walls[0]) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + cellSize, y); ctx.stroke(); }
+                if (this.walls[1]) { ctx.beginPath(); ctx.moveTo(x + cellSize, y); ctx.lineTo(x + cellSize, y + cellSize); ctx.stroke(); }
+                if (this.walls[2]) { ctx.beginPath(); ctx.moveTo(x + cellSize, y + cellSize); ctx.lineTo(x, y + cellSize); ctx.stroke(); }
+                if (this.walls[3]) { ctx.beginPath(); ctx.moveTo(x, y + cellSize); ctx.lineTo(x, y); ctx.stroke(); }
+
+                // Color visited for generation debug? No need for game
+            }
+        }
+
+        function generateMaze() {
+            // Reset
+            maze = [];
+            for (let y = 0; y < rows; y++) {
+                let row = [];
+                for (let x = 0; x < cols; x++) {
+                    row.push(new Cell(x, y));
+                }
+                maze.push(row);
+            }
+            player = { x: 0, y: 0 };
+
+            // Recursive Backtracker
+            let stack = [];
+            let current = maze[0][0];
+            current.visited = true;
+
+            while (true) {
+                // Step 1: Get unvisited neighbors
+                const neighbors = getUnvisitedNeighbors(current);
+
+                if (neighbors.length > 0) {
+                    const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    stack.push(current);
+
+                    // Remove walls
+                    removeWalls(current, next);
+
+                    current = next;
+                    current.visited = true;
+                } else if (stack.length > 0) {
+                    current = stack.pop();
+                } else {
+                    break;
+                }
+            }
+
+            draw();
+        }
+
+        function getUnvisitedNeighbors(cell) {
+            const neighbors = [];
+            const { x, y } = cell;
+
+            if (y > 0 && !maze[y - 1][x].visited) neighbors.push(maze[y - 1][x]); // Top
+            if (x < cols - 1 && !maze[y][x + 1].visited) neighbors.push(maze[y][x + 1]); // Right
+            if (y < rows - 1 && !maze[y + 1][x].visited) neighbors.push(maze[y + 1][x]); // Bottom
+            if (x > 0 && !maze[y][x - 1].visited) neighbors.push(maze[y][x - 1]); // Left
+
+            return neighbors;
+        }
+
+        function removeWalls(a, b) {
+            const x = a.x - b.x;
+            if (x === 1) { a.walls[3] = false; b.walls[1] = false; }
+            if (x === -1) { a.walls[1] = false; b.walls[3] = false; }
+
+            const y = a.y - b.y;
+            if (y === 1) { a.walls[0] = false; b.walls[2] = false; }
+            if (y === -1) { a.walls[2] = false; b.walls[0] = false; }
+        }
+
+        function draw() {
+            ctx.fillStyle = "#1c1917"; // stone-900
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Maze
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    maze[y][x].draw();
+                }
+            }
+
+            // Draw Goal
+            ctx.fillStyle = "#ef4444";
+            ctx.fillRect(goal.x * cellSize + 5, goal.y * cellSize + 5, cellSize - 10, cellSize - 10);
+
+            // Draw Player
+            ctx.fillStyle = "#22c55e";
+            ctx.fillRect(player.x * cellSize + 5, player.y * cellSize + 5, cellSize - 10, cellSize - 10);
+        }
+
+        function move(dx, dy) {
+            const currentCell = maze[player.y][player.x];
+            let canMove = false;
+
+            // Check walls
+            if (dx === 1 && !currentCell.walls[1]) canMove = true;
+            if (dx === -1 && !currentCell.walls[3]) canMove = true;
+            if (dy === 1 && !currentCell.walls[2]) canMove = true;
+            if (dy === -1 && !currentCell.walls[0]) canMove = true;
+
+            if (canMove) {
+                player.x += dx;
+                player.y += dy;
+                draw();
+
+                if (player.x === goal.x && player.y === goal.y) {
+                    setTimeout(() => {
+                        alert("🎉 迷宫逃脱成功!");
+                        generateMaze();
+                    }, 50);
+                }
+            }
+        }
+
+        // Input
+        document.addEventListener('keydown', e => {
+            if (e.key === "ArrowUp") move(0, -1);
+            if (e.key === "ArrowDown") move(0, 1);
+            if (e.key === "ArrowLeft") move(-1, 0);
+            if (e.key === "ArrowRight") move(1, 0);
+        });
+
+        let touchX, touchY;
+        canvas.addEventListener('touchstart', e => {
+            touchX = e.touches[0].clientX;
+            touchY = e.touches[0].clientY;
+            e.preventDefault();
+        });
+        canvas.addEventListener('touchend', e => {
+            const dx = e.changedTouches[0].clientX - touchX;
+            const dy = e.changedTouches[0].clientY - touchY;
+            if (Math.abs(dx) > Math.abs(dy)) {
+                if (dx > 20) move(1, 0);
+                else if (dx < -20) move(-1, 0);
+            } else {
+                if (dy > 20) move(0, 1);
+                else if (dy < -20) move(0, -1);
+            }
+        });
+
+        generateMaze();
+    </script>
+</body>
+
+</html>

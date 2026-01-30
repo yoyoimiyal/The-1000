@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IEEE 754 浮点数转换器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .bit-box {
+            width: 24px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #cbd5e1;
+            font-family: monospace;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .bit-box:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
+        .bit-1 {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #2563eb;
+        }
+
+        .bit-0 {
+            background-color: #f1f5f9;
+            color: #94a3b8;
+        }
+
+        .group-sign {
+            border-bottom: 4px solid #ef4444;
+        }
+
+        .group-exp {
+            border-bottom: 4px solid #22c55e;
+        }
+
+        .group-mant {
+            border-bottom: 4px solid #3b82f6;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-4xl bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-mono">0101</span> IEEE 754
+                Visualizer
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-blue-600">退出</a>
+        </header>
+
+        <!-- Input -->
+        <div class="mb-8">
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Decimal Value (Float 32-bit)</label>
+            <input type="number" id="input-float"
+                class="w-full p-4 text-3xl font-mono border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                value="3.14159" step="any" oninput="fromFloat()">
+        </div>
+
+        <!-- Bits Visual -->
+        <div class="mb-2 flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400 px-1">
+            <span class="text-red-500">Sign (1)</span>
+            <span class="text-green-600">Exponent (8)</span>
+            <span class="text-blue-600">Mantissa (23)</span>
+        </div>
+
+        <div class="flex flex-wrap gap-1 mb-8 justify-center select-none" id="bits-container">
+            <!-- Bits injected here -->
+        </div>
+
+        <!-- Breakdown -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                <p class="text-xs font-bold text-red-500 uppercase mb-1">Sign</p>
+                <div class="text-2xl font-mono font-bold text-slate-700" id="val-sign">+1</div>
+                <p class="text-xs text-slate-500 mt-2">0 = Positive, 1 = Negative</p>
+            </div>
+
+            <div class="bg-green-50 p-4 rounded-xl border border-green-100">
+                <p class="text-xs font-bold text-green-600 uppercase mb-1">Exponent</p>
+                <div class="text-2xl font-mono font-bold text-slate-700" id="val-exp">128</div>
+                <p class="text-xs text-slate-500 mt-2">Raw: <span id="raw-exp">0</span>, Bias: 127</p>
+            </div>
+
+            <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                <p class="text-xs font-bold text-blue-600 uppercase mb-1">Mantissa (Fraction)</p>
+                <div class="text-2xl font-mono font-bold text-slate-700" id="val-mant">1.570795</div>
+                <p class="text-xs text-slate-500 mt-2">1 + Fraction</p>
+            </div>
+
+        </div>
+
+        <!-- Formula -->
+        <div class="mt-8 p-4 bg-slate-800 rounded-xl text-white font-mono text-xs md:text-sm text-center">
+            Value = <span class="text-red-400">(-1)^S</span> × <span class="text-blue-400">1.M</span> × <span
+                class="text-green-400">2^(E-127)</span>
+        </div>
+
+    </div>
+
+    <script>
+        const container = document.getElementById('bits-container');
+        const inputFloat = document.getElementById('input-float');
+
+        // DataView to handle conversions
+        const buffer = new ArrayBuffer(4);
+        const floatView = new Float32Array(buffer);
+        const intView = new Uint32Array(buffer);
+
+        function initBits() {
+            container.innerHTML = '';
+            for (let i = 31; i >= 0; i--) {
+                const bit = document.createElement('div');
+                bit.id = `bit-${i}`;
+
+                // Styling classes
+                let groupClass = '';
+                if (i === 31) groupClass = 'group-sign';
+                else if (i >= 23) groupClass = 'group-exp';
+                else groupClass = 'group-mant';
+
+                bit.className = `bit-box ${groupClass} bit-0`;
+                bit.innerText = '0';
+                bit.onclick = () => toggleBit(i);
+                container.appendChild(bit);
+            }
+        }
+
+        function fromFloat() {
+            let val = parseFloat(inputFloat.value);
+            if (isNaN(val)) val = 0;
+
+            floatView[0] = val;
+            updateBitsFromInt();
+            updateBreakdown();
+        }
+
+        function toggleBit(index) {
+            const currentInt = intView[0];
+            // Toggle bit at index
+            const mask = 1 << index;
+            intView[0] = currentInt ^ mask;
+
+            // Update Float Input
+            inputFloat.value = floatView[0];
+
+            updateBitsFromInt();
+            updateBreakdown();
+        }
+
+        function updateBitsFromInt() {
+            const intVal = intView[0];
+            for (let i = 31; i >= 0; i--) {
+                const bitVal = (intVal >> i) & 1;
+                const el = document.getElementById(`bit-${i}`);
+                el.innerText = bitVal;
+                if (bitVal === 1) {
+                    el.classList.remove('bit-0');
+                    el.classList.add('bit-1');
+                } else {
+                    el.classList.remove('bit-1');
+                    el.classList.add('bit-0');
+                }
+            }
+        }
+
+        function updateBreakdown() {
+            const intVal = intView[0];
+
+            const sign = (intVal >>> 31) & 1;
+            const exp = (intVal >>> 23) & 0xFF;
+            const mant = intVal & 0x7FFFFF;
+
+            // Sign
+            document.getElementById('val-sign').innerText = sign === 0 ? "+1" : "-1";
+
+            // Exponent
+            document.getElementById('val-exp').innerText = exp;
+            document.getElementById('raw-exp').innerText = exp - 127; // Unbiased
+
+            // Mantissa
+            // 1.M = 1 + sum(bit * 2^-i)
+            let fraction = 1.0;
+            let accumulator = 0.5;
+            for (let i = 22; i >= 0; i--) {
+                if ((mant >> i) & 1) {
+                    fraction += accumulator;
+                }
+                accumulator /= 2;
+            }
+
+            // Special cases
+            if (exp === 0) {
+                // Denormalized
+                document.getElementById('val-mant').innerText = (fraction - 1).toFixed(6) + " (Denorm)";
+            } else if (exp === 255) {
+                document.getElementById('val-mant').innerText = mant === 0 ? "Infinity" : "NaN";
+            } else {
+                document.getElementById('val-mant').innerText = fraction.toFixed(6);
+            }
+        }
+
+        initBits();
+        fromFloat();
+    </script>
+</body>
+
+</html>

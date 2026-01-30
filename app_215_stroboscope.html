@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>频闪灯</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .warning-overlay {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            width: 90%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Safety Warning -->
+    <div id="warning" class="warning-overlay">
+        <div class="text-6xl mb-4">⚠️</div>
+        <h1 class="text-3xl font-bold text-red-500 mb-4">光敏性癫痫警告</h1>
+        <p class="text-gray-300 mb-8 max-w-md">本应用会产生快速闪烁的灯光效果。如果您患有光敏性癫痫或对闪光敏感，请<span
+                class="font-bold text-white">立即关闭</span>此页面。</p>
+        <div class="flex gap-4">
+            <a href="./navigation.html"
+                class="px-6 py-3 border border-gray-600 rounded-full text-gray-400 hover:text-white transition">离开</a>
+            <button onclick="acceptWarning()"
+                class="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition">我已知晓，继续</button>
+        </div>
+    </div>
+
+    <!-- Flashing Element -->
+    <div id="flash-bg" class="w-full h-screen bg-black"></div>
+
+    <!-- Controls -->
+    <div id="controls" class="controls bg-gray-900/90 backdrop-blur p-6 rounded-2xl border border-gray-700 hidden">
+        <div class="flex justify-between items-center mb-4 text-white">
+            <h2 class="font-bold">Stroboscope</h2>
+            <div class="text-xs text-gray-400"><span id="hz-val" class="text-xl font-bold text-yellow-400">10</span> Hz
+            </div>
+        </div>
+
+        <input type="range" id="freq" min="1" max="50" value="10"
+            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mb-6 accent-yellow-500"
+            oninput="updateFreq(this.value)">
+
+        <button onclick="toggle()" id="btn-toggle"
+            class="w-full py-4 bg-white text-black font-bold rounded-xl text-xl hover:bg-gray-200 transition shadow-lg">
+            START
+        </button>
+
+        <a href="./navigation.html" class="block text-center mt-4 text-xs text-gray-500 hover:text-white">退出</a>
+    </div>
+
+    <script>
+        const flashBg = document.getElementById('flash-bg');
+        const hzVal = document.getElementById('hz-val');
+        const btn = document.getElementById('btn-toggle');
+        const warning = document.getElementById('warning');
+        const controls = document.getElementById('controls');
+
+        let isRunning = false;
+        let frequency = 10;
+        let intervalId;
+        let state = false; // Black
+
+        function acceptWarning() {
+            warning.style.display = 'none';
+            controls.classList.remove('hidden');
+        }
+
+        function updateFreq(val) {
+            frequency = parseInt(val);
+            hzVal.innerText = frequency;
+            if (isRunning) {
+                stopFlash();
+                startFlash();
+            }
+        }
+
+        function toggle() {
+            if (isRunning) {
+                stopFlash();
+                isRunning = false;
+                btn.innerText = "START";
+                btn.className = "w-full py-4 bg-white text-black font-bold rounded-xl text-xl hover:bg-gray-200 transition shadow-lg";
+                flashBg.style.backgroundColor = "black";
+            } else {
+                startFlash();
+                isRunning = true;
+                btn.innerText = "STOP";
+                btn.className = "w-full py-4 bg-red-600 text-white font-bold rounded-xl text-xl hover:bg-red-700 transition shadow-lg";
+            }
+        }
+
+        function startFlash() {
+            // Freq Hz = cycles per second.
+            // Cycle = ON + OFF. 
+            // Interval = 1000 / (freq * 2) for half cycle toggle? 
+            // Or use requestAnimationFrame for higher precision if freq is high?
+            // setInterval is okay for < 60Hz visual strobe.
+
+            const period = 1000 / frequency / 2; // Toggle time
+
+            intervalId = setInterval(() => {
+                state = !state;
+                flashBg.style.backgroundColor = state ? "white" : "black";
+            }, period);
+        }
+
+        function stopFlash() {
+            clearInterval(intervalId);
+            flashBg.style.backgroundColor = "black";
+        }
+    </script>
+</body>
+
+</html>

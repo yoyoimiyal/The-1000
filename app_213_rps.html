@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>石头剪刀布</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .choice-btn {
+            font-size: 3rem;
+            transition: transform 0.1s;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 4px solid #e5e7eb;
+            cursor: pointer;
+        }
+
+        .choice-btn:active {
+            transform: scale(0.9);
+            border-color: #3b82f6;
+        }
+
+        .shake {
+            animation: shake 0.5s infinite;
+        }
+
+        @keyframes shake {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            25% {
+                transform: rotate(10deg);
+            }
+
+            75% {
+                transform: rotate(-10deg);
+            }
+
+            100% {
+                transform: rotate(0deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-amber-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800 select-none">
+
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 border border-amber-100">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-amber-800">Rock Paper Scissors</h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-amber-600">退出</a>
+        </header>
+
+        <!-- Arena -->
+        <div class="flex justify-between items-center mb-12 px-4 h-32">
+            <div class="text-center">
+                <div class="text-xs font-bold text-slate-400 uppercase mb-2">You</div>
+                <div id="player-hand" class="text-6xl transition-transform duration-200">✊</div>
+            </div>
+            <div class="text-2xl font-black text-slate-200">VS</div>
+            <div class="text-center">
+                <div class="text-xs font-bold text-slate-400 uppercase mb-2">Computer</div>
+                <div id="cpu-hand" class="text-6xl transition-transform duration-200">✊</div>
+            </div>
+        </div>
+
+        <div class="text-center mb-8 h-8">
+            <p id="result-msg" class="text-lg font-bold text-slate-700">准备开始...</p>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex justify-center gap-4 mb-8">
+            <button class="choice-btn" onclick="play('rock')" title="Rock">✊</button>
+            <button class="choice-btn" onclick="play('paper')" title="Paper">✋</button>
+            <button class="choice-btn" onclick="play('scissors')" title="Scissors">✌️</button>
+        </div>
+
+        <!-- Scoreboard -->
+        <div class="grid grid-cols-3 gap-2 text-center bg-amber-50 p-4 rounded-xl">
+            <div>
+                <p class="text-xs font-bold text-green-600">WIN</p>
+                <p class="text-xl font-black text-slate-700" id="s-win">0</p>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-yellow-600">DRAW</p>
+                <p class="text-xl font-black text-slate-700" id="s-draw">0</p>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-red-600">LOSE</p>
+                <p class="text-xl font-black text-slate-700" id="s-lose">0</p>
+            </div>
+        </div>
+
+        <button onclick="resetStats()" class="w-full mt-4 text-xs text-slate-400 hover:text-slate-600">重置分数</button>
+
+    </div>
+
+    <script>
+        const pHand = document.getElementById('player-hand');
+        const cHand = document.getElementById('cpu-hand');
+        const msg = document.getElementById('result-msg');
+
+        let stats = { win: 0, draw: 0, lose: 0 };
+        const emojis = { rock: '✊', paper: '✋', scissors: '✌️' };
+        let isAnimating = false;
+
+        function play(choice) {
+            if (isAnimating) return;
+            isAnimating = true;
+
+            // Reset Animation
+            pHand.style.transform = 'rotate(0deg)';
+            cHand.style.transform = 'rotate(0deg)';
+            pHand.innerText = '✊';
+            cHand.innerText = '✊';
+            msg.innerText = "Rock... Paper... Scissors...";
+            msg.className = "text-lg font-bold text-slate-500";
+
+            // Shake
+            pHand.classList.add('shake');
+            cHand.classList.add('shake');
+
+            setTimeout(() => {
+                pHand.classList.remove('shake');
+                cHand.classList.remove('shake');
+
+                const cpuChoice = ['rock', 'paper', 'scissors'][Math.floor(Math.random() * 3)];
+
+                pHand.innerText = emojis[choice];
+                cHand.innerText = emojis[cpuChoice];
+
+                determineWinner(choice, cpuChoice);
+                isAnimating = false;
+            }, 1500);
+        }
+
+        function determineWinner(p, c) {
+            if (p === c) {
+                msg.innerText = "平局 (Draw)!";
+                msg.className = "text-lg font-bold text-yellow-600";
+                stats.draw++;
+            } else if (
+                (p === 'rock' && c === 'scissors') ||
+                (p === 'paper' && c === 'rock') ||
+                (p === 'scissors' && c === 'paper')
+            ) {
+                msg.innerText = "你赢了 (You Win)!";
+                msg.className = "text-lg font-bold text-green-600";
+                stats.win++;
+            } else {
+                msg.innerText = "你输了 (You Lose)!";
+                msg.className = "text-lg font-bold text-red-600";
+                stats.lose++;
+            }
+            updateScore();
+        }
+
+        function updateScore() {
+            document.getElementById('s-win').innerText = stats.win;
+            document.getElementById('s-draw').innerText = stats.draw;
+            document.getElementById('s-lose').innerText = stats.lose;
+        }
+
+        function resetStats() {
+            stats = { win: 0, draw: 0, lose: 0 };
+            updateScore();
+            msg.innerText = "准备开始...";
+            msg.className = "text-lg font-bold text-slate-700";
+        }
+    </script>
+</body>
+
+</html>

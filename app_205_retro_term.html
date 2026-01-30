@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>复古黑客终端</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #4ade80;
+            font-family: 'VT323', monospace;
+            font-size: 1.5rem;
+            overflow: hidden;
+        }
+
+        #terminal {
+            width: 100%;
+            height: 100vh;
+            padding: 2rem;
+            overflow-y: auto;
+            text-shadow: 0 0 5px #4ade80;
+        }
+
+        /* Scanline effect */
+        .scanline {
+            width: 100%;
+            height: 100%;
+            position: fixed;
+            left: 0;
+            top: 0;
+            pointer-events: none;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2));
+            background-size: 100% 4px;
+            z-index: 10;
+        }
+
+        .flicker {
+            animation: flicker 0.15s infinite;
+            pointer-events: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.02);
+            opacity: 0;
+            z-index: 10;
+        }
+
+        @keyframes flicker {
+            0% {
+                opacity: 0.02;
+            }
+
+            50% {
+                opacity: 0.05;
+            }
+
+            100% {
+                opacity: 0.02;
+            }
+        }
+
+        input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #4ade80;
+            width: 50%;
+            font-family: inherit;
+            font-size: inherit;
+            text-shadow: inherit;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 1.2em;
+            background: #4ade80;
+            animation: blink 1s step-end infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body onclick="focusInput()">
+
+    <div class="scanline"></div>
+    <div class="flicker"></div>
+
+    <div id="terminal">
+        <div id="output">
+            <p>Welcome to RetroTerm v1.0.0</p>
+            <p>Type 'help' for available commands.</p>
+            <br>
+        </div>
+        <div class="flex">
+            <span class="mr-2">user@system:~$</span>
+            <input type="text" id="cmd" autofocus autocomplete="off" onkeydown="handleKey(event)">
+        </div>
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+        const cmdInput = document.getElementById('cmd');
+        const term = document.getElementById('terminal');
+
+        const fileSystem = {
+            'readme.txt': 'This is a fake filesystem.\nThere is nothing here.',
+            'secret.doc': 'Top Secret: The cake is a lie.',
+            'app_205.exe': 'Binary content...'
+        };
+
+        const commands = {
+            'help': 'Available commands: help, clear, date, echo, ls, cat, whoami, reboot, exit',
+            'date': () => new Date().toString(),
+            'whoami': 'root',
+            'clear': () => { output.innerHTML = ''; return null; },
+            'ls': () => Object.keys(fileSystem).join('  '),
+            'cat': (args) => {
+                if (!args[0]) return "Usage: cat <filename>";
+                return fileSystem[args[0]] || `cat: ${args[0]}: No such file`;
+            },
+            'echo': (args) => args.join(' '),
+            'exit': () => { window.location.href = './navigation.html'; return "Bye..."; },
+            'reboot': () => {
+                location.reload();
+                return "Rebooting...";
+            }
+        };
+
+        function handleKey(e) {
+            if (e.key === 'Enter') {
+                const val = cmdInput.value.trim();
+                print(`user@system:~$ ${val}`);
+
+                if (val) {
+                    processCommand(val);
+                }
+
+                cmdInput.value = '';
+                term.scrollTop = term.scrollHeight;
+            }
+        }
+
+        function processCommand(raw) {
+            const parts = raw.split(' ');
+            const cmd = parts[0].toLowerCase();
+            const args = parts.slice(1);
+
+            if (commands[cmd]) {
+                const response = typeof commands[cmd] === 'function' ? commands[cmd](args) : commands[cmd];
+                if (response !== null) print(response);
+            } else {
+                print(`bash: ${cmd}: command not found`);
+            }
+        }
+
+        function print(text) {
+            const p = document.createElement('p');
+            p.innerText = text; // Safe text
+            // Allow basic newlines for cat
+            p.innerHTML = text.replace(/\n/g, '<br>');
+            output.appendChild(p);
+        }
+
+        function focusInput() {
+            cmdInput.focus();
+        }
+    </script>
+</body>
+
+</html>

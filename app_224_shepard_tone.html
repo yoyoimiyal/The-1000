@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>谢泼德音错觉</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .spiral {
+            animation: spin 10s linear infinite;
+            transform-origin: center;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spiral.reverse {
+            animation: spin 10s linear infinite reverse;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-white">
+
+    <div class="w-full max-w-md text-center">
+
+        <header class="flex justify-between items-center mb-10 px-4">
+            <h1 class="text-xl font-bold text-purple-400">Shepard Tone</h1>
+            <a href="./navigation.html"
+                class="text-xs text-gray-500 hover:text-white border border-gray-700 px-3 py-1 rounded">EXIT</a>
+        </header>
+
+        <!-- Visual -->
+        <div class="relative w-64 h-64 mx-auto mb-10 opacity-80">
+            <div id="visual-spiral"
+                class="w-full h-full rounded-full border-4 border-dashed border-purple-500 opacity-20"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <span class="text-4xl font-bold text-white opacity-50" id="direction-icon">⬆️</span>
+            </div>
+            <p class="absolute -bottom-8 w-full text-center text-xs text-gray-500 uppercase tracking-widest">Auditory
+                Illusion</p>
+        </div>
+
+        <div class="space-y-4">
+
+            <div class="flex gap-4">
+                <button onclick="playShepard(1)"
+                    class="flex-1 py-4 bg-purple-600 hover:bg-purple-700 rounded-xl font-bold shadow-lg transition">
+                    无限上升 (Ascend)
+                </button>
+                <button onclick="playShepard(-1)"
+                    class="flex-1 py-4 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold shadow-lg transition">
+                    无限下降 (Descend)
+                </button>
+            </div>
+
+            <button onclick="stop()"
+                class="w-full py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl transition">
+                停止 (Stop)
+            </button>
+
+            <div class="bg-gray-800 p-4 rounded-xl mt-6 text-xs text-gray-400 leading-relaxed text-left">
+                <p><strong>谢泼德音阶：</strong>利用多个八度间隔的正弦波叠加，通过调整音量包络，让大脑产生音高不断上升或下降的错觉，实际上音高在循环。</p>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        let audioCtx;
+        let oscillators = [];
+        let gainNodes = [];
+        let isPlaying = false;
+        let direction = 1;
+        let baseFreq = 220;
+        let speed = 0.5; // rate of change
+        let animationId;
+
+        const visual = document.getElementById('visual-spiral');
+        const icon = document.getElementById('direction-icon');
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playShepard(dir) {
+            initAudio();
+            if (isPlaying) stop();
+
+            direction = dir;
+            isPlaying = true;
+
+            // UI
+            visual.className = `w-full h-full rounded-full border-4 border-dashed border-purple-500 opacity-80 spiral ${dir < 0 ? 'reverse' : ''}`;
+            icon.innerText = dir > 0 ? "⬆️" : "⬇️";
+            icon.style.opacity = '1';
+
+            // Create oscillators across range
+            // We loop frequency from 0 to 1 (normalized cycle)
+            // freq = base * 2^cycle
+            // volume = bell curve based on cycle
+
+            // We update frequency continuously in loop
+            loop();
+        }
+
+        let time = 0;
+
+        function loop() {
+            if (!isPlaying) return;
+
+            // Setup nodes if not exist
+            if (oscillators.length === 0) {
+                // Create 10 oscillators for smooth overlap, spread across audio spectrum
+                for (let i = 0; i < 6; i++) {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    oscillators.push(osc);
+                    gainNodes.push(gain);
+                }
+            }
+
+            // Update freq and gain
+            time += (0.002 * direction); // Speed
+
+            oscillators.forEach((osc, i) => {
+                // Stagger phase for each oscillator
+                let phase = (time + i / oscillators.length) % 1;
+                if (phase < 0) phase += 1;
+
+                // Frequency: 40Hz to 4000Hz (exponential)
+                // Let's say range 20Hz * 2^(10*phase) -> 20 to 20480
+                // Or narrower for musical effect: 55Hz (A1) to 880Hz (A5)
+                const freq = 55 * Math.pow(2, phase * 6); // 6 Octaves
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+                // Volume: Bell curve (hanning window or sine window) to fade in/out at ends of spectrum
+                // sin(PI * phase) peaks at 0.5
+                const vol = Math.sin(Math.PI * phase) * 0.15; // Max vol 0.15
+                gainNodes[i].gain.setValueAtTime(vol, audioCtx.currentTime);
+            });
+
+            animationId = requestAnimationFrame(loop);
+        }
+
+        function stop() {
+            isPlaying = false;
+            cancelAnimationFrame(animationId);
+            oscillators.forEach(osc => osc.stop());
+            oscillators = [];
+            gainNodes = [];
+
+            visual.className = "w-full h-full rounded-full border-4 border-dashed border-purple-500 opacity-20";
+            icon.style.opacity = '0.5';
+        }
+    </script>
+</body>
+
+</html>

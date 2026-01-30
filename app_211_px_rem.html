@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PX-REM 转换器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .input-box {
+            transition: border-color 0.2s;
+        }
+
+        .input-box:focus-within {
+            border-color: #3b82f6;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-700">
+                <span class="bg-indigo-100 px-2 py-1 rounded text-xs font-mono">CSS</span> Unit Converter
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="mb-8 flex items-center justify-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+            <label class="text-sm font-bold text-slate-500 uppercase">基准字号 (Root Font Size):</label>
+            <div class="relative w-24">
+                <input type="number" id="base-size" value="16"
+                    class="w-full p-2 pr-8 border border-slate-300 rounded-lg text-center font-bold outline-none focus:border-indigo-500"
+                    oninput="convert('base')">
+                <span class="absolute right-2 top-2 text-slate-400 text-sm">px</span>
+            </div>
+        </div>
+
+        <div class="flex flex-col md:flex-row gap-8 items-center">
+
+            <!-- PX Input -->
+            <div class="flex-1 w-full">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Pixels (PX)</label>
+                <div class="input-box flex items-center border-2 border-slate-200 rounded-2xl p-2 bg-white">
+                    <input type="number" id="px-val"
+                        class="w-full p-2 text-3xl font-mono text-center outline-none text-slate-700 font-bold"
+                        placeholder="16" oninput="convert('px')">
+                    <span class="text-slate-400 font-bold mr-4">px</span>
+                </div>
+            </div>
+
+            <!-- Arrow -->
+            <div class="text-slate-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 rotate-90 md:rotate-0" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+            </div>
+
+            <!-- REM Input -->
+            <div class="flex-1 w-full">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Root EM (REM)</label>
+                <div class="input-box flex items-center border-2 border-slate-200 rounded-2xl p-2 bg-white">
+                    <input type="number" id="rem-val"
+                        class="w-full p-2 text-3xl font-mono text-center outline-none text-indigo-600 font-bold"
+                        placeholder="1" oninput="convert('rem')">
+                    <span class="text-slate-400 font-bold mr-4">rem</span>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="mt-8 grid grid-cols-4 gap-4 text-center">
+            <button onclick="setPx(12)"
+                class="py-2 bg-slate-100 hover:bg-slate-200 rounded text-xs font-bold text-slate-600 transition">12px</button>
+            <button onclick="setPx(14)"
+                class="py-2 bg-slate-100 hover:bg-slate-200 rounded text-xs font-bold text-slate-600 transition">14px</button>
+            <button onclick="setPx(16)"
+                class="py-2 bg-slate-100 hover:bg-slate-200 rounded text-xs font-bold text-slate-600 transition">16px</button>
+            <button onclick="setPx(24)"
+                class="py-2 bg-slate-100 hover:bg-slate-200 rounded text-xs font-bold text-slate-600 transition">24px</button>
+        </div>
+
+    </div>
+
+    <script>
+        const pxInput = document.getElementById('px-val');
+        const remInput = document.getElementById('rem-val');
+        const baseInput = document.getElementById('base-size');
+
+        function convert(source) {
+            const base = parseFloat(baseInput.value) || 16;
+
+            if (source === 'px' || source === 'base') {
+                const px = parseFloat(pxInput.value);
+                if (!isNaN(px)) {
+                    // Prevent infinite loop if called from base update
+                    if (source === 'base' && document.activeElement === remInput) {
+                        const rem = parseFloat(remInput.value);
+                        if (!isNaN(rem)) pxInput.value = parseFloat((rem * base).toFixed(4));
+                    } else {
+                        remInput.value = parseFloat((px / base).toFixed(4));
+                    }
+                }
+            }
+
+            if (source === 'rem') {
+                const rem = parseFloat(remInput.value);
+                if (!isNaN(rem)) {
+                    pxInput.value = parseFloat((rem * base).toFixed(4));
+                }
+            }
+        }
+
+        function setPx(val) {
+            pxInput.value = val;
+            convert('px');
+        }
+
+        // Init
+        setPx(16);
+    </script>
+</body>
+
+</html>

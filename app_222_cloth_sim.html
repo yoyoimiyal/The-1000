@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>布料物理模拟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #1e1e1e;
+            cursor: crosshair;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="fixed top-4 left-4 z-10 pointer-events-none text-white/80">
+        <h1 class="text-xl font-bold">Cloth Simulation</h1>
+        <p class="text-xs">Drag to interact, Right click to tear</p>
+    </div>
+
+    <div class="fixed bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-4">
+        <button onclick="reset()"
+            class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full backdrop-blur border border-white/20 text-xs font-bold transition">Reset</button>
+        <a href="./navigation.html"
+            class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full backdrop-blur border border-white/20 text-xs font-bold transition">Exit</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        const physicsAccuracy = 3;
+        const mouseCutRange = 10;
+        const mouseInfluenceSize = 20;
+        const mouseInfluenceScalar = 5;
+        const gravity = 1200;
+        const clothY = 30;
+        const spacing = 8;
+        const tearDist = 60;
+        const friction = 0.99;
+        const bounce = 0.5;
+
+        let points = [];
+        let constraints = [];
+        let mouse = { x: 0, y: 0, down: false, button: 0 };
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            reset();
+        }
+
+        window.addEventListener('resize', resize);
+
+        class Point {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.ox = x; // Old X
+                this.oy = y; // Old Y
+                this.pinned = false;
+            }
+            update(dt) {
+                if (this.pinned) return;
+                const vx = (this.x - this.ox) * friction;
+                const vy = (this.y - this.oy) * friction;
+                this.ox = this.x;
+                this.oy = this.y;
+                this.x += vx;
+                this.y += vy + gravity * dt * dt;
+
+                // Interaction
+                if (mouse.down) {
+                    const dx = this.x - mouse.x;
+                    const dy = this.y - mouse.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (mouse.button === 0 && dist < mouseInfluenceSize) {
+                        // Drag
+                        const nx = mouse.x - mouse.lastX;
+                        const ny = mouse.y - mouse.lastY;
+                        this.ox = this.x - nx * 1.5;
+                        this.oy = this.y - ny * 1.5;
+                    }
+                }
+            }
+            draw() {
+                // Points not drawn for performance, lines are enough
+            }
+            constrain() {
+                if (this.pinned) return;
+                // Bounds
+                if (this.y > height - 1) { this.y = height - 1; }
+                if (this.x > width - 1) { this.x = width - 1; }
+                if (this.x < 1) { this.x = 1; }
+            }
+        }
+
+        class Constraint {
+            constructor(p1, p2) {
+                this.p1 = p1;
+                this.p2 = p2;
+                this.length = spacing;
+            }
+            resolve() {
+                const dx = this.p1.x - this.p2.x;
+                const dy = this.p1.y - this.p2.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > tearDist) {
+                    // Tear
+                    const idx = constraints.indexOf(this);
+                    if (idx > -1) constraints.splice(idx, 1);
+                    return;
+                }
+
+                const diff = (this.length - dist) / dist;
+                const mul = diff * 0.5; // Stiff
+                const offX = dx * mul;
+                const offY = dy * mul;
+
+                if (!this.p1.pinned) {
+                    this.p1.x += offX;
+                    this.p1.y += offY;
+                }
+                if (!this.p2.pinned) {
+                    this.p2.x -= offX;
+                    this.p2.y -= offY;
+                }
+            }
+            draw() {
+                ctx.moveTo(this.p1.x, this.p1.y);
+                ctx.lineTo(this.p2.x, this.p2.y);
+            }
+        }
+
+        function reset() {
+            points = [];
+            constraints = [];
+            const cols = Math.floor(width / spacing / 2); // Half width cloth
+            const rows = Math.floor(height / spacing / 2);
+
+            const startX = (width - cols * spacing) / 2;
+
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const p = new Point(startX + x * spacing, clothY + y * spacing);
+                    if (y === 0 && x % 4 === 0) p.pinned = true; // Pin top row
+                    points.push(p);
+
+                    if (x > 0) {
+                        constraints.push(new Constraint(points[points.length - 1], points[points.length - 2]));
+                    }
+                    if (y > 0) {
+                        constraints.push(new Constraint(points[points.length - 1], points[points.length - 1 - cols]));
+                    }
+                }
+            }
+        }
+
+        function update() {
+            ctx.clearRect(0, 0, width, height);
+
+            const dt = 0.016; // Fixed timestep approx
+
+            // Update Points
+            for (const p of points) {
+                p.update(dt);
+                p.constrain();
+            }
+
+            // Solve Constraints
+            for (let i = 0; i < physicsAccuracy; i++) {
+                for (let j = constraints.length - 1; j >= 0; j--) {
+                    constraints[j].resolve();
+                }
+            }
+
+            // Interaction: Cut
+            if (mouse.down && mouse.button === 2) {
+                // Right click cut
+                for (let j = constraints.length - 1; j >= 0; j--) {
+                    const c = constraints[j];
+                    const mx = (c.p1.x + c.p2.x) / 2;
+                    const my = (c.p1.y + c.p2.y) / 2;
+                    const dist = Math.hypot(mx - mouse.x, my - mouse.y);
+                    if (dist < mouseCutRange) {
+                        constraints.splice(j, 1);
+                    }
+                }
+            }
+
+            // Draw
+            ctx.beginPath();
+            ctx.strokeStyle = '#a5f3fc'; // Cyan-200
+            for (const c of constraints) {
+                c.draw();
+            }
+            ctx.stroke();
+
+            // Track mouse velocity
+            mouse.lastX = mouse.x;
+            mouse.lastY = mouse.y;
+
+            requestAnimationFrame(update);
+        }
+
+        // Input
+        canvas.addEventListener('mousedown', e => {
+            mouse.down = true;
+            mouse.button = e.button;
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+            mouse.lastX = e.clientX;
+            mouse.lastY = e.clientY;
+        });
+        window.addEventListener('mouseup', () => mouse.down = false);
+        window.addEventListener('mousemove', e => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        resize();
+        update();
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEO Meta 标签生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .preview-card {
+            border: 1px solid #dfe1e5;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: arial, sans-serif;
+            background: white;
+            max-width: 600px;
+        }
+
+        .preview-title {
+            color: #1a0dab;
+            font-size: 20px;
+            line-height: 1.3;
+            cursor: pointer;
+        }
+
+        .preview-title:hover {
+            text-decoration: underline;
+        }
+
+        .preview-url {
+            color: #202124;
+            font-size: 14px;
+            line-height: 1.3;
+        }
+
+        .preview-desc {
+            color: #4d5156;
+            font-size: 14px;
+            line-height: 1.58;
+            margin-top: 3px;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen p-6 flex flex-col items-center text-slate-700">
+
+    <div class="w-full max-w-4xl flex flex-col md:flex-row gap-8">
+
+        <!-- Input Form -->
+        <div class="flex-1 w-full bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <header class="flex justify-between items-center mb-6">
+                <h1 class="text-lg font-bold text-slate-800">Meta Generator</h1>
+                <a href="./navigation.html" class="text-xs text-blue-500 hover:underline">退出</a>
+            </header>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Site Title (Title)</label>
+                    <input type="text" id="title"
+                        class="w-full p-2 border border-slate-300 rounded outline-none focus:border-blue-500"
+                        placeholder="My Awesome Website" oninput="update()">
+                    <p class="text-[10px] text-slate-400 mt-1 text-right"><span id="count-title">0</span> / 60 chars</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Description</label>
+                    <textarea id="desc"
+                        class="w-full p-2 border border-slate-300 rounded outline-none focus:border-blue-500 h-24 resize-none"
+                        placeholder="A brief description of your content..." oninput="update()"></textarea>
+                    <p class="text-[10px] text-slate-400 mt-1 text-right"><span id="count-desc">0</span> / 160 chars</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Keywords (Comma
+                        separated)</label>
+                    <input type="text" id="keywords"
+                        class="w-full p-2 border border-slate-300 rounded outline-none focus:border-blue-500"
+                        placeholder="html, tools, generator" oninput="update()">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Author</label>
+                    <input type="text" id="author"
+                        class="w-full p-2 border border-slate-300 rounded outline-none focus:border-blue-500"
+                        placeholder="John Doe" oninput="update()">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Thumbnail URL
+                        (OG:Image)</label>
+                    <input type="text" id="image"
+                        class="w-full p-2 border border-slate-300 rounded outline-none focus:border-blue-500"
+                        placeholder="https://example.com/image.jpg" oninput="update()">
+                </div>
+            </div>
+        </div>
+
+        <!-- Output & Preview -->
+        <div class="flex-1 w-full space-y-6">
+
+            <!-- Google Preview -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 class="text-xs font-bold text-slate-400 uppercase mb-4">Google Search Preview</h3>
+                <div class="preview-card">
+                    <div class="preview-url">www.example.com › ...</div>
+                    <div class="preview-title" id="prev-title">My Awesome Website</div>
+                    <div class="preview-desc" id="prev-desc">A brief description of your content...</div>
+                </div>
+            </div>
+
+            <!-- Code -->
+            <div class="bg-slate-900 text-green-400 p-6 rounded-2xl shadow-lg relative group">
+                <div class="absolute top-4 right-4">
+                    <button onclick="copyCode()"
+                        class="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1 rounded transition">Copy</button>
+                </div>
+                <textarea id="output"
+                    class="w-full h-64 bg-transparent outline-none resize-none font-mono text-xs leading-relaxed"
+                    readonly></textarea>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        function update() {
+            const title = document.getElementById('title').value || "My Awesome Website";
+            const desc = document.getElementById('desc').value || "A brief description of your content...";
+            const keywords = document.getElementById('keywords').value;
+            const author = document.getElementById('author').value;
+            const image = document.getElementById('image').value;
+
+            // Preview
+            document.getElementById('prev-title').innerText = title;
+            document.getElementById('prev-desc').innerText = desc;
+
+            // Counts
+            document.getElementById('count-title').innerText = title.length;
+            document.getElementById('count-desc').innerText = desc.length;
+
+            // Generate Code
+            let code = `<!-- Primary Meta Tags -->
+<title>${title}</title>
+<meta name="title" content="${title}">
+<meta name="description" content="${desc}">\n`;
+
+            if (keywords) code += `<meta name="keywords" content="${keywords}">\n`;
+            if (author) code += `<meta name="author" content="${author}">\n`;
+
+            code += `
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://example.com/">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${desc}">`;
+
+            if (image) code += `\n<meta property="og:image" content="${image}">`;
+
+            code += `
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary_large_image">
+<meta property="twitter:url" content="https://example.com/">
+<meta property="twitter:title" content="${title}">
+<meta property="twitter:description" content="${desc}">`;
+
+            if (image) code += `\n<meta property="twitter:image" content="${image}">`;
+
+            document.getElementById('output').value = code;
+        }
+
+        function copyCode() {
+            const el = document.getElementById('output');
+            el.select();
+            document.execCommand('copy');
+            alert("代码已复制");
+        }
+
+        update();
+    </script>
+</body>
+
+</html>

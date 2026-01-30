@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>色弱测试游戏</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .game-grid {
+            display: grid;
+            gap: 4px;
+            padding: 4px;
+            background: #fff;
+            border-radius: 8px;
+        }
+
+        .block {
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .block:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-800 min-h-screen flex flex-col items-center justify-center p-4 select-none">
+
+    <div class="w-full max-w-md">
+
+        <header class="flex justify-between items-end mb-6 text-white">
+            <div>
+                <h1 class="text-2xl font-bold">Color Kuku</h1>
+                <p class="text-xs text-slate-400">找出颜色不同的方块</p>
+            </div>
+            <div class="text-right">
+                <div class="text-sm">Score: <span id="score" class="font-bold text-yellow-400 text-xl">0</span></div>
+                <div class="text-xs text-slate-400">Time: <span id="time" class="text-red-400">60</span>s</div>
+            </div>
+        </header>
+
+        <div class="aspect-square bg-white rounded-xl shadow-2xl p-2 mb-6 relative">
+            <div id="grid" class="w-full h-full game-grid">
+                <!-- Blocks injected -->
+            </div>
+
+            <!-- Start Overlay -->
+            <div id="overlay"
+                class="absolute inset-0 bg-slate-900/90 rounded-lg flex flex-col items-center justify-center z-10">
+                <button onclick="startGame()" id="start-btn"
+                    class="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-full shadow-lg transition transform hover:scale-105 text-lg">
+                    开始测试
+                </button>
+                <div id="final-score-area" class="hidden text-center mt-4">
+                    <p class="text-slate-400 text-sm">最终得分</p>
+                    <p class="text-4xl font-bold text-yellow-400 mb-4" id="final-score">0</p>
+                    <p class="text-xs text-slate-500" id="comment">...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center">
+            <a href="./navigation.html" class="text-xs text-slate-500 hover:text-white">退出游戏</a>
+        </div>
+
+    </div>
+
+    <script>
+        const grid = document.getElementById('grid');
+        const scoreEl = document.getElementById('score');
+        const timeEl = document.getElementById('time');
+        const overlay = document.getElementById('overlay');
+        const startBtn = document.getElementById('start-btn');
+        const finalScoreEl = document.getElementById('final-score');
+        const finalArea = document.getElementById('final-score-area');
+        const commentEl = document.getElementById('comment');
+
+        let score = 0;
+        let level = 1;
+        let timeLeft = 60;
+        let timerId;
+        let isPlaying = false;
+
+        function startGame() {
+            score = 0;
+            level = 1;
+            timeLeft = 60;
+            scoreEl.innerText = 0;
+            timeEl.innerText = 60;
+
+            overlay.classList.add('hidden');
+            finalArea.classList.add('hidden');
+            startBtn.innerText = "再玩一次";
+
+            isPlaying = true;
+            nextLevel();
+
+            timerId = setInterval(() => {
+                timeLeft--;
+                timeEl.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    gameOver();
+                }
+            }, 1000);
+        }
+
+        function nextLevel() {
+            // Calculate grid size (starts 2x2, grows to max ??)
+            // e.g. level 1 -> 2x2, level 2-> 3x3 ... max 8x8?
+            let size = Math.min(8, Math.floor(Math.sqrt(level + 3)) + 1); // rough progression
+
+            grid.innerHTML = '';
+            grid.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+
+            // Generate Color
+            const r = Math.floor(Math.random() * 200) + 20; // avoid too dark/light
+            const g = Math.floor(Math.random() * 200) + 20;
+            const b = Math.floor(Math.random() * 200) + 20;
+
+            // Generate Diff Color
+            // Difference decreases as level increases
+            // Max diff ~100, Min diff ~10
+            let diff = Math.max(10, 100 - (level * 2));
+
+            // Apply diff to one channel
+            const sign = Math.random() > 0.5 ? 1 : -1;
+            const r2 = r + (diff * sign); // Simplified logic, clamp handled by CSS/Browser color parsing usually or need Math.min
+            // Better to stay valid:
+            const safeR2 = Math.min(255, Math.max(0, r + diff * sign));
+
+            const baseColor = `rgb(${r},${g},${b})`;
+            const diffColor = `rgb(${safeR2},${g},${b})`;
+            // Note: changing only R is usually enough, but for accessibility maybe brightness? 
+            // Using opacity is a common trick for this game (Kuku Kube style).
+            // Let's use opacity diff? No, distinct color is better.
+
+            // Better logic: HSL manipulation for consistent difficulty?
+            // Simple RGB offset works well enough for casual play.
+
+            const targetIndex = Math.floor(Math.random() * (size * size));
+
+            for (let i = 0; i < size * size; i++) {
+                const el = document.createElement('div');
+                el.className = 'block';
+                el.style.backgroundColor = (i === targetIndex) ? diffColor : baseColor;
+
+                if (i === targetIndex) {
+                    el.onclick = () => {
+                        if (!isPlaying) return;
+                        score++;
+                        scoreEl.innerText = score;
+                        level++;
+                        nextLevel();
+                    };
+                } else {
+                    el.onclick = () => {
+                        // Penalty?
+                        if (!isPlaying) return;
+                        // Shake or deduct time?
+                        timeLeft = Math.max(0, timeLeft - 2);
+                        timeEl.innerText = timeLeft;
+                    };
+                }
+                grid.appendChild(el);
+            }
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            clearInterval(timerId);
+
+            finalScoreEl.innerText = score;
+
+            // Comment
+            let comment = "";
+            if (score < 10) comment = "色弱边缘？👀";
+            else if (score < 20) comment = "正常视力 👌";
+            else if (score < 30) comment = "火眼金睛 🔥";
+            else comment = "色彩大师 🎨";
+            commentEl.innerText = comment;
+
+            finalArea.classList.remove('hidden');
+            overlay.classList.remove('hidden');
+        }
+    </script>
+</body>
+
+</html>

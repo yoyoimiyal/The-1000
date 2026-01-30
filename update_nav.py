@@ -41,12 +41,13 @@ def generate_nav():
     # 3. 生成 HTML 内容
     total = len(apps)
     
+    # 注意：这里生成的已经是 index.html 了
     html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1000小程序计划 - 导航站 (Auto)</title>
+    <title>1000小程序计划 - 网页版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -80,6 +81,8 @@ def generate_nav():
             background-color: #ef4444; width: 8px; height: 8px; border-radius: 50%;
             margin: 6px;
         }}
+        /* Return to Home Button Style for sub-pages */
+        /* This CSS is prepared for future integration if needed */
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
@@ -97,9 +100,10 @@ def generate_nav():
     </header>
 
     <main class="container mx-auto px-4 py-8">
-        <!-- Search Filter (Simple JS implementation embedded) -->
+        
+        <!-- Search Filter -->
         <div class="max-w-md mx-auto mb-8 relative">
-            <input type="text" id="search" placeholder="搜索小程序..." class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition" onkeyup="filterApps()">
+            <input type="text" id="search" placeholder="搜索小程序 (Search)..." class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition" onkeyup="filterApps()">
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4" id="app-grid">
@@ -126,6 +130,7 @@ def generate_nav():
         
         display_id = f"{app_id:03d}"
         
+        # 注意：这里所有的链接都是相对路径 ./filename，这在 GitHub Pages 上完美工作
         html += f'''            <a href="./{filename}" class="{classes}" data-search="{title.lower()} {app_id}">
                 {indicator}
                 <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">{display_id}</span>
@@ -139,7 +144,7 @@ def generate_nav():
     </main>
 
     <footer class="text-center py-10 text-slate-400 text-sm">
-        <p>&copy; 2026 1000小程序计划</p>
+        <p>&copy; 2026 1000小程序计划 | Hosted on GitHub Pages</p>
         <p class="text-xs mt-2 opacity-60">Last updated via Python Script</p>
     </footer>
 
@@ -163,12 +168,20 @@ def generate_nav():
 </html>
 """
 
-    # 5. 写入文件
+    # 5. 写入文件 (注意文件名变为 index.html)
     try:
-        with open('navigation.html', 'w', encoding='utf-8') as f:
+        with open('index.html', 'w', encoding='utf-8') as f:
             f.write(html)
-        print(f"✅ Successfully generated navigation.html with {total} apps!")
-        print(f"   Latest app: #{apps[-1]['id']} - {apps[-1]['title']}")
+        print(f"✅ Successfully generated index.html with {total} apps!")
+        
+        # 可选：如果存在旧的 navigation.html，可以删除它以免混淆
+        if os.path.exists('navigation.html'):
+            try:
+                os.remove('navigation.html')
+                print("🗑️  Removed old navigation.html")
+            except:
+                pass
+                
     except Exception as e:
         print(f"❌ Error writing file: {e}")
 

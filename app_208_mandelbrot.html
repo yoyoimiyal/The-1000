@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>曼德博集合探险</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="fixed top-4 left-4 z-10 text-white mix-blend-difference pointer-events-none">
+        <h1 class="text-xl font-bold">Mandelbrot Explorer</h1>
+        <p class="text-xs opacity-70">点击放大 (Click to Zoom) | 右键缩小 (Right Click)</p>
+        <p class="text-xs opacity-50 font-mono mt-1" id="coords">X: -0.5, Y: 0, Zoom: 1x</p>
+    </div>
+
+    <div class="fixed bottom-4 right-4 z-10">
+        <button onclick="resetView()"
+            class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full backdrop-blur border border-white/20 text-xs font-bold transition">重置视图</button>
+        <a href="./navigation.html"
+            class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full backdrop-blur border border-white/20 text-xs font-bold transition ml-2">退出</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const coordDisplay = document.getElementById('coords');
+
+        let width, height;
+        // Viewport
+        let panX = -0.5;
+        let panY = 0;
+        let zoom = 200; // pixels per unit
+        const maxIter = 100;
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            draw();
+        }
+        window.addEventListener('resize', resize);
+
+        function draw() {
+            // Get image data
+            const imgData = ctx.createImageData(width, height);
+            const data = imgData.data;
+
+            // Iterate pixels
+            for (let x = 0; x < width; x++) {
+                for (let y = 0; y < height; y++) {
+                    // Map pixel to complex plane
+                    const cRe = (x - width / 2) / zoom + panX;
+                    const cIm = (y - height / 2) / zoom + panY;
+
+                    // Mandelbrot iteration: z = z^2 + c
+                    let zRe = 0;
+                    let zIm = 0;
+                    let n = 0;
+
+                    // Main cardioid optimization? Omitted for simplicity
+
+                    while (n < maxIter && (zRe * zRe + zIm * zIm) <= 4) {
+                        const zReNew = zRe * zRe - zIm * zIm + cRe;
+                        zIm = 2 * zRe * zIm + cIm;
+                        zRe = zReNew;
+                        n++;
+                    }
+
+                    // Color
+                    const idx = (y * width + x) * 4;
+                    if (n === maxIter) {
+                        // Inside: Black
+                        data[idx] = 0;
+                        data[idx + 1] = 0;
+                        data[idx + 2] = 0;
+                        data[idx + 3] = 255;
+                    } else {
+                        // Outside: Color based on n
+                        // Palette: Blue -> Green -> Red
+                        // Smooth coloring could be better but simple int works
+                        const t = n / maxIter;
+                        data[idx] = Math.floor(9 * (1 - t) * t * t * t * 255); // R
+                        data[idx + 1] = Math.floor(15 * (1 - t) * (1 - t) * t * t * 255); // G
+                        data[idx + 2] = Math.floor(8.5 * (1 - t) * (1 - t) * (1 - t) * t * 255); // B
+                        data[idx + 3] = 255;
+                    }
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+            updateCoords();
+        }
+
+        function updateCoords() {
+            coordDisplay.innerText = `X: ${panX.toFixed(6)}, Y: ${panY.toFixed(6)}, Zoom: ${(zoom / 200).toFixed(2)}x`;
+        }
+
+        function resetView() {
+            panX = -0.5;
+            panY = 0;
+            zoom = 200;
+            draw();
+        }
+
+        function handleZoom(e, direction) {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            // Mouse pos relative to center
+            const mouseX = e.clientX - rect.left - width / 2;
+            const mouseY = e.clientY - rect.top - height / 2;
+
+            // Current complex coord of mouse
+            const mouseRe = mouseX / zoom + panX;
+            const mouseIm = mouseY / zoom + panY;
+
+            // Zoom
+            const factor = direction > 0 ? 1.5 : 0.66;
+            zoom *= factor;
+
+            // New pan so mouse complex coord is still under mouse
+            // mouseRe = mouseX / newZoom + newPanX
+            // newPanX = mouseRe - mouseX / newZoom
+            panX = mouseRe - mouseX / zoom;
+            panY = mouseIm - mouseY / zoom;
+
+            // Use requestAnimationFrame for smoother feel if spamming
+            requestAnimationFrame(draw);
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            // Left click zoom in, Right click zoom out
+            if (e.button === 0) handleZoom(e, 1);
+            else if (e.button === 2) handleZoom(e, -1);
+        });
+
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        // Init
+        resize();
+    </script>
+</body>
+
+</html>

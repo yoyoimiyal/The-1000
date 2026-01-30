@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1000小程序计划 - 导航站 (Auto)</title>
+    <title>1000小程序计划 - 网页版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -37,6 +37,8 @@
             background-color: #ef4444; width: 8px; height: 8px; border-radius: 50%;
             margin: 6px;
         }
+        /* Return to Home Button Style for sub-pages */
+        /* This CSS is prepared for future integration if needed */
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
@@ -48,15 +50,16 @@
                 1000小程序计划
             </h1>
             <div class="text-sm bg-indigo-700 px-4 py-1.5 rounded-full flex items-center gap-2 shadow-inner">
-                当前进度: <span class="font-bold text-yellow-300 text-lg font-mono">200</span> / 1000
+                当前进度: <span class="font-bold text-yellow-300 text-lg font-mono">225</span> / 1000
             </div>
         </div>
     </header>
 
     <main class="container mx-auto px-4 py-8">
-        <!-- Search Filter (Simple JS implementation embedded) -->
+        
+        <!-- Search Filter -->
         <div class="max-w-md mx-auto mb-8 relative">
-            <input type="text" id="search" placeholder="搜索小程序..." class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition" onkeyup="filterApps()">
+            <input type="text" id="search" placeholder="搜索小程序 (Search)..." class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition" onkeyup="filterApps()">
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4" id="app-grid">
@@ -1035,23 +1038,23 @@
                 <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">195</span>
                 <span class="truncate">网格反应测试</span>
             </a>
-            <a href="./app_196_chmod.html" class="app-card bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" data-search="linux 权限计算器 196">
-                <div class="badge-new"></div>
+            <a href="./app_196_chmod.html" class="app-card" data-search="linux 权限计算器 196">
+                
                 <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">196</span>
                 <span class="truncate">Linux 权限计算器</span>
             </a>
-            <a href="./app_197_biorhythm.html" class="app-card bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" data-search="生物节律计算器 197">
-                <div class="badge-new"></div>
+            <a href="./app_197_biorhythm.html" class="app-card" data-search="生物节律计算器 197">
+                
                 <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">197</span>
                 <span class="truncate">生物节律计算器</span>
             </a>
-            <a href="./app_198_tv_static.html" class="app-card bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" data-search="电视雪花模拟器 198">
-                <div class="badge-new"></div>
+            <a href="./app_198_tv_static.html" class="app-card" data-search="电视雪花模拟器 198">
+                
                 <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">198</span>
                 <span class="truncate">电视雪花模拟器</span>
             </a>
-            <a href="./app_199_hsl_explorer.html" class="app-card bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" data-search="hsl 色彩实验室 199">
-                <div class="badge-new"></div>
+            <a href="./app_199_hsl_explorer.html" class="app-card" data-search="hsl 色彩实验室 199">
+                
                 <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">199</span>
                 <span class="truncate">HSL 色彩实验室</span>
             </a>
@@ -1060,12 +1063,137 @@
                 <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">200</span>
                 <span class="truncate">200 里程碑礼炮 🏆</span>
             </a>
+            <a href="./app_201_falling_sand.html" class="app-card" data-search="物理沙盘 201">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">201</span>
+                <span class="truncate">物理沙盘</span>
+            </a>
+            <a href="./app_202_jwt.html" class="app-card" data-search="jwt 解码器 202">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">202</span>
+                <span class="truncate">JWT 解码器</span>
+            </a>
+            <a href="./app_203_fibonacci.html" class="app-card" data-search="黄金螺旋演示 203">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">203</span>
+                <span class="truncate">黄金螺旋演示</span>
+            </a>
+            <a href="./app_204_color_test.html" class="app-card" data-search="色弱测试游戏 204">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">204</span>
+                <span class="truncate">色弱测试游戏</span>
+            </a>
+            <a href="./app_205_retro_term.html" class="app-card" data-search="复古黑客终端 205">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">205</span>
+                <span class="truncate">复古黑客终端</span>
+            </a>
+            <a href="./app_206_ieee754.html" class="app-card" data-search="ieee 754 浮点数转换器 206">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">206</span>
+                <span class="truncate">IEEE 754 浮点数转换器</span>
+            </a>
+            <a href="./app_207_dtmf.html" class="app-card" data-search="dtmf 拨号音生成器 207">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">207</span>
+                <span class="truncate">DTMF 拨号音生成器</span>
+            </a>
+            <a href="./app_208_mandelbrot.html" class="app-card" data-search="曼德博集合探险 208">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">208</span>
+                <span class="truncate">曼德博集合探险</span>
+            </a>
+            <a href="./app_209_html_entities.html" class="app-card" data-search="html 实体编码器 209">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">209</span>
+                <span class="truncate">HTML 实体编码器</span>
+            </a>
+            <a href="./app_210_connect_four.html" class="app-card" data-search="四子棋 210">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">210</span>
+                <span class="truncate">四子棋</span>
+            </a>
+            <a href="./app_211_px_rem.html" class="app-card" data-search="px-rem 转换器 211">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">211</span>
+                <span class="truncate">PX-REM 转换器</span>
+            </a>
+            <a href="./app_212_maze.html" class="app-card" data-search="迷宫生成与探索 212">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">212</span>
+                <span class="truncate">迷宫生成与探索</span>
+            </a>
+            <a href="./app_213_rps.html" class="app-card" data-search="石头剪刀布 213">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">213</span>
+                <span class="truncate">石头剪刀布</span>
+            </a>
+            <a href="./app_214_mirror_text.html" class="app-card" data-search="文字翻转工具 214">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">214</span>
+                <span class="truncate">文字翻转工具</span>
+            </a>
+            <a href="./app_215_stroboscope.html" class="app-card" data-search="频闪灯 215">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">215</span>
+                <span class="truncate">频闪灯</span>
+            </a>
+            <a href="./app_216_ascii_cam.html" class="app-card" data-search="ascii 摄像机 216">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">216</span>
+                <span class="truncate">ASCII 摄像机</span>
+            </a>
+            <a href="./app_217_barcode_gen.html" class="app-card" data-search="条形码生成器 217">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">217</span>
+                <span class="truncate">条形码生成器</span>
+            </a>
+            <a href="./app_218_sleep_cycle.html" class="app-card" data-search="睡眠周期计算器 218">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">218</span>
+                <span class="truncate">睡眠周期计算器</span>
+            </a>
+            <a href="./app_219_pixelate.html" class="app-card" data-search="图片像素化工具 219">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">219</span>
+                <span class="truncate">图片像素化工具</span>
+            </a>
+            <a href="./app_220_steganography.html" class="app-card" data-search="图片隐写术 220">
+                
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">220</span>
+                <span class="truncate">图片隐写术</span>
+            </a>
+            <a href="./app_221_tetris.html" class="app-card bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" data-search="俄罗斯方块 221">
+                <div class="badge-new"></div>
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">221</span>
+                <span class="truncate">俄罗斯方块</span>
+            </a>
+            <a href="./app_222_cloth_sim.html" class="app-card bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" data-search="布料物理模拟 222">
+                <div class="badge-new"></div>
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">222</span>
+                <span class="truncate">布料物理模拟</span>
+            </a>
+            <a href="./app_223_truth_table.html" class="app-card bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" data-search="真值表生成器 223">
+                <div class="badge-new"></div>
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">223</span>
+                <span class="truncate">真值表生成器</span>
+            </a>
+            <a href="./app_224_shepard_tone.html" class="app-card bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" data-search="谢泼德音错觉 224">
+                <div class="badge-new"></div>
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">224</span>
+                <span class="truncate">谢泼德音错觉</span>
+            </a>
+            <a href="./app_225_meta_tags.html" class="app-card bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" data-search="seo meta 标签生成器 225">
+                <div class="badge-new"></div>
+                <span class="opacity-40 mr-3 text-xs font-mono font-normal select-none">225</span>
+                <span class="truncate">SEO Meta 标签生成器</span>
+            </a>
 
         </div>
     </main>
 
     <footer class="text-center py-10 text-slate-400 text-sm">
-        <p>&copy; 2026 1000小程序计划</p>
+        <p>&copy; 2026 1000小程序计划 | Hosted on GitHub Pages</p>
         <p class="text-xs mt-2 opacity-60">Last updated via Python Script</p>
     </footer>
 

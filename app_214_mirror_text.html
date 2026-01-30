@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文字翻转工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        textarea {
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-violet-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-2xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-violet-800 flex items-center gap-2">
+                <span class="text-2xl transform rotate-180 inline-block">R</span> Text Flipper
+            </h1>
+            <a href="./navigation.html" class="text-sm text-violet-500 hover:text-violet-700">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-violet-100">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">正常文字 (Normal)</label>
+                <textarea id="input"
+                    class="w-full h-32 p-3 bg-violet-50/50 border border-violet-100 rounded-xl resize-none outline-none focus:ring-2 focus:ring-violet-400 transition"
+                    placeholder="Type something here..." oninput="convert()"></textarea>
+            </div>
+
+            <div class="flex justify-center gap-4">
+                <button onclick="setMode('upside')" id="btn-upside"
+                    class="bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition">Upside
+                    Down (倒立)</button>
+                <button onclick="setMode('mirror')" id="btn-mirror"
+                    class="bg-white text-violet-600 border border-violet-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-violet-50 transition">Mirror
+                    (镜像)</button>
+                <button onclick="setMode('reverse')" id="btn-reverse"
+                    class="bg-white text-violet-600 border border-violet-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-violet-50 transition">Reverse
+                    (反向)</button>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl shadow-lg border border-violet-100 relative group">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">转换结果 (Result)</label>
+                <textarea id="output"
+                    class="w-full h-32 p-3 bg-white border border-slate-200 rounded-xl resize-none outline-none text-violet-900 font-medium"
+                    readonly></textarea>
+                <button onclick="copy()"
+                    class="absolute top-4 right-4 bg-violet-100 hover:bg-violet-200 text-violet-700 px-3 py-1 rounded-lg text-xs font-bold transition">复制</button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Upside down map
+        const upsideMap = {
+            'a': 'ɐ', 'b': 'q', 'c': 'ɔ', 'd': 'p', 'e': 'ǝ', 'f': 'ɟ', 'g': 'ƃ', 'h': 'ɥ', 'i': 'ᴉ', 'j': 'ɾ',
+            'k': 'ʞ', 'l': 'l', 'm': 'ɯ', 'n': 'u', 'o': 'o', 'p': 'd', 'q': 'b', 'r': 'ɹ', 's': 's', 't': 'ʇ',
+            'u': 'n', 'v': 'ʌ', 'w': 'ʍ', 'x': 'x', 'y': 'ʎ', 'z': 'z',
+            'A': '∀', 'B': 'B', 'C': 'Ɔ', 'D': 'D', 'E': 'Ǝ', 'F': 'Ⅎ', 'G': 'פ', 'H': 'H', 'I': 'I', 'J': 'ſ',
+            'K': 'K', 'L': '˥', 'M': 'W', 'N': 'N', 'O': 'O', 'P': 'd', 'Q': 'Q', 'R': 'R', 'S': 'S', 'T': '┴',
+            'U': '∩', 'V': 'Λ', 'W': 'M', 'X': 'X', 'Y': '⅄', 'Z': 'Z',
+            '1': 'Ɩ', '2': 'ᄅ', '3': 'Ɛ', '4': 'ㄣ', '5': 'ϛ', '6': '9', '7': 'ㄥ', '8': '8', '9': '6', '0': '0',
+            '.': '˙', ',': "'", '\'': ',', '"': ',,', '`': ',', '<': '>', '>': '<', '(': ')', ')': '(', '[': ']', ']': '[', '{': '}', '}': '{', '?': '¿', '!': '¡', '&': '⅋', '_': '‾'
+        };
+
+        // Mirror Map (Rough approximation with unicode)
+        const mirrorMap = {
+            'a': 'ɒ', 'b': 'd', 'c': 'ɔ', 'd': 'b', 'e': 'ɘ', 'f': 'Ꮈ', 'g': 'ǫ', 'h': 'ʜ', 'i': 'i', 'j': 'ꞁ',
+            'k': 'ʞ', 'l': 'l', 'm': 'm', 'n': 'n', 'o': 'o', 'p': 'q', 'q': 'p', 'r': 'ɿ', 's': 'ƨ', 't': 't',
+            'u': 'u', 'v': 'v', 'w': 'w', 'x': 'x', 'y': 'y', 'z': 'ƹ'
+        };
+
+        let mode = 'upside';
+        const input = document.getElementById('input');
+        const output = document.getElementById('output');
+
+        function setMode(m) {
+            mode = m;
+            document.querySelectorAll('button[id^="btn-"]').forEach(b => {
+                b.className = "bg-white text-violet-600 border border-violet-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-violet-50 transition";
+            });
+            document.getElementById(`btn-${m}`).className = "bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition";
+            convert();
+        }
+
+        function convert() {
+            const txt = input.value;
+            let res = "";
+
+            if (mode === 'upside') {
+                // Reverse string then map chars
+                res = txt.split('').reverse().map(c => upsideMap[c] || c).join('');
+            } else if (mode === 'mirror') {
+                // Reverse string then map mirror chars
+                res = txt.split('').reverse().map(c => mirrorMap[c.toLowerCase()] || c).join('');
+                // Note: Mirror map is incomplete for all unicode, best effort for lowercase
+            } else if (mode === 'reverse') {
+                res = txt.split('').reverse().join('');
+            }
+
+            output.value = res;
+        }
+
+        function copy() {
+            output.select();
+            document.execCommand('copy');
+            alert("已复制!");
+        }
+    </script>
+</body>
+
+</html>
