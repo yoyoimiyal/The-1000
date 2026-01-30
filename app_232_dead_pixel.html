@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>屏幕坏点检测</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            transition: background-color 0.1s;
+        }
+
+        .hidden-ui {
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 h-screen w-screen flex flex-col items-center justify-center overflow-hidden cursor-pointer"
+    onclick="nextColor()">
+
+    <div id="ui" class="text-center text-white transition-opacity duration-300">
+        <h1 class="text-4xl font-bold mb-4">Dead Pixel Test</h1>
+        <p class="text-gray-400 mb-8 max-w-md mx-auto text-sm leading-relaxed">
+            点击屏幕或按空格键切换颜色。<br>
+            依次检查屏幕上是否有长亮（亮点）或不亮（暗点）的像素。<br>
+            颜色顺序：黑 -> 白 -> 红 -> 绿 -> 蓝
+        </p>
+        <div class="flex gap-4 justify-center">
+            <button onclick="enterFullScreen()"
+                class="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-full font-bold shadow-lg">开始检测</button>
+            <a href="./navigation.html" onclick="event.stopPropagation()"
+                class="px-6 py-2 border border-gray-600 hover:bg-gray-800 rounded-full font-bold text-gray-400">退出</a>
+        </div>
+    </div>
+
+    <script>
+        const colors = ['#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff'];
+        let colorIndex = -1; // Start at menu state
+        const ui = document.getElementById('ui');
+
+        function enterFullScreen() {
+            const el = document.documentElement;
+            const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+            if (rfs) {
+                rfs.call(el).catch(err => {
+                    console.log("Fullscreen denied", err);
+                });
+            }
+            startTest();
+        }
+
+        function startTest() {
+            ui.classList.add('hidden-ui');
+            colorIndex = 0;
+            updateColor();
+        }
+
+        function nextColor() {
+            if (colorIndex === -1) return; // In menu
+
+            colorIndex++;
+            if (colorIndex >= colors.length) {
+                // Exit test
+                exitTest();
+            } else {
+                updateColor();
+            }
+        }
+
+        function updateColor() {
+            document.body.style.backgroundColor = colors[colorIndex];
+        }
+
+        function exitTest() {
+            colorIndex = -1;
+            document.body.style.backgroundColor = '#111827'; // gray-900
+            ui.classList.remove('hidden-ui');
+            if (document.exitFullscreen) document.exitFullscreen().catch(() => { });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowRight') {
+                if (colorIndex === -1) enterFullScreen();
+                else nextColor();
+            }
+            if (e.code === 'Escape') exitTest();
+        });
+    </script>
+</body>
+
+</html>

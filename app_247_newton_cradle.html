@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>牛顿摆模拟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            cursor: grab;
+        }
+
+        canvas:active {
+            cursor: grabbing;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-4 text-white select-none">
+
+    <div class="fixed top-4 left-4 z-10 pointer-events-none text-white/50">
+        <h1 class="font-bold text-xl text-white">Newton's Cradle</h1>
+        <p class="text-xs">Drag the balls to interact</p>
+    </div>
+
+    <canvas id="canvas" class="rounded-xl shadow-2xl border border-gray-700 bg-gray-800"></canvas>
+
+    <div class="mt-8 flex gap-4">
+        <button onclick="reset()"
+            class="bg-gray-700 hover:bg-gray-600 px-6 py-2 rounded-full text-sm font-bold transition">重置</button>
+        <a href="./navigation.html"
+            class="bg-gray-700 hover:bg-gray-600 px-6 py-2 rounded-full text-sm font-bold transition">退出</a>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        const ballRadius = 30; // Radius
+        const stringLen = 250;
+        const originY = 100;
+        const ballCount = 5;
+        const g = 0.5; // Gravity
+        const damping = 0.995; // Air resistance
+
+        let balls = [];
+        let draggingBall = null;
+
+        function resize() {
+            width = Math.min(window.innerWidth - 32, 600);
+            height = 500;
+            canvas.width = width;
+            canvas.height = height;
+            reset();
+        }
+        window.addEventListener('resize', resize);
+
+        class Ball {
+            constructor(index) {
+                this.index = index;
+                this.originX = (width / 2) + (index - (ballCount - 1) / 2) * (ballRadius * 2);
+                this.angle = 0;
+                this.velocity = 0;
+                this.x = 0;
+                this.y = 0;
+                this.mass = 1;
+                this.updatePos();
+            }
+
+            updatePos() {
+                this.x = this.originX + Math.sin(this.angle) * stringLen;
+                this.y = originY + Math.cos(this.angle) * stringLen;
+            }
+
+            update() {
+                if (this === draggingBall) return;
+
+                const accel = (-g / stringLen) * Math.sin(this.angle);
+                this.velocity += accel;
+                this.velocity *= damping;
+                this.angle += this.velocity;
+                this.updatePos();
+            }
+
+            draw() {
+                // String
+                ctx.beginPath();
+                ctx.moveTo(this.originX, originY);
+                ctx.lineTo(this.x, this.y);
+                ctx.strokeStyle = '#9ca3af'; // gray-400
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Ball
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, ballRadius, 0, Math.PI * 2);
+                // Silver gradient
+                const grad = ctx.createRadialGradient(this.x - 10, this.y - 10, 5, this.x, this.y, ballRadius);
+                grad.addColorStop(0, '#fff');
+                grad.addColorStop(0.3, '#d1d5db');
+                grad.addColorStop(1, '#4b5563');
+                ctx.fillStyle = grad;
+                ctx.fill();
+                ctx.strokeStyle = '#374151';
+                ctx.stroke();
+            }
+        }
+
+        function resolveCollisions() {
+            // Check neighbors
+            for (let i = 0; i < ballCount - 1; i++) {
+                const b1 = balls[i];
+                const b2 = balls[i + 1];
+
+                // Distance
+                const dx = b2.x - b1.x;
+                const dy = b2.y - b1.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < ballRadius * 2) {
+                    // Collision!
+                    // Simple 1D elastic collision on tangent
+                    // Since they are constrained by strings, we can just swap velocities roughly for equal mass
+                    // But we need to handle angles.
+
+                    // Simple approximation: Swap angular velocity
+                    const v1 = b1.velocity;
+                    const v2 = b2.velocity;
+
+                    // Only swap if moving towards each other
+                    if (v1 > v2) {
+                        b1.velocity = v2;
+                        b2.velocity = v1;
+
+                        // Separate to avoid sticking
+                        const overlap = ballRadius * 2 - dist;
+                        // Push apart? 
+                        // Just swapping velocity works well for Newton's cradle visual logic usually
+                        // We also add a small energy loss (restitution)
+                        b1.velocity *= 0.98;
+                        b2.velocity *= 0.98;
+
+                        // Push angles slightly apart
+                        // This part is tricky without breaking physics constraint.
+                        // Let's rely on velocity swap.
+                    }
+                }
+            }
+        }
+
+        function reset() {
+            balls = [];
+            for (let i = 0; i < ballCount; i++) {
+                balls.push(new Ball(i));
+            }
+            // Start simulation loop if not already
+        }
+
+        function loop() {
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw Top Bar
+            ctx.fillStyle = '#4b5563';
+            ctx.fillRect((width / 2) - (ballCount * ballRadius + 20), originY - 10, (ballCount * ballRadius * 2 + 40), 20);
+
+            // Physics sub-steps for stability
+            for (let i = 0; i < 4; i++) {
+                balls.forEach(b => b.update());
+                resolveCollisions();
+            }
+
+            balls.forEach(b => b.draw());
+
+            requestAnimationFrame(loop);
+        }
+
+        // Input Handling
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        function startDrag(e) {
+            e.preventDefault();
+            const m = getMousePos(e);
+            // Check collision with balls
+            for (let b of balls) {
+                const dist = Math.sqrt((m.x - b.x) ** 2 + (m.y - b.y) ** 2);
+                if (dist < ballRadius * 1.5) {
+                    draggingBall = b;
+                    b.velocity = 0; // Stop it
+                    break;
+                }
+            }
+        }
+
+        function drag(e) {
+            if (draggingBall) {
+                e.preventDefault();
+                const m = getMousePos(e);
+                // Set angle based on mouse pos relative to originX
+                const dx = m.x - draggingBall.originX;
+                const dy = m.y - originY;
+                const angle = Math.atan2(dx, dy);
+                draggingBall.angle = angle;
+                draggingBall.velocity = 0;
+                draggingBall.updatePos();
+            }
+        }
+
+        function endDrag() {
+            draggingBall = null;
+        }
+
+        canvas.addEventListener('mousedown', startDrag);
+        canvas.addEventListener('mousemove', drag);
+        canvas.addEventListener('mouseup', endDrag);
+        canvas.addEventListener('mouseleave', endDrag);
+
+        canvas.addEventListener('touchstart', startDrag);
+        canvas.addEventListener('touchmove', drag);
+        canvas.addEventListener('touchend', endDrag);
+
+        resize();
+        loop();
+    </script>
+</body>
+
+</html>

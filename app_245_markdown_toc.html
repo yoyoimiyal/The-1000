@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown 目录生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-5xl h-[90vh] flex flex-col">
+
+        <header class="flex justify-between items-center mb-6 shrink-0">
+            <h1 class="text-xl font-bold text-slate-700 flex items-center gap-2">
+                <span class="bg-black text-white px-2 py-1 rounded text-xs font-mono">TOC</span> Generator
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-slate-600">退出</a>
+        </header>
+
+        <div class="flex-1 flex flex-col md:flex-row gap-6 overflow-hidden">
+
+            <!-- Input -->
+            <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200">
+                <div
+                    class="p-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase flex justify-between">
+                    <span>Markdown Content</span>
+                    <button onclick="document.getElementById('input').value=''"
+                        class="text-red-400 hover:text-red-600">Clear</button>
+                </div>
+                <textarea id="input" class="flex-1 p-4 resize-none outline-none font-mono text-sm leading-relaxed"
+                    placeholder="# Header 1&#10;## Header 2&#10;### Header 3..." oninput="generate()"></textarea>
+            </div>
+
+            <!-- Output -->
+            <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200">
+                <div
+                    class="p-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase flex justify-between items-center">
+                    <span>Table of Contents</span>
+                    <div class="flex gap-2">
+                        <label class="flex items-center gap-1 cursor-pointer">
+                            <input type="checkbox" id="link" checked onchange="generate()">
+                            <span>Links</span>
+                        </label>
+                        <button onclick="copyTOC()" class="text-indigo-500 hover:underline font-bold">Copy</button>
+                    </div>
+                </div>
+                <textarea id="output"
+                    class="flex-1 p-4 resize-none outline-none font-mono text-sm leading-relaxed bg-slate-50 text-indigo-700"
+                    readonly></textarea>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const input = document.getElementById('input');
+        const output = document.getElementById('output');
+        const linkCheck = document.getElementById('link');
+
+        function generate() {
+            const raw = input.value;
+            const lines = raw.split('\n');
+            let toc = [];
+
+            // Regex for headers #
+            // Supports # Header, ## Header, etc.
+            const regex = /^(#{1,6})\s+(.+)$/;
+
+            lines.forEach(line => {
+                const match = line.match(regex);
+                if (match) {
+                    const level = match[1].length;
+                    const title = match[2].trim();
+
+                    // Indent: level 1 = 0 spaces, level 2 = 2 spaces...
+                    // Common practice: Standard indentation is 2 or 4 spaces.
+                    // Let's use 2 spaces per level minus 1.
+                    const indent = '  '.repeat(level - 1);
+
+                    let item = `${indent}- ${title}`;
+
+                    if (linkCheck.checked) {
+                        // Generate slug
+                        // Lowercase, replace spaces with -, remove non-word chars
+                        const slug = title.toLowerCase()
+                            .replace(/[^\w\u4e00-\u9fa5 -]/g, '') // Keep chinese, words, spaces, dashes
+                            .replace(/\s+/g, '-');
+
+                        item = `${indent}- [${title}](#${slug})`;
+                    }
+
+                    toc.push(item);
+                }
+            });
+
+            if (toc.length === 0) {
+                output.value = "";
+            } else {
+                output.value = "## Table of Contents\n\n" + toc.join('\n');
+            }
+        }
+
+        function copyTOC() {
+            output.select();
+            document.execCommand('copy');
+            alert("TOC 已复制!");
+        }
+
+        // Sample
+        input.value = `# Project Title
+
+## Introduction
+Some text...
+
+## Installation
+How to install...
+
+### Requirements
+- Node.js
+- NPM
+
+## Usage
+How to use...
+
+## License
+MIT`;
+        generate();
+    </script>
+</body>
+
+</html>

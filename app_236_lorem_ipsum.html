@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高级乱数假文生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        textarea {
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-4xl h-[90vh] flex flex-col">
+
+        <header class="flex justify-between items-center mb-6 shrink-0">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-slate-700">
+                <span class="text-2xl">📝</span> Advanced Lorem
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-slate-600">退出</a>
+        </header>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 shrink-0">
+
+            <div class="flex flex-wrap gap-4 items-end mb-4">
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">类型 (Type)</label>
+                    <select id="type" class="p-2 border border-slate-300 rounded-lg outline-none bg-white min-w-[150px]"
+                        onchange="updateOptions()">
+                        <option value="lorem">Lorem Ipsum (拉丁文)</option>
+                        <option value="chinese">中文乱数 (Chinese)</option>
+                        <option value="name">随机姓名 (Names)</option>
+                        <option value="address">随机地址 (Address)</option>
+                        <option value="color">随机颜色 (Colors)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">数量 (Count)</label>
+                    <input type="number" id="count" value="5" min="1" max="100"
+                        class="w-20 p-2 border border-slate-300 rounded-lg outline-none">
+                </div>
+
+                <div id="opt-paragraphs">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">单位</label>
+                    <select id="unit" class="p-2 border border-slate-300 rounded-lg outline-none bg-white">
+                        <option value="paragraphs">段落 (Paragraphs)</option>
+                        <option value="sentences">句子 (Sentences)</option>
+                        <option value="words">单词 (Words)</option>
+                    </select>
+                </div>
+
+                <button onclick="generate()"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-bold transition shadow ml-auto">
+                    生成 Generate
+                </button>
+            </div>
+
+        </div>
+
+        <div class="flex-1 relative group">
+            <textarea id="output"
+                class="w-full h-full p-6 border border-slate-200 rounded-2xl outline-none resize-none bg-white text-slate-600 leading-relaxed text-sm"
+                readonly></textarea>
+            <button onclick="copy()"
+                class="absolute top-4 right-4 bg-slate-100 hover:bg-slate-200 text-slate-500 px-3 py-1 rounded text-xs font-bold transition opacity-0 group-hover:opacity-100 border border-slate-200">Copy</button>
+        </div>
+
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+
+        // Data Sources
+        const latinWords = ["lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit", "sed", "do", "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore", "magna", "aliqua", "ut", "enim", "ad", "minim", "veniam", "quis", "nostrud"];
+        const cnChars = "的一是在不了有和人这中大为上个国我以要他时来用们生到作地于出就分对成会可主发年动同工也能下过子说产种面而方后多定行学法所民得经十三之进着等部度家电力里如水化高自二理起小物现实加量都两体制机当使点从业本去把性好应开它合还因由其些然前外天政四日那社义事平形相全表间样与关各重新线内数正心反你明看原又么利比或但质气第向道命此变条只没结解问意建月公无系军很情者最立代想已通并提直题党程展五果料象员革位入常文总次品式活设及管特件长求老头基资边流路级少图山统接知较将组见计别她手角期根论运农指几九区强放决西被干做必战先回则任取据处队南给色光门即保治北造百规热领七海口东导器压志世金增争济阶油思术极交联衣简号千列温复论光许难轻厂苦确近况亚集";
+
+        const firstNames = ["Alice", "Bob", "Charlie", "David", "Eva", "Frank", "Grace", "Henry", "Ivy", "Jack", "Kevin", "Lily", "Mike", "Nancy", "Oscar", "Paul", "Queen", "Rose", "Steve", "Tom"];
+        const lastNames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez"];
+
+        const cities = ["New York", "London", "Paris", "Tokyo", "Beijing", "Shanghai", "Berlin", "Sydney", "Toronto", "Moscow"];
+        const streets = ["Main St", "Broadway", "Park Ave", "5th Ave", "High St", "Market St", "Church St", "River Rd"];
+
+        function rand(max) { return Math.floor(Math.random() * max); }
+        function randItem(arr) { return arr[rand(arr.length)]; }
+
+        function generateLatin(count, unit) {
+            let res = [];
+            if (unit === 'words') {
+                for (let i = 0; i < count; i++) res.push(randItem(latinWords));
+                return res.join(" ");
+            }
+            if (unit === 'sentences') {
+                for (let i = 0; i < count; i++) {
+                    let len = rand(10) + 5;
+                    let sentence = [];
+                    for (let j = 0; j < len; j++) sentence.push(randItem(latinWords));
+                    sentence[0] = sentence[0].charAt(0).toUpperCase() + sentence[0].slice(1);
+                    res.push(sentence.join(" ") + ".");
+                }
+                return res.join(" ");
+            }
+            if (unit === 'paragraphs') {
+                for (let i = 0; i < count; i++) {
+                    let len = rand(5) + 3; // 3-8 sentences
+                    let para = [];
+                    for (let j = 0; j < len; j++) {
+                        let slen = rand(10) + 5;
+                        let sentence = [];
+                        for (let k = 0; k < slen; k++) sentence.push(randItem(latinWords));
+                        sentence[0] = sentence[0].charAt(0).toUpperCase() + sentence[0].slice(1);
+                        para.push(sentence.join(" ") + ".");
+                    }
+                    res.push(para.join(" "));
+                }
+                return res.join("\n\n");
+            }
+        }
+
+        function generateChinese(count, unit) {
+            let res = [];
+            if (unit === 'words') { // Single chars or 2-char words? Let's do random 1-2 chars
+                for (let i = 0; i < count; i++) {
+                    let w = cnChars.charAt(rand(cnChars.length));
+                    if (Math.random() > 0.5) w += cnChars.charAt(rand(cnChars.length));
+                    res.push(w);
+                }
+                return res.join(" "); // Space separated for clarity? or none? Usually no space, but list of words maybe comma. Let's space.
+            }
+            if (unit === 'sentences') {
+                for (let i = 0; i < count; i++) {
+                    let len = rand(15) + 5;
+                    let s = "";
+                    for (let j = 0; j < len; j++) s += cnChars.charAt(rand(cnChars.length));
+                    res.push(s + "。");
+                }
+                return res.join("");
+            }
+            if (unit === 'paragraphs') {
+                for (let i = 0; i < count; i++) {
+                    let len = rand(5) + 3;
+                    let p = "";
+                    for (let j = 0; j < len; j++) {
+                        let slen = rand(15) + 5;
+                        let s = "";
+                        for (let k = 0; k < slen; k++) s += cnChars.charAt(rand(cnChars.length));
+                        p += s + "。";
+                    }
+                    res.push(p);
+                }
+                return res.join("\n\n");
+            }
+        }
+
+        function generateNames(count) {
+            let res = [];
+            for (let i = 0; i < count; i++) res.push(`${randItem(firstNames)} ${randItem(lastNames)}`);
+            return res.join("\n");
+        }
+
+        function generateAddress(count) {
+            let res = [];
+            for (let i = 0; i < count; i++) res.push(`${rand(999) + 1} ${randItem(streets)}, ${randItem(cities)}, Country`);
+            return res.join("\n");
+        }
+
+        function generateColor(count) {
+            let res = [];
+            for (let i = 0; i < count; i++) {
+                const hex = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+                res.push(hex);
+            }
+            return res.join("\n");
+        }
+
+        function generate() {
+            const type = document.getElementById('type').value;
+            const count = parseInt(document.getElementById('count').value);
+            const unit = document.getElementById('unit').value;
+
+            let text = "";
+
+            if (type === 'lorem') text = generateLatin(count, unit);
+            else if (type === 'chinese') text = generateChinese(count, unit);
+            else if (type === 'name') text = generateNames(count);
+            else if (type === 'address') text = generateAddress(count);
+            else if (type === 'color') text = generateColor(count);
+
+            output.value = text;
+        }
+
+        function updateOptions() {
+            const type = document.getElementById('type').value;
+            const unitDiv = document.getElementById('opt-paragraphs');
+
+            if (type === 'lorem' || type === 'chinese') {
+                unitDiv.style.display = 'block';
+            } else {
+                unitDiv.style.display = 'none';
+            }
+        }
+
+        function copy() {
+            output.select();
+            document.execCommand('copy');
+            alert("已复制!");
+        }
+
+        generate();
+    </script>
+</body>
+
+</html>

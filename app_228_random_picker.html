@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>随机抽签器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .winner-anim {
+            animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes pop {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-indigo-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-lg h-[85vh] flex flex-col">
+
+        <header class="flex justify-between items-center mb-6 shrink-0">
+            <h1 class="text-xl font-bold text-indigo-700 flex items-center gap-2">
+                <span class="text-2xl">🎲</span> Random Picker
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div
+            class="bg-white p-6 rounded-2xl shadow-xl flex-1 flex flex-col border border-indigo-100 relative overflow-hidden">
+
+            <!-- Result Overlay -->
+            <div id="result-overlay"
+                class="absolute inset-0 bg-white/95 backdrop-blur z-20 hidden flex-col items-center justify-center text-center p-8">
+                <p class="text-sm text-slate-400 uppercase tracking-widest font-bold mb-4">The Winner Is</p>
+                <div id="winner-name" class="text-5xl font-black text-indigo-600 mb-8 break-words w-full winner-anim">
+                    Name</div>
+                <button onclick="closeResult()"
+                    class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-8 py-3 rounded-full font-bold transition">Back</button>
+            </div>
+
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">名单 (每行一个)</label>
+            <textarea id="input-list"
+                class="flex-1 w-full p-4 bg-slate-50 border border-slate-200 rounded-xl resize-none outline-none focus:ring-2 focus:ring-indigo-500 text-lg leading-relaxed placeholder-slate-300"
+                placeholder="Alice&#10;Bob&#10;Charlie&#10;David..."></textarea>
+
+            <div class="mt-4 flex gap-4">
+                <button onclick="document.getElementById('input-list').value=''"
+                    class="px-4 py-3 bg-white border border-slate-200 text-slate-500 rounded-xl font-bold hover:bg-slate-50 transition">清空</button>
+                <button onclick="pick()"
+                    class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition transform active:scale-95 text-lg">
+                    开始抽签
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const input = document.getElementById('input-list');
+        const overlay = document.getElementById('result-overlay');
+        const winnerEl = document.getElementById('winner-name');
+
+        // Sample data if empty
+        const sample = "Alice\nBob\nCharlie\nDavid\nEva\nFrank\nGrace";
+
+        function pick() {
+            let val = input.value.trim();
+            if (!val) {
+                // If empty, use sample? Or alert?
+                // Let's use sample for demo
+                // val = sample; 
+                // input.value = sample;
+                alert("请输入名单！");
+                return;
+            }
+
+            const names = val.split('\n').map(n => n.trim()).filter(n => n !== '');
+
+            if (names.length === 0) return;
+
+            // Rolling animation effect
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+
+            let i = 0;
+            const duration = 2000; // 2s roll
+            const interval = 50; // change every 50ms
+            const steps = duration / interval;
+
+            const timer = setInterval(() => {
+                winnerEl.innerText = names[Math.floor(Math.random() * names.length)];
+                winnerEl.className = "text-4xl font-bold text-slate-300 mb-8 break-words w-full"; // Dim during roll
+                i++;
+                if (i >= steps) {
+                    clearInterval(timer);
+                    // Final winner
+                    const winner = names[Math.floor(Math.random() * names.length)];
+                    winnerEl.innerText = winner;
+                    winnerEl.className = "text-6xl font-black text-indigo-600 mb-8 break-words w-full winner-anim";
+
+                    // Fire confetti? (Optional polish)
+                }
+            }, interval);
+        }
+
+        function closeResult() {
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flex');
+        }
+    </script>
+</body>
+
+</html>

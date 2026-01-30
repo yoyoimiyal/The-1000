@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>熄灯游戏</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .grid-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            background-color: #334155;
+            padding: 8px;
+            border-radius: 8px;
+        }
+
+        .cell {
+            width: 50px;
+            height: 50px;
+            background-color: #1e293b;
+            /* Off */
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .cell.on {
+            background-color: #fbbf24;
+            /* On */
+            box-shadow: 0 0 15px #fbbf24, inset 0 0 5px rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 min-h-screen flex flex-col items-center justify-center p-6 text-white select-none">
+
+    <div class="w-full max-w-md">
+
+        <header class="flex justify-between items-end mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-yellow-400">Lights Out</h1>
+                <p class="text-xs text-slate-400">目标：熄灭所有灯光</p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs text-slate-500 uppercase">Moves</p>
+                <p class="text-2xl font-mono font-bold" id="moves">0</p>
+            </div>
+        </header>
+
+        <div class="flex justify-center mb-8">
+            <div id="board" class="grid-board shadow-2xl">
+                <!-- 5x5 Grid -->
+            </div>
+        </div>
+
+        <div class="text-center space-y-4">
+            <p id="msg" class="h-6 text-green-400 font-bold"></p>
+            <div class="flex gap-4 justify-center">
+                <button onclick="initGame()"
+                    class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-full font-bold transition shadow-lg">
+                    新游戏
+                </button>
+                <a href="./navigation.html"
+                    class="px-6 py-2 border border-slate-600 hover:bg-slate-800 rounded-full font-bold text-slate-400 transition">
+                    退出
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const boardEl = document.getElementById('board');
+        const movesEl = document.getElementById('moves');
+        const msgEl = document.getElementById('msg');
+
+        const size = 5;
+        let moves = 0;
+        let grid = []; // 2D array of bools
+
+        function initGame() {
+            moves = 0;
+            movesEl.innerText = 0;
+            msgEl.innerText = "";
+            grid = Array(size).fill().map(() => Array(size).fill(false));
+
+            // Randomize by simulating clicks to ensure solvability
+            // Start with all off, then random clicks
+            for (let i = 0; i < 15; i++) {
+                const r = Math.floor(Math.random() * size);
+                const c = Math.floor(Math.random() * size);
+                toggle(r, c, false); // Don't count these moves
+            }
+
+            render();
+        }
+
+        function toggle(r, c, countMove = true) {
+            if (r >= 0 && r < size && c >= 0 && c < size) {
+                // Toggle self and neighbors
+                flip(r, c);
+                flip(r - 1, c);
+                flip(r + 1, c);
+                flip(r, c - 1);
+                flip(r, c + 1);
+
+                if (countMove) {
+                    moves++;
+                    movesEl.innerText = moves;
+                    render(); // Only re-render if user interaction
+                    checkWin();
+                }
+            }
+        }
+
+        function flip(r, c) {
+            if (r >= 0 && r < size && c >= 0 && c < size) {
+                grid[r][c] = !grid[r][c];
+            }
+        }
+
+        function render() {
+            boardEl.innerHTML = '';
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = `cell ${grid[r][c] ? 'on' : ''}`;
+                    cell.onclick = () => toggle(r, c);
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        function checkWin() {
+            const isAllOff = grid.every(row => row.every(val => val === false));
+            if (isAllOff) {
+                msgEl.innerText = "🎉 恭喜！挑战成功！";
+                setTimeout(() => alert("You Win! Moves: " + moves), 100);
+            }
+        }
+
+        initGame();
+    </script>
+</body>
+
+</html>

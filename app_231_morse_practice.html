@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>摩斯密码训练营</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: currentColor;
+            display: inline-block;
+        }
+
+        .dash {
+            width: 30px;
+            height: 12px;
+            border-radius: 4px;
+            background: currentColor;
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-gray-200 select-none">
+
+    <div class="w-full max-w-md bg-gray-800 p-8 rounded-3xl shadow-2xl border border-gray-700 text-center">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-yellow-500 flex items-center gap-2">
+                <span class="text-2xl">📻</span> Morse Trainer
+            </h1>
+            <div class="text-xs text-gray-400">Score: <span id="score" class="text-white font-bold text-lg">0</span>
+            </div>
+        </header>
+
+        <!-- Display Area -->
+        <div class="bg-black/30 rounded-xl p-8 mb-8 min-h-[150px] flex flex-col items-center justify-center relative">
+            <div id="visual-code" class="flex gap-2 items-center text-yellow-400 mb-4 h-8 text-2xl">
+                <!-- Dots/Dashes injected here -->
+                <span class="text-gray-600 text-sm">点击开始...</span>
+            </div>
+
+            <button onclick="playCurrentCode()" id="replay-btn"
+                class="text-gray-500 hover:text-white transition disabled:opacity-30" disabled>
+                🔊 重听 (Replay)
+            </button>
+        </div>
+
+        <!-- Input -->
+        <div class="grid grid-cols-4 gap-2 mb-6" id="keyboard">
+            <!-- A-Z 0-9 Buttons injected -->
+        </div>
+
+        <button onclick="startGame()" id="start-btn"
+            class="w-full py-3 bg-yellow-600 hover:bg-yellow-500 text-black font-bold rounded-xl shadow-lg transition transform active:scale-95">
+            开始训练
+        </button>
+
+        <div class="mt-4 flex justify-between text-xs text-gray-500">
+            <a href="./navigation.html" class="hover:text-white">退出</a>
+            <span>Mode: A-Z</span>
+        </div>
+
+    </div>
+
+    <script>
+        const morseMap = {
+            'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
+            'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
+            'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.',
+            'S': '...', 'T': '-', 'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-',
+            'Y': '-.--', 'Z': '--..'
+        };
+        const keys = Object.keys(morseMap);
+
+        let currentLetter = '';
+        let score = 0;
+        let isPlaying = false;
+        let audioCtx;
+
+        const visualEl = document.getElementById('visual-code');
+        const scoreEl = document.getElementById('score');
+        const keyboardEl = document.getElementById('keyboard');
+        const startBtn = document.getElementById('start-btn');
+        const replayBtn = document.getElementById('replay-btn');
+
+        function initKeyboard() {
+            keyboardEl.innerHTML = '';
+            keys.forEach(char => {
+                const btn = document.createElement('button');
+                btn.innerText = char;
+                btn.className = "bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded shadow active:bg-gray-500 transition disabled:opacity-50";
+                btn.onclick = () => checkAnswer(char);
+                btn.disabled = true;
+                keyboardEl.appendChild(btn);
+            });
+        }
+
+        function startGame() {
+            score = 0;
+            scoreEl.innerText = 0;
+            isPlaying = true;
+            startBtn.classList.add('hidden');
+            enableKeyboard(true);
+            replayBtn.disabled = false;
+
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            currentLetter = keys[Math.floor(Math.random() * keys.length)];
+            const code = morseMap[currentLetter];
+
+            // Render Visual
+            visualEl.innerHTML = '';
+            for (let symbol of code) {
+                const span = document.createElement('span');
+                span.className = symbol === '.' ? 'dot' : 'dash';
+                visualEl.appendChild(span);
+            }
+
+            playCurrentCode();
+        }
+
+        function playCurrentCode() {
+            const code = morseMap[currentLetter];
+            let time = audioCtx.currentTime + 0.1;
+            const dotDuration = 0.08;
+
+            for (let symbol of code) {
+                const duration = symbol === '.' ? dotDuration : dotDuration * 3;
+                playTone(time, duration);
+                time += duration + dotDuration; // Add gap
+            }
+        }
+
+        function playTone(startTime, duration) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.value = 600;
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            gain.gain.setValueAtTime(0, startTime);
+            gain.gain.linearRampToValueAtTime(0.1, startTime + 0.01);
+            gain.gain.setValueAtTime(0.1, startTime + duration - 0.01);
+            gain.gain.linearRampToValueAtTime(0, startTime + duration);
+
+            osc.start(startTime);
+            osc.stop(startTime + duration);
+        }
+
+        function checkAnswer(char) {
+            if (!isPlaying) return;
+
+            if (char === currentLetter) {
+                score++;
+                scoreEl.innerText = score;
+                // Feedback
+                visualEl.innerHTML = `<span class="text-green-500 font-bold text-4xl">${currentLetter}</span>`;
+                setTimeout(nextQuestion, 600);
+            } else {
+                score = Math.max(0, score - 1);
+                scoreEl.innerText = score;
+                visualEl.innerHTML = `<span class="text-red-500 font-bold text-4xl">${currentLetter}</span>`;
+                // Play error sound?
+                setTimeout(nextQuestion, 1000);
+            }
+        }
+
+        function enableKeyboard(enable) {
+            const btns = keyboardEl.querySelectorAll('button');
+            btns.forEach(b => b.disabled = !enable);
+        }
+
+        initKeyboard();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简计时器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+        }
+
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        /* Hide scrollbar */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-black min-h-screen flex flex-col items-center justify-center text-white overflow-hidden selection:bg-white selection:text-black">
+
+    <div class="fixed top-4 left-4 z-10 opacity-0 hover:opacity-100 transition-opacity duration-500">
+        <a href="./navigation.html"
+            class="text-xs text-gray-500 hover:text-white border border-gray-800 px-3 py-1 rounded">退出</a>
+    </div>
+
+    <div class="relative w-[300px] h-[300px] sm:w-[500px] sm:h-[500px] flex items-center justify-center">
+        <!-- SVG Ring -->
+        <svg class="absolute inset-0 w-full h-full pointer-events-none">
+            <circle class="text-gray-900" stroke-width="8" stroke="currentColor" fill="transparent" r="48%" cx="50%"
+                cy="50%" />
+            <circle id="ring" class="text-white progress-ring__circle" stroke-width="8" stroke-linecap="round"
+                stroke="currentColor" fill="transparent" r="48%" cx="50%" cy="50%" />
+        </svg>
+
+        <div class="text-center z-10 flex flex-col items-center gap-4">
+
+            <div id="time-display"
+                class="text-6xl sm:text-9xl font-bold tracking-tight font-mono tabular-nums cursor-pointer"
+                onclick="toggleEdit()">
+                00:00
+            </div>
+
+            <!-- Edit Mode Inputs -->
+            <div id="edit-inputs" class="hidden gap-2">
+                <input type="number" id="in-min"
+                    class="bg-transparent border-b-2 border-white w-20 text-center text-4xl outline-none"
+                    placeholder="MM" min="0" max="99">
+                <span class="text-4xl">:</span>
+                <input type="number" id="in-sec"
+                    class="bg-transparent border-b-2 border-white w-20 text-center text-4xl outline-none"
+                    placeholder="SS" min="0" max="59">
+                <button onclick="saveEdit()"
+                    class="bg-white text-black px-4 py-1 rounded font-bold text-sm">SET</button>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex gap-6 mt-4 opacity-0 hover:opacity-100 transition-opacity duration-300" id="controls">
+                <button onclick="toggleTimer()" id="btn-toggle"
+                    class="text-sm font-bold uppercase tracking-widest hover:text-gray-300">Start</button>
+                <button onclick="resetTimer()"
+                    class="text-sm font-bold uppercase tracking-widest hover:text-gray-300">Reset</button>
+                <button onclick="addTime(1)" class="text-sm font-bold hover:text-gray-300">+1m</button>
+                <button onclick="addTime(5)" class="text-sm font-bold hover:text-gray-300">+5m</button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const display = document.getElementById('time-display');
+        const ring = document.getElementById('ring');
+        const editArea = document.getElementById('edit-inputs');
+        const controls = document.getElementById('controls');
+        const btnToggle = document.getElementById('btn-toggle');
+
+        // Calculate circumference
+        // r = 48% of width. If width=500, r=240. Circ = 2*PI*240 approx 1500
+        // We set stroke-dasharray via JS based on actual size or use pathLength attribute (easier)
+        // Let's use getBoundingClientRect or simplified relative calc
+        // Since it's responsive SVG, we set stroke-dasharray to 100 and use pathLength="100" in SVG if supported, 
+        // or just calculate.
+        // Simplest: use fixed viewBox in SVG 100x100 and scale up via CSS.
+
+        // Let's modify SVG structure slightly for easier math
+        ring.parentElement.setAttribute('viewBox', '0 0 100 100');
+        ring.setAttribute('r', '45');
+        ring.setAttribute('cx', '50');
+        ring.setAttribute('cy', '50');
+        ring.previousElementSibling.setAttribute('r', '45');
+        ring.previousElementSibling.setAttribute('cx', '50');
+        ring.previousElementSibling.setAttribute('cy', '50');
+
+        const radius = 45;
+        const circumference = 2 * Math.PI * radius;
+        ring.style.strokeDasharray = `${circumference} ${circumference}`;
+        ring.style.strokeDashoffset = circumference;
+
+        let totalTime = 5 * 60; // 5 min default
+        let timeLeft = totalTime;
+        let timerId = null;
+        let isRunning = false;
+
+        function updateDisplay() {
+            const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const s = (timeLeft % 60).toString().padStart(2, '0');
+            display.innerText = `${m}:${s}`;
+
+            // Ring
+            const offset = circumference - (timeLeft / totalTime) * circumference;
+            ring.style.strokeDashoffset = offset;
+
+            // Title
+            document.title = `${m}:${s} - Timer`;
+        }
+
+        function toggleTimer() {
+            if (isRunning) {
+                clearInterval(timerId);
+                isRunning = false;
+                btnToggle.innerText = "Start";
+            } else {
+                if (timeLeft <= 0) return;
+                isRunning = true;
+                btnToggle.innerText = "Pause";
+                timerId = setInterval(() => {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                        updateDisplay();
+                    } else {
+                        clearInterval(timerId);
+                        isRunning = false;
+                        btnToggle.innerText = "Start";
+                        // Alarm sound?
+                        alert("Time's up!");
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timerId);
+            isRunning = false;
+            timeLeft = totalTime;
+            btnToggle.innerText = "Start";
+            updateDisplay();
+        }
+
+        function addTime(min) {
+            totalTime += min * 60;
+            timeLeft += min * 60;
+            updateDisplay();
+        }
+
+        function toggleEdit() {
+            if (isRunning) return;
+            display.classList.add('hidden');
+            editArea.classList.remove('hidden');
+            controls.classList.add('invisible');
+
+            const m = Math.floor(timeLeft / 60);
+            const s = timeLeft % 60;
+            document.getElementById('in-min').value = m;
+            document.getElementById('in-sec').value = s;
+            document.getElementById('in-min').focus();
+        }
+
+        function saveEdit() {
+            const m = parseInt(document.getElementById('in-min').value) || 0;
+            const s = parseInt(document.getElementById('in-sec').value) || 0;
+            totalTime = m * 60 + s;
+            if (totalTime <= 0) totalTime = 60; // Min 1 min fallback? Or 1 sec.
+            timeLeft = totalTime;
+
+            editArea.classList.add('hidden');
+            display.classList.remove('hidden');
+            controls.classList.remove('invisible');
+            updateDisplay();
+        }
+
+        updateDisplay();
+    </script>
+</body>
+
+</html>

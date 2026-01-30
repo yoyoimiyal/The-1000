@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文本大小写转换</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-3xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-gray-700 flex items-center gap-2">
+                <span class="bg-gray-200 px-2 py-1 rounded text-sm font-mono">aA</span> Case Converter
+            </h1>
+            <a href="./navigation.html" class="text-sm text-gray-400 hover:text-gray-600">退出</a>
+        </header>
+
+        <textarea id="input"
+            class="w-full h-48 p-4 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 mb-6 resize-none text-lg"
+            placeholder="在此输入文本... (Type or paste text here)"></textarea>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <button onclick="convert('upper')"
+                class="py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 font-bold text-sm shadow-sm">UPPER
+                CASE</button>
+            <button onclick="convert('lower')"
+                class="py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 font-bold text-sm shadow-sm">lower
+                case</button>
+            <button onclick="convert('title')"
+                class="py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 font-bold text-sm shadow-sm">Title
+                Case</button>
+            <button onclick="convert('sentence')"
+                class="py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 font-bold text-sm shadow-sm">Sentence
+                case</button>
+            <button onclick="convert('inverse')"
+                class="py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 font-bold text-sm shadow-sm">iNVERSE
+                cASE</button>
+            <button onclick="convert('alternating')"
+                class="py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 font-bold text-sm shadow-sm">aLtErNaTiNg</button>
+            <button onclick="clearText()"
+                class="py-3 bg-red-50 text-red-500 border border-red-100 rounded-lg hover:bg-red-100 font-bold text-sm shadow-sm">Clear</button>
+            <button onclick="copyText()"
+                class="py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm shadow-sm">Copy</button>
+        </div>
+
+        <div class="text-center text-xs text-gray-400">
+            Character Count: <span id="char-count">0</span> | Word Count: <span id="word-count">0</span> | Line Count:
+            <span id="line-count">0</span>
+        </div>
+
+    </div>
+
+    <script>
+        const input = document.getElementById('input');
+        const charCount = document.getElementById('char-count');
+        const wordCount = document.getElementById('word-count');
+        const lineCount = document.getElementById('line-count');
+
+        function updateStats() {
+            const text = input.value;
+            charCount.innerText = text.length;
+            wordCount.innerText = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+            lineCount.innerText = text.trim() === '' ? 0 : text.split(/\n/).length;
+        }
+
+        input.addEventListener('input', updateStats);
+
+        function convert(type) {
+            let text = input.value;
+            if (!text) return;
+
+            switch (type) {
+                case 'upper':
+                    text = text.toUpperCase();
+                    break;
+                case 'lower':
+                    text = text.toLowerCase();
+                    break;
+                case 'title':
+                    text = text.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                    break;
+                case 'sentence':
+                    text = text.toLowerCase().replace(/(^\s*\w|[\.\!\?]\s*\w)/g, c => c.toUpperCase());
+                    break;
+                case 'inverse':
+                    text = text.split('').map(c => c === c.toUpperCase() ? c.toLowerCase() : c.toUpperCase()).join('');
+                    break;
+                case 'alternating':
+                    text = text.split('').map((c, i) => i % 2 === 0 ? c.toLowerCase() : c.toUpperCase()).join('');
+                    break;
+            }
+
+            input.value = text;
+            updateStats();
+        }
+
+        function clearText() {
+            input.value = '';
+            updateStats();
+        }
+
+        function copyText() {
+            input.select();
+            document.execCommand('copy');
+            alert('已复制到剪贴板');
+        }
+    </script>
+</body>
+
+</html>

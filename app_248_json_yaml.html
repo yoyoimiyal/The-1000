@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON-YAML 互转</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- js-yaml library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <style>
+        textarea {
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-6xl h-[90vh] flex flex-col">
+
+        <header class="flex justify-between items-center mb-6 shrink-0">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-700">
+                <span class="bg-indigo-100 px-2 py-1 rounded text-xs font-mono">YAML</span> Converter
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="flex-1 flex flex-col md:flex-row gap-6 overflow-hidden">
+
+            <!-- JSON Side -->
+            <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200">
+                <div
+                    class="p-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase flex justify-between items-center">
+                    <span>JSON</span>
+                    <div class="flex gap-2">
+                        <button onclick="loadSample()" class="hover:text-indigo-600">Sample</button>
+                        <button onclick="clearAll()" class="hover:text-red-500">Clear</button>
+                    </div>
+                </div>
+                <textarea id="json-input"
+                    class="flex-1 w-full p-4 resize-none outline-none focus:bg-indigo-50/10 transition"
+                    placeholder='{"key": "value"}'></textarea>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex md:flex-col gap-4 justify-center items-center shrink-0">
+                <button onclick="jsonToYaml()"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition">
+                    To YAML &rarr;
+                </button>
+                <button onclick="yamlToJson()"
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition">
+                    &larr; To JSON
+                </button>
+            </div>
+
+            <!-- YAML Side -->
+            <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200">
+                <div
+                    class="p-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase flex justify-between items-center">
+                    <span>YAML</span>
+                    <button onclick="copyYaml()" class="hover:text-indigo-600">Copy</button>
+                </div>
+                <textarea id="yaml-input"
+                    class="flex-1 w-full p-4 resize-none outline-none focus:bg-emerald-50/10 transition"
+                    placeholder="key: value"></textarea>
+            </div>
+
+        </div>
+
+        <div id="error-msg" class="mt-4 bg-red-100 text-red-600 text-xs p-3 rounded-lg hidden"></div>
+
+    </div>
+
+    <script>
+        const jsonEl = document.getElementById('json-input');
+        const yamlEl = document.getElementById('yaml-input');
+        const errEl = document.getElementById('error-msg');
+
+        function loadSample() {
+            const data = {
+                app: "JSON-YAML Converter",
+                version: 1.0,
+                features: ["Convert JSON to YAML", "Convert YAML to JSON", "Error Handling"],
+                settings: {
+                    theme: "light",
+                    autoSave: true
+                }
+            };
+            jsonEl.value = JSON.stringify(data, null, 2);
+            jsonToYaml();
+        }
+
+        function jsonToYaml() {
+            errEl.classList.add('hidden');
+            try {
+                const jsonStr = jsonEl.value;
+                if (!jsonStr.trim()) return;
+
+                const obj = JSON.parse(jsonStr);
+                // Re-format JSON for pretty print
+                jsonEl.value = JSON.stringify(obj, null, 2);
+
+                const yamlStr = jsyaml.dump(obj);
+                yamlEl.value = yamlStr;
+            } catch (e) {
+                showError("JSON Parse Error: " + e.message);
+            }
+        }
+
+        function yamlToJson() {
+            errEl.classList.add('hidden');
+            try {
+                const yamlStr = yamlEl.value;
+                if (!yamlStr.trim()) return;
+
+                const obj = jsyaml.load(yamlStr);
+                const jsonStr = JSON.stringify(obj, null, 2);
+                jsonEl.value = jsonStr;
+            } catch (e) {
+                showError("YAML Parse Error: " + e.message);
+            }
+        }
+
+        function showError(msg) {
+            errEl.innerText = msg;
+            errEl.classList.remove('hidden');
+        }
+
+        function clearAll() {
+            jsonEl.value = '';
+            yamlEl.value = '';
+            errEl.classList.add('hidden');
+        }
+
+        function copyYaml() {
+            yamlEl.select();
+            document.execCommand('copy');
+            alert('YAML Copied!');
+        }
+
+        // Init
+        loadSample();
+    </script>
+</body>
+
+</html>

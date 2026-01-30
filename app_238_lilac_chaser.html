@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>淡紫追逐者错觉</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .cross {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+        }
+
+        .cross::before,
+        .cross::after {
+            content: '';
+            position: absolute;
+            background: black;
+        }
+
+        .cross::before {
+            width: 2px;
+            height: 20px;
+            left: 9px;
+            top: 0;
+        }
+
+        .cross::after {
+            width: 20px;
+            height: 2px;
+            left: 0;
+            top: 9px;
+        }
+
+        .dot {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #e879f9;
+            /* fuschia-400 / lilac */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-top: -20px;
+            margin-left: -20px;
+            filter: blur(8px);
+            /* Blur helps the illusion */
+        }
+
+        .hidden-dot {
+            opacity: 0;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-200 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="text-center mb-8">
+        <h1 class="text-2xl font-bold mb-2">Lilac Chaser Illusion</h1>
+        <p class="text-sm text-slate-500 max-w-md mx-auto">
+            注视中间的十字。你会发现：<br>
+            1. 出现一个绿色的圆点在旋转。<br>
+            2. 随着时间推移，粉色的圆点会完全消失，只剩下绿点在转动。
+        </p>
+    </div>
+
+    <div class="relative w-[400px] h-[400px]">
+        <div class="cross"></div>
+        <div id="dots-container"></div>
+    </div>
+
+    <div class="mt-8 text-center">
+        <a href="./navigation.html" class="text-sm text-slate-400 hover:text-slate-600 underline">退出</a>
+    </div>
+
+    <script>
+        const container = document.getElementById('dots-container');
+        const count = 12;
+        const radius = 140;
+
+        // Create dots
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2;
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+
+            const dot = document.createElement('div');
+            dot.className = 'dot';
+            dot.style.transform = `translate(${x}px, ${y}px)`;
+            dot.id = `dot-${i}`;
+            container.appendChild(dot);
+        }
+
+        let current = 0;
+
+        function loop() {
+            // Reset previous
+            const prev = (current - 1 + count) % count;
+            document.getElementById(`dot-${prev}`).classList.remove('hidden-dot');
+
+            // Hide current
+            document.getElementById(`dot-${current}`).classList.add('hidden-dot');
+
+            current = (current + 1) % count;
+        }
+
+        // Speed: needs to be fast enough for phi phenomenon
+        // About 100-150ms per step
+        setInterval(loop, 120);
+    </script>
+</body>
+
+</html>

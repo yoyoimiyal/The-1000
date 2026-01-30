@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>口袋钢琴</title>
+    <title>口袋钢琴 - 扩展版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .piano-container {
@@ -12,6 +12,7 @@
             justify-content: center;
             position: relative;
             user-select: none;
+            -webkit-user-select: none;
         }
 
         .white-key {
@@ -24,67 +25,78 @@
             box-shadow: 0 5px 5px rgba(0, 0, 0, 0.1);
             z-index: 1;
             cursor: pointer;
-            transition: background 0.1s, transform 0.05s;
+            transition: background 0.1s, transform 0.05s, box-shadow 0.05s;
             display: flex;
             align-items: flex-end;
             justify-content: center;
             padding-bottom: 10px;
             color: #aaa;
             font-size: 12px;
+            position: relative;
         }
 
         .white-key:active,
         .white-key.active {
-            background: #f3f4f6;
+            background: linear-gradient(to bottom, #fff 0%, #e0e0e0 100%);
             transform: translateY(2px);
             box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
-            background: linear-gradient(to bottom, #fff 0%, #eee 100%);
         }
 
         .black-key {
             width: 40px;
             height: 120px;
-            background: #1f2937;
+            background: linear-gradient(to bottom, #333 0%, #000 100%);
             border-radius: 0 0 6px 6px;
             position: absolute;
-            z-index: 2;
+            z-index: 10;
             cursor: pointer;
             box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
-            transition: background 0.1s, transform 0.05s;
+            transition: background 0.1s, transform 0.05s, box-shadow 0.05s;
         }
 
         .black-key:active,
         .black-key.active {
             background: #000;
             transform: translateY(2px);
+            box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
         }
 
-        /* Positioning Black Keys */
+        /* 黑键位置计算 (基于白键宽度60px) */
+        /* C#4 */
         .bk-1 {
             left: 40px;
         }
 
-        /* C# */
+        /* D#4 */
         .bk-2 {
             left: 100px;
         }
 
-        /* D# */
+        /* F#4 */
         .bk-3 {
             left: 220px;
         }
 
-        /* F# */
+        /* G#4 */
         .bk-4 {
             left: 280px;
         }
 
-        /* G# */
+        /* A#4 */
         .bk-5 {
             left: 340px;
         }
 
-        /* A# */
+        /* 新增的高音黑键 */
+        /* C#5 (在 C5 和 D5 之间: 420+60-20) */
+        .bk-6 {
+            left: 460px;
+        }
+
+        /* D#5 (在 D5 和 E5 之间: 480+60-20) */
+        .bk-7 {
+            left: 520px;
+        }
     </style>
 </head>
 
@@ -92,34 +104,55 @@
 
     <div class="mb-8 text-center text-white">
         <h1 class="text-3xl font-bold mb-2">Pocket Piano</h1>
-        <p class="text-gray-400 text-sm">点击按键或使用键盘 (A-K)</p>
+        <p class="text-gray-400 text-sm">新增高音区域：L, ; (分号) | O, P</p>
     </div>
 
     <div class="bg-gray-900 p-4 pt-8 rounded-xl shadow-2xl border-t-8 border-gray-700 relative">
         <div class="piano-container relative">
-            <!-- White Keys -->
-            <div class="white-key" data-note="C4" data-key="a" onclick="play('C4')">A</div>
-            <div class="white-key" data-note="D4" data-key="s" onclick="play('D4')">S</div>
-            <div class="white-key" data-note="E4" data-key="d" onclick="play('E4')">D</div>
-            <div class="white-key" data-note="F4" data-key="f" onclick="play('F4')">F</div>
-            <div class="white-key" data-note="G4" data-key="g" onclick="play('G4')">G</div>
-            <div class="white-key" data-note="A4" data-key="h" onclick="play('A4')">H</div>
-            <div class="white-key" data-note="B4" data-key="j" onclick="play('B4')">J</div>
-            <div class="white-key" data-note="C5" data-key="k" onclick="play('C5')">K</div>
+            <div class="white-key" data-note="C4" data-key="a" onmousedown="play('C4')" ontouchstart="play('C4')">A
+            </div>
+            <div class="white-key" data-note="D4" data-key="s" onmousedown="play('D4')" ontouchstart="play('D4')">S
+            </div>
+            <div class="white-key" data-note="E4" data-key="d" onmousedown="play('E4')" ontouchstart="play('E4')">D
+            </div>
+            <div class="white-key" data-note="F4" data-key="f" onmousedown="play('F4')" ontouchstart="play('F4')">F
+            </div>
+            <div class="white-key" data-note="G4" data-key="g" onmousedown="play('G4')" ontouchstart="play('G4')">G
+            </div>
+            <div class="white-key" data-note="A4" data-key="h" onmousedown="play('A4')" ontouchstart="play('A4')">H
+            </div>
+            <div class="white-key" data-note="B4" data-key="j" onmousedown="play('B4')" ontouchstart="play('B4')">J
+            </div>
 
-            <!-- Black Keys -->
-            <div class="black-key bk-1" data-note="C#4" data-key="w" onclick="play('C#4')"></div>
-            <div class="black-key bk-2" data-note="D#4" data-key="e" onclick="play('D#4')"></div>
-            <!-- Skip E-F gap -->
-            <div class="black-key bk-3" data-note="F#4" data-key="t" onclick="play('F#4')"></div>
-            <div class="black-key bk-4" data-note="G#4" data-key="y" onclick="play('G#4')"></div>
-            <div class="black-key bk-5" data-note="A#4" data-key="u" onclick="play('A#4')"></div>
+            <div class="white-key" data-note="C5" data-key="k" onmousedown="play('C5')" ontouchstart="play('C5')">K
+            </div>
+
+            <div class="white-key" data-note="D5" data-key="l" onmousedown="play('D5')" ontouchstart="play('D5')">L
+            </div>
+            <div class="white-key" data-note="E5" data-key=";" onmousedown="play('E5')" ontouchstart="play('E5')">;
+            </div>
+
+            <div class="black-key bk-1" data-note="C#4" data-key="w" onmousedown="play('C#4')"
+                ontouchstart="play('C#4')"></div>
+            <div class="black-key bk-2" data-note="D#4" data-key="e" onmousedown="play('D#4')"
+                ontouchstart="play('D#4')"></div>
+            <div class="black-key bk-3" data-note="F#4" data-key="t" onmousedown="play('F#4')"
+                ontouchstart="play('F#4')"></div>
+            <div class="black-key bk-4" data-note="G#4" data-key="y" onmousedown="play('G#4')"
+                ontouchstart="play('G#4')"></div>
+            <div class="black-key bk-5" data-note="A#4" data-key="u" onmousedown="play('A#4')"
+                ontouchstart="play('A#4')"></div>
+
+            <div class="black-key bk-6" data-note="C#5" data-key="o" onmousedown="play('C#5')"
+                ontouchstart="play('C#5')"></div>
+            <div class="black-key bk-7" data-note="D#5" data-key="p" onmousedown="play('D#5')"
+                ontouchstart="play('D#5')"></div>
         </div>
     </div>
 
     <div class="mt-8">
-        <a href="./navigation.html"
-            class="text-gray-500 hover:text-white text-sm border border-gray-600 px-4 py-2 rounded-full transition">返回导航</a>
+        <a href="#" onclick="window.location.reload()"
+            class="text-gray-500 hover:text-white text-sm border border-gray-600 px-4 py-2 rounded-full transition">重置</a>
     </div>
 
     <script>
@@ -133,7 +166,13 @@
             'G4': 392.00, 'G#4': 415.30,
             'A4': 440.00, 'A#4': 466.16,
             'B4': 493.88,
-            'C5': 523.25
+            'C5': 523.25,
+
+            // 新增高音频率
+            'C#5': 554.37,
+            'D5': 587.33, // 高音Re (2.)
+            'D#5': 622.25,
+            'E5': 659.25  // 高音Mi (3.)
         };
 
         const keyMap = {
@@ -144,16 +183,24 @@
             'g': 'G4', 'y': 'G#4',
             'h': 'A4', 'u': 'A#4',
             'j': 'B4',
-            'k': 'C5'
+            'k': 'C5',
+
+            // 新增映射
+            'o': 'C#5',
+            'l': 'D5',
+            'p': 'D#5',
+            ';': 'E5'
         };
 
+        const animationTimers = {};
+
         function play(note) {
+            if (event && event.type === 'touchstart') event.preventDefault();
             if (audioCtx.state === 'suspended') audioCtx.resume();
 
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
 
-            // Simple piano-like tone (triangle wave is softer than square)
             osc.type = 'triangle';
             osc.frequency.value = frequencies[note];
 
@@ -161,32 +208,47 @@
             gain.connect(audioCtx.destination);
 
             const now = audioCtx.currentTime;
-
-            // Attack
             gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(0.5, now + 0.02);
-            // Decay
+            gain.gain.linearRampToValueAtTime(0.3, now + 0.02);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
 
             osc.start(now);
             osc.stop(now + 1.5);
 
-            // Visual feedback
-            animateKey(note);
-        }
-
-        function animateKey(note) {
-            const el = document.querySelector(`[data-note="${note}"]`);
-            if (el) {
-                el.classList.add('active');
-                setTimeout(() => el.classList.remove('active'), 100);
+            if (event && (event.type === 'mousedown' || event.type === 'touchstart')) {
+                animateKeyStart(note);
+                setTimeout(() => animateKeyEnd(note), 150);
             }
         }
 
+        function animateKeyStart(note) {
+            const el = document.querySelector(`[data-note="${note}"]`);
+            if (el) {
+                if (animationTimers[note]) clearTimeout(animationTimers[note]);
+                el.classList.add('active');
+            }
+        }
+
+        function animateKeyEnd(note) {
+            const el = document.querySelector(`[data-note="${note}"]`);
+            if (el) el.classList.remove('active');
+        }
+
         document.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
             const key = e.key.toLowerCase();
-            if (!e.repeat && keyMap[key]) {
-                play(keyMap[key]);
+            if (keyMap[key]) {
+                const note = keyMap[key];
+                play(note);
+                animateKeyStart(note);
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if (keyMap[key]) {
+                const note = keyMap[key];
+                animateKeyEnd(note);
             }
         });
     </script>

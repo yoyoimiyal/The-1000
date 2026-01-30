@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRT 显示器模拟器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .crt-container {
+            position: relative;
+            overflow: hidden;
+            background-color: #111;
+            /* Curved corners */
+            border-radius: 20px;
+        }
+
+        .screen-content {
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* Scanlines */
+        .scanlines {
+            background: linear-gradient(to bottom,
+                    rgba(255, 255, 255, 0),
+                    rgba(255, 255, 255, 0) 50%,
+                    rgba(0, 0, 0, 0.4) 50%,
+                    rgba(0, 0, 0, 0.4));
+            background-size: 100% 4px;
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* RGB Split (Chromatic Aberration) */
+        .rgb-split {
+            text-shadow: 2px 0 #ff0000, -2px 0 #0000ff;
+            /* Simple text shift */
+        }
+
+        /* Flicker */
+        .flicker {
+            animation: flicker 0.15s infinite;
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.02);
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        @keyframes flicker {
+            0% {
+                opacity: 0.02;
+            }
+
+            50% {
+                opacity: 0.05;
+            }
+
+            100% {
+                opacity: 0.02;
+            }
+        }
+
+        /* Curvature / Vignette */
+        .vignette {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 30;
+            background: radial-gradient(circle, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.6) 100%);
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 1);
+        }
+
+        /* Scanline Move */
+        .moving-scan {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            animation: scan 5s linear infinite;
+            z-index: 15;
+            pointer-events: none;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+
+        @keyframes scan {
+            0% {
+                top: -10%;
+            }
+
+            100% {
+                top: 110%;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-gray-400">
+
+    <div class="w-full max-w-4xl flex flex-col md:flex-row gap-8 items-center">
+
+        <!-- CRT Screen -->
+        <div class="flex-1 w-full aspect-video bg-black p-4 rounded-3xl shadow-2xl border-4 border-gray-800">
+            <div class="crt-container w-full h-full relative group">
+
+                <!-- Content -->
+                <div id="display-content"
+                    class="screen-content bg-[url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80')] flex items-center justify-center">
+                    <h1
+                        class="text-6xl font-black text-white rgb-split opacity-80 uppercase tracking-widest text-center">
+                        Retro<br>Vision</h1>
+                </div>
+
+                <!-- Effects Layers -->
+                <div class="scanlines opacity-50" id="fx-scan"></div>
+                <div class="flicker opacity-100" id="fx-flicker"></div>
+                <div class="vignette opacity-100" id="fx-vignette"></div>
+                <div class="moving-scan" id="fx-move"></div>
+
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="w-full md:w-64 space-y-4">
+            <header class="mb-6 flex justify-between items-center">
+                <h2 class="font-bold text-lg text-white">CRT Settings</h2>
+                <a href="./navigation.html" class="text-xs hover:text-white">Exit</a>
+            </header>
+
+            <label
+                class="block w-full py-2 bg-gray-800 border border-gray-700 rounded text-center cursor-pointer hover:bg-gray-700 transition text-xs font-bold text-gray-300">
+                📂 更换图片
+                <input type="file" class="hidden" accept="image/*" onchange="loadImage(event)">
+            </label>
+
+            <div class="space-y-4 pt-4 border-t border-gray-800">
+                <label class="flex items-center justify-between cursor-pointer">
+                    <span class="text-xs font-bold uppercase">Scanlines</span>
+                    <input type="checkbox" checked onchange="toggle('fx-scan')" class="accent-green-500">
+                </label>
+                <label class="flex items-center justify-between cursor-pointer">
+                    <span class="text-xs font-bold uppercase">Flicker</span>
+                    <input type="checkbox" checked onchange="toggle('fx-flicker')" class="accent-green-500">
+                </label>
+                <label class="flex items-center justify-between cursor-pointer">
+                    <span class="text-xs font-bold uppercase">Vignette</span>
+                    <input type="checkbox" checked onchange="toggle('fx-vignette')" class="accent-green-500">
+                </label>
+                <label class="flex items-center justify-between cursor-pointer">
+                    <span class="text-xs font-bold uppercase">Moving Bar</span>
+                    <input type="checkbox" checked onchange="toggle('fx-move')" class="accent-green-500">
+                </label>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const display = document.getElementById('display-content');
+
+        function loadImage(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                display.style.backgroundImage = `url(${url})`;
+                display.innerHTML = ''; // Clear text
+            }
+        }
+
+        function toggle(id) {
+            const el = document.getElementById(id);
+            if (el.style.display === 'none') {
+                el.style.display = 'block';
+            } else {
+                el.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+
+</html>

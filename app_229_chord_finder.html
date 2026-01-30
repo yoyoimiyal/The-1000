@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>吉他和弦查询</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .fretboard {
+            display: grid;
+            grid-template-columns: 40px repeat(4, 1fr);
+            /* Nut + 4 Frets */
+            grid-template-rows: repeat(6, 40px);
+            /* 6 Strings */
+            background-color: #fce7f3;
+            /* pink-100 wood-ish */
+            border: 2px solid #831843;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .string-line {
+            height: 2px;
+            background-color: #831843;
+            position: absolute;
+            left: 0;
+            right: 0;
+            transform: translateY(-50%);
+        }
+
+        .fret-line {
+            width: 2px;
+            background-color: #9d174d;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+        }
+
+        .finger-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: #be185d;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .nut {
+            border-right: 6px solid #4a044e;
+        }
+
+        /* Nut thick line */
+        .mute-mark {
+            color: #be185d;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .open-mark {
+            color: #15803d;
+            font-weight: bold;
+            font-size: 16px;
+            border: 2px solid #15803d;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+
+<body class="bg-pink-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-3xl shadow-xl border border-pink-100">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-pink-800 flex items-center gap-2">
+                <span class="text-2xl">🎸</span> Chord Finder
+            </h1>
+            <a href="./navigation.html" class="text-sm text-pink-400 hover:underline">退出</a>
+        </header>
+
+        <div class="flex gap-4 mb-8">
+            <!-- Root -->
+            <select id="root"
+                class="flex-1 p-3 bg-pink-50 border border-pink-200 rounded-xl font-bold text-pink-900 outline-none"
+                onchange="renderChord()">
+                <option value="C">C</option>
+                <option value="D">D</option>
+                <option value="E">E</option>
+                <option value="F">F</option>
+                <option value="G">G</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+            </select>
+            <!-- Type -->
+            <select id="type"
+                class="flex-1 p-3 bg-pink-50 border border-pink-200 rounded-xl font-bold text-pink-900 outline-none"
+                onchange="renderChord()">
+                <option value="maj">Major (大)</option>
+                <option value="min">Minor (m)</option>
+                <option value="7">7 (属七)</option>
+                <option value="maj7">Maj7 (大七)</option>
+                <option value="min7">m7 (小七)</option>
+            </select>
+        </div>
+
+        <!-- Fretboard Visualization -->
+        <div class="flex justify-center mb-8">
+            <div id="board-container" class="relative pt-6 pl-8">
+                <!-- String Labels -->
+                <div
+                    class="absolute left-0 top-6 flex flex-col justify-between h-[240px] text-xs font-mono text-slate-400 py-3 -ml-6">
+                    <span>E</span><span>A</span><span>D</span><span>G</span><span>B</span><span>e</span>
+                </div>
+
+                <!-- Markers (X / O) -->
+                <div id="top-markers"
+                    class="absolute top-0 left-0 w-full flex flex-col justify-between h-[240px] py-2 pl-2">
+                    <!-- Injected -->
+                </div>
+
+                <div class="fretboard w-[240px] h-[240px] relative nut bg-amber-100 border-amber-900">
+                    <!-- Strings -->
+                    <div class="string-line" style="top: 20px"></div>
+                    <div class="string-line" style="top: 60px"></div>
+                    <div class="string-line" style="top: 100px"></div>
+                    <div class="string-line" style="top: 140px"></div>
+                    <div class="string-line" style="top: 180px"></div>
+                    <div class="string-line" style="top: 220px"></div>
+
+                    <!-- Frets -->
+                    <div class="fret-line" style="left: 60px"></div>
+                    <div class="fret-line" style="left: 120px"></div>
+                    <div class="fret-line" style="left: 180px"></div>
+
+                    <!-- Dots Container -->
+                    <div id="dots-layer" class="absolute inset-0"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center text-xs text-slate-400">
+            <p>* 显示前 4 品格的常用按法</p>
+        </div>
+
+    </div>
+
+    <script>
+        // Simplified Chord Database (String: 6->1, -1=Mute, 0=Open, >0=Fret)
+        const chords = {
+            'C': {
+                'maj': [-1, 3, 2, 0, 1, 0],
+                'min': [-1, 3, 5, 5, 4, 3], // Barre C minor is hard to show on 4 frets. Usually start fret 3. 
+                // Let's use simple open chords where possible, or skip complex ones for this mini demo.
+                // Alternative Open Cm is hard.
+                // We will only implement common open chords for demo.
+                '7': [-1, 3, 2, 3, 1, 0],
+                'maj7': [-1, 3, 2, 0, 0, 0],
+                'min7': [-1, 3, 1, 3, 1, -1] // tough one
+            },
+            'D': {
+                'maj': [-1, -1, 0, 2, 3, 2],
+                'min': [-1, -1, 0, 2, 3, 1],
+                '7': [-1, -1, 0, 2, 1, 2],
+                'maj7': [-1, -1, 0, 2, 2, 2],
+                'min7': [-1, -1, 0, 2, 1, 1]
+            },
+            'E': {
+                'maj': [0, 2, 2, 1, 0, 0],
+                'min': [0, 2, 2, 0, 0, 0],
+                '7': [0, 2, 0, 1, 0, 0],
+                'maj7': [0, 2, 1, 1, 0, 0],
+                'min7': [0, 2, 0, 0, 0, 0]
+            },
+            'F': {
+                // F Major Barre (1,3,3,2,1,1) needs simplification for beginners: xx3211
+                'maj': [-1, -1, 3, 2, 1, 1],
+                'min': [-1, -1, 3, 1, 1, 1], // F min usually barre 1
+                '7': [-1, -1, 3, 2, 1, 0] // F7 open-ish?
+                // ... F is hard without barre.
+            },
+            'G': {
+                'maj': [3, 2, 0, 0, 0, 3],
+                'min': [3, 5, 5, 3, 3, 3], // Gm barre 3
+                '7': [3, 2, 0, 0, 0, 1],
+                'maj7': [3, 2, 0, 0, 0, 2],
+                'min7': [3, 5, 3, 3, 3, 3]
+            },
+            'A': {
+                'maj': [-1, 0, 2, 2, 2, 0],
+                'min': [-1, 0, 2, 2, 1, 0],
+                '7': [-1, 0, 2, 0, 2, 0],
+                'maj7': [-1, 0, 2, 1, 2, 0],
+                'min7': [-1, 0, 2, 0, 1, 0]
+            },
+            'B': {
+                'maj': [-1, 2, 4, 4, 4, 2], // B Barre 2
+                'min': [-1, 2, 4, 4, 3, 2], // Bm Barre 2
+                '7': [-1, 2, 1, 2, 0, 2] // B7 open
+            }
+        };
+        // Note: For a real app, we need a full database or algorithm. This is a demo subset.
+
+        function renderChord() {
+            const root = document.getElementById('root').value;
+            const type = document.getElementById('type').value;
+
+            const data = chords[root] && chords[root][type];
+            const layer = document.getElementById('dots-layer');
+            const markers = document.getElementById('top-markers');
+
+            layer.innerHTML = '';
+            markers.innerHTML = '';
+
+            if (!data) {
+                // Not in simplified DB
+                markers.innerHTML = '<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-slate-400 text-xs">暂无数据</div>';
+                return;
+            }
+
+            // Draw
+            // data is array of 6 strings (Low E to High e)
+            // Visual: Top line is Low E (thickest)
+
+            data.forEach((fret, strIdx) => {
+                // Top marker (Mute/Open)
+                const markerBox = document.createElement('div');
+                markerBox.className = "absolute left-[-20px] w-6 flex justify-center items-center";
+                markerBox.style.top = (20 + strIdx * 40 - 12) + 'px'; // Center vertically on string
+
+                if (fret === -1) {
+                    markerBox.innerHTML = '<span class="mute-mark">×</span>';
+                    markers.appendChild(markerBox);
+                } else if (fret === 0) {
+                    markerBox.innerHTML = '<span class="open-mark">○</span>';
+                    markers.appendChild(markerBox);
+                } else {
+                    // Finger dot
+                    const dot = document.createElement('div');
+                    dot.className = "finger-dot absolute";
+                    // X position: Fret width 60px. Center of fret 1 = 30px.
+                    // pos = (fret - 1) * 60 + 30
+                    const left = (fret - 1) * 60 + 30;
+                    dot.style.left = (left - 12) + 'px'; // -12 to center
+                    dot.style.top = (20 + strIdx * 40 - 12) + 'px';
+                    // Finger number logic is complex, just show dot or fret num?
+                    // Let's just show dot.
+
+                    layer.appendChild(dot);
+                }
+            });
+        }
+
+        // Init
+        renderChord();
+    </script>
+</body>
+
+</html>

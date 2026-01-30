@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>化学方程式配平器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Using a simple matrix solver for balancing is complex, we'll use a brute force for small coefficients or a library.
+         For a single file app, a basic algebraic solver is best. Or a library via CDN.
+         Let's try chem-balancer or implement a Gauss-Jordan elimination for chemical matrix.
+         Actually, implementing a robust balancer in vanilla JS single file is a great challenge.
+         Let's use a specialized library: algebra.js or similar? No, standard is math.js.
+         To keep it simple and dependency light, we'll implement a matrix solver for small integers.
+    -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+</head>
+
+<body class="bg-cyan-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-xl border border-cyan-100">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-cyan-800 flex items-center gap-2">
+                <span class="text-2xl">⚗️</span> Chemical Balancer
+            </h1>
+            <a href="./navigation.html" class="text-sm text-cyan-600 hover:underline">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">输入未配平的方程式 (Reactants ->
+                    Products)</label>
+                <div class="relative">
+                    <input type="text" id="input-eq"
+                        class="w-full p-4 text-xl font-bold bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-cyan-500 placeholder-slate-300"
+                        placeholder="H2 + O2 -> H2O" value="C6H12O6 + O2 -> CO2 + H2O"
+                        onkeypress="if(event.key==='Enter') balance()">
+                </div>
+                <p class="text-xs text-slate-400 mt-2">支持格式: A + B -> C + D (使用 -> 或 = 分隔)</p>
+            </div>
+
+            <button onclick="balance()"
+                class="w-full py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl shadow-lg transition">
+                配平 Balance
+            </button>
+
+            <div id="result-box" class="bg-cyan-50 border border-cyan-200 p-6 rounded-2xl text-center hidden">
+                <p class="text-xs text-cyan-600 uppercase font-bold mb-2">配平结果</p>
+                <div id="result-eq" class="text-2xl md:text-3xl font-bold text-slate-800 break-words"
+                    style="line-height: 1.5;"></div>
+            </div>
+
+            <div id="error-box"
+                class="hidden text-center text-red-500 text-sm font-bold bg-red-50 p-3 rounded-lg border border-red-100">
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Simple matrix solver for chemical balancing
+        function balance() {
+            const input = document.getElementById('input-eq').value;
+            const resBox = document.getElementById('result-box');
+            const resEq = document.getElementById('result-eq');
+            const errBox = document.getElementById('error-box');
+
+            errBox.classList.add('hidden');
+            resBox.classList.add('hidden');
+
+            try {
+                const parts = input.split(/->|=/);
+                if (parts.length !== 2) throw new Error("Format error: Use '->' or '=' to separate reactants and products.");
+
+                const left = parseSide(parts[0]);
+                const right = parseSide(parts[1]);
+
+                // Get all elements
+                const elements = new Set([...Object.keys(left.elements), ...Object.keys(right.elements)]);
+                const elementList = Array.from(elements);
+                const terms = [...left.terms, ...right.terms]; // All molecules
+
+                // Build Matrix
+                // Rows = Elements, Cols = Molecules
+                // M[i][j] = count of element i in molecule j
+                // Reactants positive, Products negative
+
+                const matrix = [];
+                for (let i = 0; i < elementList.length; i++) {
+                    const el = elementList[i];
+                    const row = [];
+                    for (let j = 0; j < terms.length; j++) {
+                        const term = terms[j];
+                        let count = term.elements[el] || 0;
+                        if (j >= left.terms.length) count = -count; // Products are negative
+                        row.push(count);
+                    }
+                    matrix.push(row);
+                }
+
+                // Solve Ax = 0 for integers
+                // We use math.js null space (kernel) if available, or Gaussian elimination
+                // Since we included math.js, let's try.
+                // Note: math.js might not be loaded or network issue. Fallback to basic if not.
+
+                if (typeof math === 'undefined') {
+                    throw new Error("Math library not loaded. Check internet.");
+                }
+
+                // Solve using math.js is complex for integer solutions.
+                // Alternative: Brute force for small coefficients (1-10) is often enough and simpler for "Mini App" constraints without heavy math lib usage.
+                // But let's try a simplified Gaussian Elimination for rational null space.
+
+                const coeffs = solveMatrix(matrix);
+
+                if (!coeffs) throw new Error("Cannot balance this equation.");
+
+                // Format Result
+                let leftStr = formatSide(left.terms, coeffs.slice(0, left.terms.length));
+                let rightStr = formatSide(right.terms, coeffs.slice(left.terms.length));
+
+                // Pretty Print numbers (subscript) is hard in plain text input, but we can use HTML
+                resEq.innerHTML = `${leftStr} <span class="text-cyan-500">→</span> ${rightStr}`;
+                resBox.classList.remove('hidden');
+
+            } catch (e) {
+                errBox.innerText = e.message;
+                errBox.classList.remove('hidden');
+            }
+        }
+
+        function parseSide(str) {
+            const parts = str.split('+').map(s => s.trim());
+            const sideElements = {};
+            const terms = [];
+
+            parts.forEach(part => {
+                const termElements = parseMolecule(part);
+                terms.push({ text: part, elements: termElements });
+                for (const el in termElements) {
+                    sideElements[el] = (sideElements[el] || 0) + termElements[el];
+                }
+            });
+
+            return { terms, elements: sideElements };
+        }
+
+        function parseMolecule(formula) {
+            const elements = {};
+            const regex = /([A-Z][a-z]?)(\d*)|(\()|(\))(\d*)/g;
+            let match;
+            const stack = [{}]; // Stack for groups
+
+            // This simplified parser doesn't handle nested parens perfectly with regex alone 
+            // but works for standard formulas like Ca(NO3)2
+
+            // Better: Tokenizer
+            let i = 0;
+            while (i < formula.length) {
+                if (formula[i] === '(') {
+                    stack.push({});
+                    i++;
+                } else if (formula[i] === ')') {
+                    i++;
+                    let num = "";
+                    while (i < formula.length && /[0-9]/.test(formula[i])) {
+                        num += formula[i];
+                        i++;
+                    }
+                    const factor = num === "" ? 1 : parseInt(num);
+                    const group = stack.pop();
+                    const top = stack[stack.length - 1];
+                    for (const el in group) {
+                        top[el] = (top[el] || 0) + group[el] * factor;
+                    }
+                } else if (/[A-Z]/.test(formula[i])) {
+                    let el = formula[i];
+                    i++;
+                    while (i < formula.length && /[a-z]/.test(formula[i])) {
+                        el += formula[i];
+                        i++;
+                    }
+                    let num = "";
+                    while (i < formula.length && /[0-9]/.test(formula[i])) {
+                        num += formula[i];
+                        i++;
+                    }
+                    const count = num === "" ? 1 : parseInt(num);
+                    const top = stack[stack.length - 1];
+                    top[el] = (top[el] || 0) + count;
+                } else {
+                    i++; // Skip unknown chars (e.g. leading numbers, though coefficients shouldn't be in input for balancing)
+                }
+            }
+            return stack[0];
+        }
+
+        function solveMatrix(matrix) {
+            // Simplified Gaussian Elimination to find null space vector
+            // This is non-trivial to implement from scratch robustly.
+            // For a "Mini App", brute force for coeffs 1-12 is surprisingly effective and robust.
+
+            const numVars = matrix[0].length;
+            const maxCoeff = 12; // Try up to 12
+
+            // Helper to check solution
+            function check(arr) {
+                for (let r = 0; r < matrix.length; r++) {
+                    let sum = 0;
+                    for (let c = 0; c < numVars; c++) {
+                        sum += matrix[r][c] * arr[c];
+                    }
+                    if (sum !== 0) return false;
+                }
+                return true;
+            }
+
+            // Recursive search (DFS)
+            // Optimize: Fix first coeff to 1, then search rest? No, ratios matter.
+            // But we can scale up. Fix first variable to range 1..maxCoeff?
+            // Actually, finding integer null space.
+
+            // Brute force logic:
+            // Iterate all combinations? Exponential time. 
+            // 4 vars, max 10 -> 10^4 = 10,000 checks. Fast.
+            // 6 vars -> 10^6 = 1M. Fast enough (JS does >100M ops/sec).
+            // So brute force works fine for common equations.
+
+            if (numVars > 7) throw new Error("Equation too complex for basic solver.");
+
+            const current = new Array(numVars).fill(1);
+
+            // Loop until solution found or limit
+            // Simple incrementer
+            while (true) {
+                if (check(current)) return current;
+
+                // Increment
+                let i = 0;
+                while (i < numVars) {
+                    current[i]++;
+                    if (current[i] <= maxCoeff) break;
+                    current[i] = 1;
+                    i++;
+                }
+                if (i === numVars) return null; // Overflow
+            }
+        }
+
+        function formatSide(terms, coeffs) {
+            return terms.map((t, i) => {
+                const c = coeffs[i];
+                const mol = formatMolecule(t.text);
+                return (c === 1 ? '' : `<span class="text-red-500 font-bold text-xl mx-1">${c}</span>`) + mol;
+            }).join(' + ');
+        }
+
+        function formatMolecule(str) {
+            return str.replace(/(\d+)/g, '<sub>$1</sub>');
+        }
+    </script>
+</body>
+
+</html>

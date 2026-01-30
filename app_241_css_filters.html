@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS 滤镜混合器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type=range] {
+            height: 4px;
+            border-radius: 2px;
+            background: #e2e8f0;
+            cursor: pointer;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #4f46e5;
+            margin-top: -6px;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col md:flex-row text-slate-800">
+
+    <!-- Preview -->
+    <div
+        class="flex-1 p-8 flex flex-col items-center justify-center bg-slate-100 border-b md:border-b-0 md:border-r border-slate-200">
+        <div class="relative group max-w-full">
+            <img id="preview-img"
+                src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+                class="rounded-xl shadow-2xl max-h-[60vh] object-contain transition-all duration-200">
+        </div>
+        <label
+            class="mt-6 px-4 py-2 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition text-sm font-bold text-slate-500">
+            📸 更换图片
+            <input type="file" class="hidden" accept="image/*" onchange="loadImage(event)">
+        </label>
+    </div>
+
+    <!-- Controls -->
+    <div class="w-full md:w-80 bg-white p-6 flex flex-col gap-6 h-auto md:h-screen overflow-y-auto shadow-xl z-10">
+
+        <header class="flex justify-between items-center mb-2">
+            <h1 class="font-bold text-lg">CSS Filters</h1>
+            <a href="./navigation.html" class="text-xs text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="space-y-5">
+            <!-- Blur -->
+            <div>
+                <div class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-2">
+                    <span>Blur (px)</span><span id="val-blur">0px</span>
+                </div>
+                <input type="range" id="blur" min="0" max="20" value="0" class="w-full" oninput="update()">
+            </div>
+
+            <!-- Brightness -->
+            <div>
+                <div class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-2">
+                    <span>Brightness (%)</span><span id="val-brightness">100%</span>
+                </div>
+                <input type="range" id="brightness" min="0" max="200" value="100" class="w-full" oninput="update()">
+            </div>
+
+            <!-- Contrast -->
+            <div>
+                <div class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-2">
+                    <span>Contrast (%)</span><span id="val-contrast">100%</span>
+                </div>
+                <input type="range" id="contrast" min="0" max="200" value="100" class="w-full" oninput="update()">
+            </div>
+
+            <!-- Grayscale -->
+            <div>
+                <div class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-2">
+                    <span>Grayscale (%)</span><span id="val-grayscale">0%</span>
+                </div>
+                <input type="range" id="grayscale" min="0" max="100" value="0" class="w-full" oninput="update()">
+            </div>
+
+            <!-- Hue Rotate -->
+            <div>
+                <div class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-2">
+                    <span>Hue Rotate (deg)</span><span id="val-hue-rotate">0deg</span>
+                </div>
+                <input type="range" id="hue-rotate" min="0" max="360" value="0" class="w-full" oninput="update()">
+            </div>
+
+            <!-- Invert -->
+            <div>
+                <div class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-2">
+                    <span>Invert (%)</span><span id="val-invert">0%</span>
+                </div>
+                <input type="range" id="invert" min="0" max="100" value="0" class="w-full" oninput="update()">
+            </div>
+
+            <!-- Saturate -->
+            <div>
+                <div class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-2">
+                    <span>Saturate (%)</span><span id="val-saturate">100%</span>
+                </div>
+                <input type="range" id="saturate" min="0" max="200" value="100" class="w-full" oninput="update()">
+            </div>
+
+            <!-- Sepia -->
+            <div>
+                <div class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-2">
+                    <span>Sepia (%)</span><span id="val-sepia">0%</span>
+                </div>
+                <input type="range" id="sepia" min="0" max="100" value="0" class="w-full" oninput="update()">
+            </div>
+
+            <button onclick="reset()"
+                class="w-full py-2 border border-slate-200 rounded-lg text-slate-500 text-xs font-bold hover:bg-slate-50">重置所有</button>
+
+            <!-- Output -->
+            <div class="bg-slate-800 p-4 rounded-xl relative group">
+                <code id="css-output"
+                    class="text-[10px] text-green-400 font-mono break-all block leading-relaxed">filter: none;</code>
+                <button onclick="copyCSS()"
+                    class="absolute top-2 right-2 text-[10px] bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded">Copy</button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const img = document.getElementById('preview-img');
+        const output = document.getElementById('css-output');
+        const filters = ['blur', 'brightness', 'contrast', 'grayscale', 'hue-rotate', 'invert', 'saturate', 'sepia'];
+        const units = { 'blur': 'px', 'hue-rotate': 'deg' };
+
+        function update() {
+            let css = "";
+            filters.forEach(f => {
+                const val = document.getElementById(f).value;
+                const unit = units[f] || '%';
+
+                // Only add if not default
+                let isDefault = false;
+                if (f === 'brightness' || f === 'contrast' || f === 'saturate') {
+                    if (val == 100) isDefault = true;
+                } else {
+                    if (val == 0) isDefault = true;
+                }
+
+                if (!isDefault) {
+                    css += `${f}(${val}${unit}) `;
+                }
+
+                // Update label
+                document.getElementById(`val-${f}`).innerText = val + unit;
+            });
+
+            if (css === "") css = "none";
+
+            img.style.filter = css;
+            output.innerText = `filter: ${css.trim()};`;
+        }
+
+        function reset() {
+            filters.forEach(f => {
+                const el = document.getElementById(f);
+                if (f === 'brightness' || f === 'contrast' || f === 'saturate') el.value = 100;
+                else el.value = 0;
+            });
+            update();
+        }
+
+        function copyCSS() {
+            navigator.clipboard.writeText(output.innerText);
+            alert("CSS 已复制!");
+        }
+
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                img.src = URL.createObjectURL(file);
+            }
+        }
+    </script>
+</body>
+
+</html>

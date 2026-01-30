@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>渐变边框生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-border-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            /* Inner bg */
+            position: relative;
+            z-index: 0;
+            color: #334155;
+            font-weight: bold;
+        }
+
+        /* The magic trick for gradient border with radius */
+        .gradient-border-box::before {
+            content: "";
+            position: absolute;
+            inset: -4px;
+            z-index: -1;
+            border-radius: inherit;
+            background: linear-gradient(45deg, #f3ec78, #af4261);
+        }
+
+        /* Alternative method: background-clip + mask */
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col md:flex-row text-slate-800">
+
+    <!-- Preview -->
+    <div
+        class="flex-1 flex items-center justify-center p-8 bg-slate-100 border-b md:border-b-0 md:border-r border-slate-200">
+
+        <div id="box" class="w-64 h-32 rounded-xl flex items-center justify-center text-xl shadow-sm">
+            Gradient Border
+        </div>
+
+    </div>
+
+    <!-- Controls -->
+    <div class="w-full md:w-80 bg-white p-6 shadow-xl z-10 flex flex-col h-auto md:h-screen overflow-y-auto">
+
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="font-bold text-lg">Gradient Border</h1>
+            <a href="./navigation.html" class="text-xs text-blue-600 hover:underline">Exit</a>
+        </header>
+
+        <div class="space-y-5">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Border Width</label>
+                <input type="range" id="width" min="1" max="20" value="4"
+                    class="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer" oninput="update()">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Border Radius</label>
+                <input type="range" id="radius" min="0" max="50" value="16"
+                    class="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer" oninput="update()">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Colors</label>
+                <div class="flex gap-2 mb-2">
+                    <input type="color" id="c1" value="#6366f1" class="flex-1 h-8 rounded cursor-pointer p-0 border-0"
+                        oninput="update()">
+                    <input type="color" id="c2" value="#ec4899" class="flex-1 h-8 rounded cursor-pointer p-0 border-0"
+                        oninput="update()">
+                </div>
+                <input type="range" id="angle" min="0" max="360" value="45"
+                    class="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer" oninput="update()">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Background</label>
+                <input type="color" id="bg" value="#ffffff"
+                    class="w-full h-8 rounded cursor-pointer p-0 border border-slate-200" oninput="update()">
+            </div>
+
+            <div class="pt-4 border-t border-slate-100">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Generated CSS</label>
+                <div class="bg-slate-800 p-4 rounded-xl relative group">
+                    <code id="css-code"
+                        class="text-[10px] text-green-400 font-mono break-all block leading-relaxed whitespace-pre-wrap"></code>
+                    <button onclick="copyCSS()"
+                        class="absolute top-2 right-2 text-[10px] bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded">Copy</button>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-2">使用 `background-origin` 和 `background-clip` 技术实现。</p>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const box = document.getElementById('box');
+        const codeEl = document.getElementById('css-code');
+
+        function update() {
+            const w = document.getElementById('width').value;
+            const r = document.getElementById('radius').value;
+            const c1 = document.getElementById('c1').value;
+            const c2 = document.getElementById('c2').value;
+            const deg = document.getElementById('angle').value;
+            const bg = document.getElementById('bg').value;
+
+            const grad = `linear-gradient(${deg}deg, ${c1}, ${c2})`;
+
+            // Modern CSS approach for gradient border on transparent or solid bg
+            // Using border-image does not support border-radius well.
+            // Best approach: Double background with clips.
+            // 1. Padding-box background (inner color)
+            // 2. Border-box background (gradient)
+
+            const style = `
+border: ${w}px solid transparent;
+border-radius: ${r}px;
+background-image: linear-gradient(${bg}, ${bg}), ${grad};
+background-origin: border-box;
+background-clip: content-box, border-box;`.trim();
+
+            box.style.cssText = style; // Apply directly
+
+            codeEl.innerText = `.gradient-border {
+  ${style}
+}`;
+        }
+
+        function copyCSS() {
+            navigator.clipboard.writeText(codeEl.innerText);
+            alert("CSS 已复制!");
+        }
+
+        update();
+    </script>
+</body>
+
+</html>

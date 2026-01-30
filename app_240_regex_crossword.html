@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>正则填字游戏</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .cell-input {
+            width: 40px;
+            height: 40px;
+            text-align: center;
+            border: 1px solid #cbd5e1;
+            outline: none;
+            font-family: monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 1.2rem;
+        }
+
+        .cell-input:focus {
+            background-color: #e0e7ff;
+            border-color: #6366f1;
+        }
+
+        .cell-input.correct {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .hint-h {
+            font-family: monospace;
+            font-size: 10px;
+            color: #64748b;
+            text-align: right;
+            padding-right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .hint-v {
+            font-family: monospace;
+            font-size: 10px;
+            color: #64748b;
+            text-align: center;
+            padding-bottom: 4px;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            height: 80px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 80px repeat(2, 40px);
+            /* 2x2 grid */
+            gap: 4px;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-slate-700">Regex Crossword</h1>
+            <div class="text-xs font-bold text-indigo-500">Level: <span id="level-display">1</span></div>
+        </header>
+
+        <!-- Game Board -->
+        <div id="board" class="mb-8">
+            <!-- Injected by JS -->
+        </div>
+
+        <div class="flex gap-4">
+            <button onclick="check()"
+                class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg shadow transition">检查答案
+                Check</button>
+            <button onclick="nextLevel()" id="next-btn"
+                class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-600 font-bold py-2 rounded-lg transition hidden">下一关
+                Next</button>
+        </div>
+
+        <div class="mt-6 text-center text-xs text-slate-400">
+            <p>填入字符使其同时满足行和列的正则表达式</p>
+        </div>
+
+    </div>
+
+    <div class="mt-8">
+        <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600 underline">退出</a>
+    </div>
+
+    <script>
+        const board = document.getElementById('board');
+        const levelDisplay = document.getElementById('level-display');
+        const nextBtn = document.getElementById('next-btn');
+
+        let level = 0;
+
+        // Simplified Puzzles
+        const puzzles = [
+            {
+                rows: ['HE|HI', 'LP|LM'],
+                cols: ['H[EL]', '[IP]M'],
+                solution: [['H', 'E'], ['L', 'M']],
+                desc: "HE/HI & LP/LM"
+            },
+            {
+                rows: ['[A-Z]O', 'G[O]'],
+                cols: ['G.', 'GO'],
+                solution: [['G', 'O'], ['G', 'O']],
+                desc: "GO GO"
+            },
+            {
+                rows: ['19|20', 'AB|80'],
+                cols: ['(1|A).', '[0B].'], // Tricky
+                solution: [['2', '0'], ['8', '0']], // Wait, 19|20. 20 matches. AB|80. 80 matches.
+                // Col 1: (1|A). -> 2 is not 1 or A. Bad puzzle logic or me?
+                // Let's make simpler valid puzzles.
+                // Row 1: 19|20. Row 2: AB|80.
+                // Col 1: [12A8] matches first char. Col 2: [90B0].
+                // Valid:
+                // R1: 20. R2: 80.
+                // C1: 28. C2: 00.
+                // C1 Regex: [28]+. C2: 0+
+                rows: ['20|19', '80|AB'],
+                cols: ['[28]+', '0+'],
+                solution: [['2', '0'], ['8', '0']]
+            },
+            {
+                // 3x3 if needed, but keeping 2x2 for UI simplicity in single file style
+                rows: ['[AB]+', '(C|D).'],
+                cols: ['A[CD]', 'B.'],
+                solution: [['A', 'B'], ['C', 'D']] // R1: AB matches [AB]+. R2: CD matches (C|D). .  C1: AC matches A[CD]. C2: BD matches B.
+            }
+        ];
+
+        function loadLevel() {
+            if (level >= puzzles.length) {
+                alert("通关了！恭喜！");
+                level = 0;
+            }
+
+            levelDisplay.innerText = level + 1;
+            const p = puzzles[level];
+            nextBtn.classList.add('hidden');
+
+            // Render 2x2 grid with hints
+            // Grid layout:
+            // Empty | Col1 | Col2
+            // Row1  | Cell | Cell
+            // Row2  | Cell | Cell
+
+            board.style.display = 'grid';
+            board.style.gridTemplateColumns = '80px 40px 40px';
+            board.style.gap = '4px';
+            board.innerHTML = '';
+
+            // Header row
+            board.appendChild(createDiv('')); // Corner
+            board.appendChild(createHintV(p.cols[0]));
+            board.appendChild(createHintV(p.cols[1]));
+
+            // Row 1
+            board.appendChild(createHintH(p.rows[0]));
+            board.appendChild(createInput(0, 0));
+            board.appendChild(createInput(0, 1));
+
+            // Row 2
+            board.appendChild(createHintH(p.rows[1]));
+            board.appendChild(createInput(1, 0));
+            board.appendChild(createInput(1, 1));
+        }
+
+        function createDiv(text) {
+            const d = document.createElement('div');
+            d.innerText = text;
+            return d;
+        }
+
+        function createHintH(text) {
+            const d = document.createElement('div');
+            d.className = 'hint-h';
+            d.innerHTML = `/${text}/`;
+            return d;
+        }
+
+        function createHintV(text) {
+            const d = document.createElement('div');
+            d.className = 'hint-v';
+            d.innerHTML = `/${text}/`;
+            return d;
+        }
+
+        function createInput(r, c) {
+            const inp = document.createElement('input');
+            inp.type = 'text';
+            inp.maxLength = 1;
+            inp.className = 'cell-input';
+            inp.id = `cell-${r}-${c}`;
+            inp.oninput = (e) => {
+                e.target.value = e.target.value.toUpperCase();
+                // Auto focus next?
+            };
+            return inp;
+        }
+
+        function check() {
+            const p = puzzles[level];
+            let allCorrect = true;
+
+            for (let r = 0; r < 2; r++) {
+                for (let c = 0; c < 2; c++) {
+                    const val = document.getElementById(`cell-${r}-${c}`).value;
+                    const correctVal = p.solution[r][c];
+                    const el = document.getElementById(`cell-${r}-${c}`);
+
+                    if (val === correctVal) {
+                        el.classList.add('correct');
+                    } else {
+                        el.classList.remove('correct');
+                        allCorrect = false;
+                    }
+                }
+            }
+
+            if (allCorrect) {
+                nextBtn.classList.remove('hidden');
+            } else {
+                alert("答案不正确，请检查正则匹配。");
+            }
+        }
+
+        function nextLevel() {
+            level++;
+            loadLevel();
+        }
+
+        loadLevel();
+    </script>
+</body>
+
+</html>

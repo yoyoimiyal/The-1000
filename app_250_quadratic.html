@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一元二次方程求解</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .math-font {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body class="bg-indigo-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-xl border border-indigo-100">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-indigo-800 flex items-center gap-2">
+                <span class="text-2xl">🧮</span> Quadratic Solver
+            </h1>
+            <a href="./navigation.html" class="text-sm text-indigo-500 hover:underline">退出</a>
+        </header>
+
+        <div class="text-center mb-8">
+            <div
+                class="text-2xl md:text-3xl font-bold bg-indigo-50 inline-block px-6 py-3 rounded-xl border border-indigo-200">
+                <span class="math-font">ax</span>² + <span class="math-font">bx</span> + <span
+                    class="math-font">c</span> = 0
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 mb-8">
+            <div>
+                <label class="block text-center text-xs font-bold text-slate-400 uppercase mb-2">a</label>
+                <input type="number" id="a" value="1"
+                    class="w-full p-3 text-center text-xl font-bold border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    oninput="solve()">
+            </div>
+            <div>
+                <label class="block text-center text-xs font-bold text-slate-400 uppercase mb-2">b</label>
+                <input type="number" id="b" value="-4"
+                    class="w-full p-3 text-center text-xl font-bold border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    oninput="solve()">
+            </div>
+            <div>
+                <label class="block text-center text-xs font-bold text-slate-400 uppercase mb-2">c</label>
+                <input type="number" id="c" value="3"
+                    class="w-full p-3 text-center text-xl font-bold border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    oninput="solve()">
+            </div>
+        </div>
+
+        <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">判别式 (Discriminant Δ)</p>
+                    <p class="text-xl font-mono text-slate-700" id="delta">0</p>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">顶点 (Vertex)</p>
+                    <p class="text-xl font-mono text-slate-700" id="vertex">(0, 0)</p>
+                </div>
+                <div class="md:col-span-2">
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">根 (Roots)</p>
+                    <p class="text-2xl font-bold text-indigo-600" id="roots">x1 = 0, x2 = 0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graph -->
+        <div class="h-64 w-full">
+            <canvas id="chart"></canvas>
+        </div>
+
+    </div>
+
+    <script>
+        let chart = null;
+
+        function solve() {
+            const a = parseFloat(document.getElementById('a').value);
+            const b = parseFloat(document.getElementById('b').value);
+            const c = parseFloat(document.getElementById('c').value);
+
+            if (isNaN(a) || isNaN(b) || isNaN(c)) return;
+            if (a === 0) {
+                document.getElementById('roots').innerText = "非二次方程 (a=0)";
+                document.getElementById('delta').innerText = "-";
+                document.getElementById('vertex').innerText = "-";
+                return;
+            }
+
+            const delta = b * b - 4 * a * c;
+            document.getElementById('delta').innerText = `Δ = ${delta}`;
+
+            // Vertex: x = -b/2a
+            const vx = -b / (2 * a);
+            const vy = a * vx * vx + b * vx + c;
+            document.getElementById('vertex').innerText = `(${vx.toFixed(2)}, ${vy.toFixed(2)})`;
+
+            // Roots
+            let rootStr = "";
+            if (delta > 0) {
+                const x1 = (-b + Math.sqrt(delta)) / (2 * a);
+                const x2 = (-b - Math.sqrt(delta)) / (2 * a);
+                rootStr = `x1 = ${x1.toFixed(2)}, x2 = ${x2.toFixed(2)}`;
+            } else if (delta === 0) {
+                const x = -b / (2 * a);
+                rootStr = `x = ${x.toFixed(2)}`;
+            } else {
+                const real = (-b / (2 * a)).toFixed(2);
+                const imag = (Math.sqrt(-delta) / (2 * a)).toFixed(2);
+                rootStr = `x = ${real} ± ${Math.abs(imag)}i`;
+            }
+            document.getElementById('roots').innerText = rootStr;
+
+            updateChart(a, b, c, vx);
+        }
+
+        function updateChart(a, b, c, vx) {
+            const ctx = document.getElementById('chart').getContext('2d');
+
+            // Generate points around vertex
+            const range = 10;
+            const labels = [];
+            const data = [];
+            const start = vx - 5;
+            const end = vx + 5;
+            const step = 0.5;
+
+            for (let x = start; x <= end; x += step) {
+                labels.push(x.toFixed(1));
+                data.push(a * x * x + b * x + c);
+            }
+
+            if (chart) chart.destroy();
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'f(x)',
+                        data: data,
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            grid: { color: '#f1f5f9' },
+                            // Add zero line highlight?
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        solve();
+    </script>
+</body>
+
+</html>

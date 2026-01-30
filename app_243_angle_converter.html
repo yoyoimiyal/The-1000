@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角度单位转换器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .input-group:focus-within label {
+            color: #f59e0b;
+        }
+
+        .input-group:focus-within input {
+            border-color: #f59e0b;
+        }
+    </style>
+</head>
+
+<body class="bg-amber-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-3xl shadow-xl border border-amber-100">
+
+        <header class="flex justify-between items-center mb-10">
+            <h1 class="text-xl font-bold text-amber-800 flex items-center gap-2">
+                <span class="text-2xl">📐</span> Angle Converter
+            </h1>
+            <a href="./navigation.html" class="text-sm text-amber-600 hover:underline">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <div class="input-group">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1 transition-colors">Degrees (度
+                    °)</label>
+                <input type="number" id="deg"
+                    class="w-full p-4 text-xl font-mono border-2 border-slate-200 rounded-xl outline-none transition-colors"
+                    placeholder="360" oninput="convert('deg')">
+            </div>
+
+            <div class="input-group">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1 transition-colors">Radians (弧度
+                    rad)</label>
+                <input type="number" id="rad"
+                    class="w-full p-4 text-xl font-mono border-2 border-slate-200 rounded-xl outline-none transition-colors"
+                    placeholder="6.28..." oninput="convert('rad')">
+            </div>
+
+            <div class="input-group">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1 transition-colors">Gradians (梯度
+                    grad)</label>
+                <input type="number" id="grad"
+                    class="w-full p-4 text-xl font-mono border-2 border-slate-200 rounded-xl outline-none transition-colors"
+                    placeholder="400" oninput="convert('grad')">
+            </div>
+
+            <div class="input-group">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1 transition-colors">Turns (圈
+                    tr)</label>
+                <input type="number" id="turn"
+                    class="w-full p-4 text-xl font-mono border-2 border-slate-200 rounded-xl outline-none transition-colors"
+                    placeholder="1" oninput="convert('turn')">
+            </div>
+
+        </div>
+
+        <button onclick="reset()"
+            class="w-full mt-8 py-3 bg-slate-100 text-slate-500 font-bold rounded-xl hover:bg-slate-200 transition">清空</button>
+
+    </div>
+
+    <script>
+        const inputs = {
+            deg: document.getElementById('deg'),
+            rad: document.getElementById('rad'),
+            grad: document.getElementById('grad'),
+            turn: document.getElementById('turn')
+        };
+
+        function convert(source) {
+            const val = parseFloat(inputs[source].value);
+
+            if (isNaN(val)) {
+                // Don't clear others while typing invalid chars, but if empty clear all
+                if (inputs[source].value === '') reset(false);
+                return;
+            }
+
+            let deg = 0;
+
+            // Normalize to degrees first
+            switch (source) {
+                case 'deg': deg = val; break;
+                case 'rad': deg = val * (180 / Math.PI); break;
+                case 'grad': deg = val * 0.9; break;
+                case 'turn': deg = val * 360; break;
+            }
+
+            // Update others
+            if (source !== 'deg') inputs.deg.value = +deg.toFixed(4);
+            if (source !== 'rad') inputs.rad.value = +(deg * (Math.PI / 180)).toFixed(4);
+            if (source !== 'grad') inputs.grad.value = +(deg / 0.9).toFixed(4);
+            if (source !== 'turn') inputs.turn.value = +(deg / 360).toFixed(4);
+        }
+
+        function reset(clearAll = true) {
+            Object.values(inputs).forEach(el => el.value = '');
+        }
+    </script>
+</body>
+
+</html>

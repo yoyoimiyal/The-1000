@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UA 分析仪</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/UAParser.js/1.0.35/ua-parser.min.js"></script>
+</head>
+
+<body class="bg-slate-50 min-h-screen p-6 flex flex-col items-center text-slate-800">
+
+    <div class="w-full max-w-3xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-700">
+                <span class="bg-indigo-100 px-2 py-1 rounded text-xs font-mono">UA</span> Parser
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <!-- Current UA -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">User Agent String</label>
+            <textarea id="ua-string"
+                class="w-full h-24 p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono break-all resize-none outline-none focus:ring-2 focus:ring-indigo-500 text-slate-600"
+                oninput="parse()"></textarea>
+            <div class="mt-2 text-right">
+                <button onclick="reset()" class="text-xs text-indigo-500 hover:underline font-bold">重置为本机</button>
+            </div>
+        </div>
+
+        <!-- Results Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- Browser -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-start gap-4">
+                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-xl">🌏</div>
+                <div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-1">Browser</h3>
+                    <p class="font-bold text-lg text-slate-800" id="browser-name">-</p>
+                    <p class="text-sm text-slate-500">Version: <span id="browser-ver">-</span></p>
+                </div>
+            </div>
+
+            <!-- OS -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-start gap-4">
+                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-xl">💻</div>
+                <div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-1">Operating System</h3>
+                    <p class="font-bold text-lg text-slate-800" id="os-name">-</p>
+                    <p class="text-sm text-slate-500">Version: <span id="os-ver">-</span></p>
+                </div>
+            </div>
+
+            <!-- Engine -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-start gap-4">
+                <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-xl">⚙️</div>
+                <div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-1">Engine</h3>
+                    <p class="font-bold text-lg text-slate-800" id="eng-name">-</p>
+                    <p class="text-sm text-slate-500">Version: <span id="eng-ver">-</span></p>
+                </div>
+            </div>
+
+            <!-- Device -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-start gap-4">
+                <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-xl">📱</div>
+                <div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-1">Device</h3>
+                    <p class="font-bold text-lg text-slate-800" id="dev-model">-</p>
+                    <p class="text-sm text-slate-500"><span id="dev-vendor">-</span> / <span
+                            id="dev-type">Desktop</span></p>
+                </div>
+            </div>
+
+            <!-- CPU -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-start gap-4 md:col-span-2">
+                <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-xl">🧠</div>
+                <div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-1">CPU Architecture</h3>
+                    <p class="font-bold text-lg text-slate-800" id="cpu-arch">-</p>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const uaInput = document.getElementById('ua-string');
+        const parser = new UAParser();
+
+        function parse() {
+            const uaString = uaInput.value;
+            parser.setUA(uaString);
+            const result = parser.getResult();
+
+            document.getElementById('browser-name').innerText = result.browser.name || 'Unknown';
+            document.getElementById('browser-ver').innerText = result.browser.version || '-';
+
+            document.getElementById('os-name').innerText = result.os.name || 'Unknown';
+            document.getElementById('os-ver').innerText = result.os.version || '-';
+
+            document.getElementById('eng-name').innerText = result.engine.name || 'Unknown';
+            document.getElementById('eng-ver').innerText = result.engine.version || '-';
+
+            document.getElementById('dev-model').innerText = result.device.model || 'Unknown';
+            document.getElementById('dev-vendor').innerText = result.device.vendor || 'Unknown';
+            document.getElementById('dev-type').innerText = result.device.type || 'Desktop/Laptop';
+
+            document.getElementById('cpu-arch').innerText = result.cpu.architecture || 'Unknown';
+        }
+
+        function reset() {
+            uaInput.value = navigator.userAgent;
+            parse();
+        }
+
+        // Init
+        reset();
+    </script>
+</body>
+
+</html>

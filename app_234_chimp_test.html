@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黑猩猩记忆测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .grid-area {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 8px;
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 5/4;
+        }
+
+        .cell {
+            border-radius: 8px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            transition: transform 0.1s;
+        }
+
+        .cell:active {
+            transform: scale(0.9);
+        }
+
+        .cell.visible {
+            background-color: #3b82f6;
+            border-bottom: 4px solid #1e40af;
+        }
+
+        .cell.hidden-num {
+            background-color: #fff;
+            border: 4px solid #cbd5e1;
+            color: transparent;
+        }
+
+        .cell.empty {
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body class="bg-blue-50 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-xl bg-white p-6 rounded-3xl shadow-xl border-b-8 border-blue-200 text-center">
+
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-xl font-bold text-blue-900">Chimp Test</h1>
+            <div class="text-sm font-bold text-blue-500">Level: <span id="level">1</span></div>
+        </header>
+
+        <div id="game-container" class="flex justify-center mb-6">
+            <div id="grid" class="grid-area">
+                <!-- Cells -->
+            </div>
+        </div>
+
+        <div id="info-msg" class="h-6 text-sm font-bold text-slate-500 mb-6">
+            点击数字 1 开始
+        </div>
+
+        <div id="controls">
+            <button onclick="startGame()" id="start-btn"
+                class="px-10 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full shadow-lg transition transform active:scale-95">开始测试</button>
+        </div>
+
+    </div>
+
+    <div class="mt-8">
+        <a href="./navigation.html" class="text-sm text-blue-400 hover:text-blue-600 underline">退出</a>
+    </div>
+
+    <script>
+        const gridEl = document.getElementById('grid');
+        const levelEl = document.getElementById('level');
+        const msgEl = document.getElementById('info-msg');
+        const startBtn = document.getElementById('start-btn');
+        const controls = document.getElementById('controls');
+
+        let level = 4; // Start with 4 numbers
+        let numbers = [];
+        let nextNum = 1;
+        let isHidden = false;
+        let isGameActive = false;
+        let lives = 3; // "Strikes" logic usually: 1 strike you lose level.
+        // Chimp test standard: If you pass, num increases. If fail, 3 strikes then game over.
+
+        function startGame() {
+            level = 4;
+            lives = 3;
+            startLevel();
+            controls.style.opacity = '0'; // Hide button visually but keep layout space? Or remove.
+            controls.style.pointerEvents = 'none';
+        }
+
+        function startLevel() {
+            levelEl.innerText = level;
+            msgEl.innerText = "按顺序点击数字";
+            gridEl.innerHTML = '';
+
+            // Grid size 8x5 = 40 cells
+            const totalCells = 40;
+            const positions = new Set();
+
+            while (positions.size < level) {
+                positions.add(Math.floor(Math.random() * totalCells));
+            }
+
+            numbers = [];
+            nextNum = 1;
+            isHidden = false;
+            isGameActive = true;
+
+            const posArray = Array.from(positions);
+
+            // Create grid cells
+            for (let i = 0; i < totalCells; i++) {
+                const cell = document.createElement('div');
+                const idx = posArray.indexOf(i);
+
+                if (idx !== -1) {
+                    // It's a number
+                    const num = idx + 1; // Incorrect logic, posArray is random order.
+                    // We need to assign numbers 1..level to random positions.
+                }
+                gridEl.appendChild(cell);
+            }
+
+            // Correct logic:
+            gridEl.innerHTML = '';
+            const cells = new Array(totalCells).fill(null);
+
+            // Shuffle numbers 1..level into random slots
+            posArray.forEach((posIndex, i) => {
+                cells[posIndex] = i + 1; // 1-based number
+            });
+
+            for (let i = 0; i < totalCells; i++) {
+                const val = cells[i];
+                const div = document.createElement('div');
+
+                if (val !== null) {
+                    div.className = "cell visible";
+                    div.innerText = val;
+                    div.dataset.val = val;
+                    div.onclick = () => handleClick(div, val);
+                } else {
+                    div.className = "cell empty";
+                }
+                gridEl.appendChild(div);
+            }
+        }
+
+        function handleClick(el, val) {
+            if (!isGameActive) return;
+
+            if (val === 1) {
+                // First click: hide others
+                hideOthers();
+            }
+
+            if (val === nextNum) {
+                // Correct
+                el.classList.add('opacity-0', 'pointer-events-none'); // Remove visually
+                nextNum++;
+                if (nextNum > level) {
+                    // Level Complete
+                    isGameActive = false;
+                    msgEl.innerText = "成功！";
+                    msgEl.className = "h-6 text-sm font-bold text-green-500 mb-6";
+                    setTimeout(() => {
+                        level++;
+                        msgEl.className = "h-6 text-sm font-bold text-slate-500 mb-6";
+                        startLevel();
+                    }, 1000);
+                }
+            } else {
+                // Wrong
+                gameOver();
+            }
+        }
+
+        function hideOthers() {
+            if (isHidden) return;
+            isHidden = true;
+            const cells = document.querySelectorAll('.cell.visible');
+            cells.forEach(c => {
+                if (parseInt(c.dataset.val) > 1) {
+                    c.classList.add('hidden-num');
+                }
+            });
+        }
+
+        function gameOver() {
+            isGameActive = false;
+            // Reveal all
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(c => c.classList.remove('hidden-num'));
+
+            msgEl.innerText = `失败！最高等级: ${level}`;
+            msgEl.className = "h-6 text-sm font-bold text-red-500 mb-6";
+
+            controls.style.opacity = '1';
+            controls.style.pointerEvents = 'auto';
+            document.querySelector('#start-btn').innerText = "再试一次";
+        }
+    </script>
+</body>
+
+</html>
