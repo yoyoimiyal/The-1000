@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>万花筒画板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            touch-action: none;
+            cursor: crosshair;
+        }
+    </style>
+</head>
+
+<body class="bg-black min-h-screen flex flex-col items-center justify-center overflow-hidden">
+
+    <!-- Controls -->
+    <div class="fixed top-4 left-4 z-10 flex gap-2">
+        <div class="bg-gray-900/80 backdrop-blur p-2 rounded-lg border border-gray-700 flex flex-col gap-2">
+            <input type="color" id="color" value="#ff00ff"
+                class="w-8 h-8 rounded cursor-pointer bg-transparent border-0">
+            <div class="h-px bg-gray-700 w-full"></div>
+            <button onclick="clearCanvas()" class="text-white text-xs font-bold p-1 hover:text-red-400">CLR</button>
+            <button onclick="download()" class="text-white text-xs font-bold p-1 hover:text-blue-400">SAV</button>
+        </div>
+
+        <div class="bg-gray-900/80 backdrop-blur p-4 rounded-lg border border-gray-700 text-white w-40">
+            <div class="mb-2">
+                <label class="text-[10px] uppercase font-bold text-gray-400">Segments</label>
+                <input type="range" id="segments" min="2" max="24" value="12"
+                    class="w-full h-1 bg-gray-600 rounded appearance-none" oninput="updateSettings()">
+                <div class="text-right text-xs" id="seg-val">12</div>
+            </div>
+            <div>
+                <label class="text-[10px] uppercase font-bold text-gray-400">Width</label>
+                <input type="range" id="width-sl" min="1" max="20" value="2"
+                    class="w-full h-1 bg-gray-600 rounded appearance-none">
+            </div>
+        </div>
+    </div>
+
+    <div class="fixed top-4 right-4 z-10">
+        <a href="./navigation.html"
+            class="text-gray-500 text-xs font-bold hover:text-white border border-gray-700 bg-gray-900/50 px-3 py-1 rounded">EXIT</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const colorInput = document.getElementById('color');
+        const segmentsInput = document.getElementById('segments');
+        const widthInput = document.getElementById('width-sl');
+        const segVal = document.getElementById('seg-val');
+
+        let width, height, cx, cy;
+        let isDrawing = false;
+        let lastX = 0, lastY = 0;
+        let segments = 12;
+        let hue = 0;
+        let useRainbow = false; // Hidden feature: double click color to toggle rainbow?
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            cx = width / 2;
+            cy = height / 2;
+            // Background
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function updateSettings() {
+            segments = parseInt(segmentsInput.value);
+            segVal.innerText = segments;
+        }
+
+        function getPos(e) {
+            if (e.touches) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            return { x: e.clientX, y: e.clientY };
+        }
+
+        function start(e) {
+            e.preventDefault();
+            isDrawing = true;
+            const pos = getPos(e);
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+
+        function move(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const pos = getPos(e);
+            const x = pos.x;
+            const y = pos.y;
+
+            const color = colorInput.value;
+            const lineWidth = parseInt(widthInput.value);
+
+            ctx.lineWidth = lineWidth;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = color;
+
+            const angle = (Math.PI * 2) / segments;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+
+            // Draw in all segments
+            for (let i = 0; i < segments; i++) {
+                ctx.rotate(angle);
+
+                // Draw line
+                ctx.beginPath();
+                ctx.moveTo(lastX - cx, lastY - cy);
+                ctx.lineTo(x - cx, y - cy);
+                ctx.stroke();
+
+                // Mirror line
+                ctx.save();
+                ctx.scale(1, -1);
+                ctx.beginPath();
+                ctx.moveTo(lastX - cx, lastY - cy);
+                ctx.lineTo(x - cx, y - cy);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            ctx.restore();
+
+            lastX = x;
+            lastY = y;
+        }
+
+        function stop() {
+            isDrawing = false;
+        }
+
+        canvas.addEventListener('mousedown', start);
+        canvas.addEventListener('mousemove', move);
+        canvas.addEventListener('mouseup', stop);
+
+        canvas.addEventListener('touchstart', start);
+        canvas.addEventListener('touchmove', move);
+        canvas.addEventListener('touchend', stop);
+
+        function clearCanvas() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+        }
+
+        function download() {
+            const link = document.createElement('a');
+            link.download = 'kaleidoscope.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+
+</html>

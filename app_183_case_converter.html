@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>变量命名转换器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        .font-mono {
+            font-family: 'Fira Code', monospace;
+        }
+
+        .result-box {
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .result-box:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen p-6 flex flex-col items-center text-slate-800">
+
+    <div class="w-full max-w-2xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-700">
+                <span class="bg-indigo-100 px-2 py-1 rounded text-sm">Aa</span> Case Converter
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+            <input type="text" id="input"
+                class="w-full p-4 border border-slate-300 rounded-xl text-lg outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-slate-700"
+                placeholder="Type here (e.g., hello world)" oninput="convert()">
+            <p class="text-xs text-slate-400 mt-2 text-right">支持空格、连字符、下划线或驼峰分词</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div class="result-box bg-white p-4 rounded-xl border border-slate-200 hover:border-indigo-300 shadow-sm"
+                onclick="copy('camel')">
+                <p class="text-xs text-slate-400 font-bold uppercase mb-1">camelCase (驼峰)</p>
+                <p class="text-lg font-mono text-indigo-600 truncate" id="res-camel">-</p>
+            </div>
+
+            <div class="result-box bg-white p-4 rounded-xl border border-slate-200 hover:border-indigo-300 shadow-sm"
+                onclick="copy('pascal')">
+                <p class="text-xs text-slate-400 font-bold uppercase mb-1">PascalCase (帕斯卡)</p>
+                <p class="text-lg font-mono text-indigo-600 truncate" id="res-pascal">-</p>
+            </div>
+
+            <div class="result-box bg-white p-4 rounded-xl border border-slate-200 hover:border-indigo-300 shadow-sm"
+                onclick="copy('snake')">
+                <p class="text-xs text-slate-400 font-bold uppercase mb-1">snake_case (蛇形)</p>
+                <p class="text-lg font-mono text-indigo-600 truncate" id="res-snake">-</p>
+            </div>
+
+            <div class="result-box bg-white p-4 rounded-xl border border-slate-200 hover:border-indigo-300 shadow-sm"
+                onclick="copy('kebab')">
+                <p class="text-xs text-slate-400 font-bold uppercase mb-1">kebab-case (短横线)</p>
+                <p class="text-lg font-mono text-indigo-600 truncate" id="res-kebab">-</p>
+            </div>
+
+            <div class="result-box bg-white p-4 rounded-xl border border-slate-200 hover:border-indigo-300 shadow-sm"
+                onclick="copy('constant')">
+                <p class="text-xs text-slate-400 font-bold uppercase mb-1">CONSTANT_CASE (常量)</p>
+                <p class="text-lg font-mono text-indigo-600 truncate" id="res-constant">-</p>
+            </div>
+
+            <div class="result-box bg-white p-4 rounded-xl border border-slate-200 hover:border-indigo-300 shadow-sm"
+                onclick="copy('sentence')">
+                <p class="text-xs text-slate-400 font-bold uppercase mb-1">Sentence case (句子)</p>
+                <p class="text-lg font-mono text-indigo-600 truncate" id="res-sentence">-</p>
+            </div>
+
+        </div>
+
+        <div id="toast"
+            class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-2 rounded-full text-sm font-bold opacity-0 transition-opacity pointer-events-none">
+            已复制到剪贴板
+        </div>
+
+    </div>
+
+    <script>
+        function convert() {
+            const input = document.getElementById('input').value;
+            if (!input) {
+                document.querySelectorAll('[id^="res-"]').forEach(el => el.innerText = '-');
+                return;
+            }
+
+            // Split into words
+            // Regex handles: space, underscore, dash, dot, and CamelCase split
+            const words = input.replace(/([a-z])([A-Z])/g, '$1 $2') // split camelCase
+                .replace(/[_\-.]/g, ' ') // replace separators
+                .toLowerCase()
+                .split(/\s+/)
+                .filter(w => w.length > 0);
+
+            if (words.length === 0) return;
+
+            // Camel
+            const camel = words.map((w, i) => i === 0 ? w : w.charAt(0).toUpperCase() + w.slice(1)).join('');
+            document.getElementById('res-camel').innerText = camel;
+
+            // Pascal
+            const pascal = words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
+            document.getElementById('res-pascal').innerText = pascal;
+
+            // Snake
+            const snake = words.join('_');
+            document.getElementById('res-snake').innerText = snake;
+
+            // Kebab
+            const kebab = words.join('-');
+            document.getElementById('res-kebab').innerText = kebab;
+
+            // Constant
+            const constant = words.join('_').toUpperCase();
+            document.getElementById('res-constant').innerText = constant;
+
+            // Sentence
+            const sentence = words.join(' ').charAt(0).toUpperCase() + words.join(' ').slice(1);
+            document.getElementById('res-sentence').innerText = sentence;
+        }
+
+        function copy(id) {
+            const text = document.getElementById(`res-${id}`).innerText;
+            if (text === '-') return;
+
+            navigator.clipboard.writeText(text);
+            const toast = document.getElementById('toast');
+            toast.classList.remove('opacity-0');
+            setTimeout(() => toast.classList.add('opacity-0'), 1500);
+        }
+    </script>
+</body>
+
+</html>

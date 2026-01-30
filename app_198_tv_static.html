@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电视雪花模拟器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #111;
+            cursor: pointer;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+            mix-blend-mode: exclusion;
+        }
+
+        .text-glow {
+            color: white;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 2rem;
+            text-shadow: 0 0 10px white;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+
+<body onclick="togglePause()">
+
+    <div class="overlay">
+        <div class="text-glow">NO SIGNAL</div>
+        <p class="text-white text-xs mt-2 opacity-50">Click to Pause/Resume</p>
+    </div>
+
+    <div class="absolute bottom-4 left-0 w-full text-center z-10 pointer-events-none">
+        <a href="./navigation.html"
+            class="text-white/30 text-xs hover:text-white pointer-events-auto px-2 py-1 bg-black/20 rounded">EXIT</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let isPaused = false;
+        let animationId;
+
+        // Using a smaller offscreen buffer and scaling it up improves performance and retro look
+        const scale = 2; // Pixel size
+        let buffer, bufferCtx;
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+
+            // Offscreen buffer
+            buffer = document.createElement('canvas');
+            buffer.width = Math.ceil(width / scale);
+            buffer.height = Math.ceil(height / scale);
+            bufferCtx = buffer.getContext('2d');
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function draw() {
+            if (isPaused) return;
+
+            const w = buffer.width;
+            const h = buffer.height;
+            const imgData = bufferCtx.createImageData(w, h);
+            const data = imgData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                // Random grayscale
+                const val = Math.random() * 255;
+                data[i] = val;     // R
+                data[i + 1] = val; // G
+                data[i + 2] = val; // B
+                data[i + 3] = 255; // Alpha
+            }
+
+            bufferCtx.putImageData(imgData, 0, 0);
+
+            // Scale up to main canvas
+            ctx.imageSmoothingEnabled = false; // Nearest neighbor for crisp pixels
+            ctx.drawImage(buffer, 0, 0, width, height);
+
+            animationId = requestAnimationFrame(draw);
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            if (!isPaused) draw();
+        }
+
+        draw();
+    </script>
+</body>
+
+</html>

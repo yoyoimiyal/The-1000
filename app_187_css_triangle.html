@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS 三角形生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .preview-area {
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .triangle-preview {
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col md:flex-row text-slate-800">
+
+    <!-- Preview -->
+    <div
+        class="flex-1 preview-area flex items-center justify-center p-8 border-b md:border-b-0 md:border-r border-slate-200">
+        <div id="triangle" class="triangle-preview drop-shadow-xl transition-all duration-200"></div>
+    </div>
+
+    <!-- Controls -->
+    <div class="w-full md:w-96 bg-white p-8 flex flex-col gap-6 h-auto md:h-screen overflow-y-auto shadow-xl z-10">
+
+        <header class="flex justify-between items-center mb-2">
+            <h1 class="font-bold text-lg flex items-center gap-2">
+                <span
+                    class="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-indigo-600"></span>
+                CSS Triangle
+            </h1>
+            <a href="./navigation.html" class="text-xs text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">方向 (Direction)</label>
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="setDir('top')"
+                        class="p-2 border rounded hover:bg-slate-50 text-xs font-bold transition dir-btn"
+                        data-dir="top">Top</button>
+                    <button onclick="setDir('bottom')"
+                        class="p-2 border rounded hover:bg-slate-50 text-xs font-bold transition dir-btn bg-slate-800 text-white"
+                        data-dir="bottom">Bottom</button>
+                    <button onclick="setDir('left')"
+                        class="p-2 border rounded hover:bg-slate-50 text-xs font-bold transition dir-btn"
+                        data-dir="left">Left</button>
+                    <button onclick="setDir('right')"
+                        class="p-2 border rounded hover:bg-slate-50 text-xs font-bold transition dir-btn"
+                        data-dir="right">Right</button>
+                    <button onclick="setDir('top-left')"
+                        class="p-2 border rounded hover:bg-slate-50 text-xs font-bold transition dir-btn"
+                        data-dir="top-left">TL</button>
+                    <button onclick="setDir('top-right')"
+                        class="p-2 border rounded hover:bg-slate-50 text-xs font-bold transition dir-btn"
+                        data-dir="top-right">TR</button>
+                    <button onclick="setDir('bottom-left')"
+                        class="p-2 border rounded hover:bg-slate-50 text-xs font-bold transition dir-btn"
+                        data-dir="bottom-left">BL</button>
+                    <button onclick="setDir('bottom-right')"
+                        class="p-2 border rounded hover:bg-slate-50 text-xs font-bold transition dir-btn"
+                        data-dir="bottom-right">BR</button>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">宽度 (Width): <span
+                        id="val-w">100px</span></label>
+                <input type="range" id="width" min="0" max="300" value="100"
+                    class="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer" oninput="update()">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">高度 (Height): <span
+                        id="val-h">100px</span></label>
+                <input type="range" id="height" min="0" max="300" value="100"
+                    class="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer" oninput="update()">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">颜色 (Color)</label>
+                <div class="flex gap-2">
+                    <input type="color" id="color" value="#4f46e5" class="w-10 h-10 rounded cursor-pointer border-0 p-0"
+                        oninput="update()">
+                    <input type="text" id="color-text" value="#4f46e5"
+                        class="flex-1 border rounded px-2 text-xs font-mono text-slate-600"
+                        oninput="document.getElementById('color').value=this.value;update()">
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">CSS Code</label>
+                <div class="bg-slate-800 p-4 rounded-xl relative group">
+                    <code id="css-output"
+                        class="text-[10px] text-green-400 font-mono break-all block leading-relaxed whitespace-pre"></code>
+                    <button onclick="copyCSS()"
+                        class="absolute top-2 right-2 text-[10px] bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded">Copy</button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const tri = document.getElementById('triangle');
+        const output = document.getElementById('css-output');
+        let direction = 'bottom';
+
+        function setDir(d) {
+            direction = d;
+            document.querySelectorAll('.dir-btn').forEach(b => {
+                b.className = 'p-2 border rounded hover:bg-slate-50 text-xs font-bold transition dir-btn';
+            });
+            document.querySelector(`[data-dir="${d}"]`).className = 'p-2 border rounded hover:bg-slate-50 text-xs font-bold transition dir-btn bg-slate-800 text-white';
+            update();
+        }
+
+        function update() {
+            const w = document.getElementById('width').value;
+            const h = document.getElementById('height').value;
+            const col = document.getElementById('color').value;
+
+            document.getElementById('val-w').innerText = w + 'px';
+            document.getElementById('val-h').innerText = h + 'px';
+            document.getElementById('color-text').value = col;
+
+            let css = `width: 0; \nheight: 0; \nborder-style: solid;\n`;
+
+            // Logic for borders based on direction
+            if (direction === 'top') {
+                css += `border-width: 0 ${w / 2}px ${h}px ${w / 2}px;\n`;
+                css += `border-color: transparent transparent ${col} transparent;`;
+            } else if (direction === 'bottom') {
+                css += `border-width: ${h}px ${w / 2}px 0 ${w / 2}px;\n`;
+                css += `border-color: ${col} transparent transparent transparent;`;
+            } else if (direction === 'left') {
+                css += `border-width: ${h / 2}px ${w}px ${h / 2}px 0;\n`;
+                css += `border-color: transparent ${col} transparent transparent;`;
+            } else if (direction === 'right') {
+                css += `border-width: ${h / 2}px 0 ${h / 2}px ${w}px;\n`;
+                css += `border-color: transparent transparent transparent ${col};`;
+            } else if (direction === 'top-left') {
+                css += `border-width: ${h}px ${w}px 0 0;\n`;
+                css += `border-color: ${col} transparent transparent transparent;`;
+            } else if (direction === 'top-right') {
+                css += `border-width: 0 ${w}px ${h}px 0;\n`;
+                css += `border-color: transparent ${col} transparent transparent;`;
+            } else if (direction === 'bottom-left') {
+                css += `border-width: ${h}px 0 0 ${w}px;\n`;
+                css += `border-color: transparent transparent transparent ${col};`;
+            } else if (direction === 'bottom-right') {
+                css += `border-width: 0 0 ${h}px ${w}px;\n`;
+                css += `border-color: transparent transparent ${col} transparent;`;
+            }
+
+            tri.style.cssText = css;
+            output.innerText = css;
+        }
+
+        function copyCSS() {
+            navigator.clipboard.writeText(output.innerText);
+            alert("CSS 已复制!");
+        }
+
+        update();
+    </script>
+</body>
+
+</html>

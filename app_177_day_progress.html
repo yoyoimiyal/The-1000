@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>时间进度仪表盘</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .progress-bar {
+            transition: width 1s linear;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-white font-mono">
+
+    <div class="w-full max-w-lg space-y-8">
+
+        <header class="flex justify-between items-end border-b border-gray-700 pb-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-100">Time Progress</h1>
+                <p class="text-xs text-gray-500" id="current-time">Loading...</p>
+            </div>
+            <a href="./navigation.html" class="text-xs text-gray-500 hover:text-white">EXIT</a>
+        </header>
+
+        <!-- Day -->
+        <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-lg">
+            <div class="flex justify-between mb-2">
+                <span class="text-sm font-bold text-blue-400">今日 (Today)</span>
+                <span class="text-sm font-bold" id="pct-day">0%</span>
+            </div>
+            <div class="w-full h-4 bg-gray-900 rounded-full overflow-hidden">
+                <div id="bar-day" class="h-full bg-blue-500 progress-bar w-0 shadow-[0_0_10px_#3b82f6]"></div>
+            </div>
+            <p class="text-right text-[10px] text-gray-500 mt-2" id="rem-day">Remains: 0h</p>
+        </div>
+
+        <!-- Week -->
+        <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-lg">
+            <div class="flex justify-between mb-2">
+                <span class="text-sm font-bold text-purple-400">本周 (Week)</span>
+                <span class="text-sm font-bold" id="pct-week">0%</span>
+            </div>
+            <div class="w-full h-4 bg-gray-900 rounded-full overflow-hidden">
+                <div id="bar-week" class="h-full bg-purple-500 progress-bar w-0 shadow-[0_0_10px_#a855f7]"></div>
+            </div>
+            <p class="text-right text-[10px] text-gray-500 mt-2" id="rem-week">Remains: 0d</p>
+        </div>
+
+        <!-- Month -->
+        <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-lg">
+            <div class="flex justify-between mb-2">
+                <span class="text-sm font-bold text-green-400">本月 (Month)</span>
+                <span class="text-sm font-bold" id="pct-month">0%</span>
+            </div>
+            <div class="w-full h-4 bg-gray-900 rounded-full overflow-hidden">
+                <div id="bar-month" class="h-full bg-green-500 progress-bar w-0 shadow-[0_0_10px_#22c55e]"></div>
+            </div>
+            <p class="text-right text-[10px] text-gray-500 mt-2" id="rem-month">Remains: 0d</p>
+        </div>
+
+        <!-- Year -->
+        <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-lg">
+            <div class="flex justify-between mb-2">
+                <span class="text-sm font-bold text-yellow-400">今年 (Year)</span>
+                <span class="text-sm font-bold" id="pct-year">0%</span>
+            </div>
+            <div class="w-full h-4 bg-gray-900 rounded-full overflow-hidden">
+                <div id="bar-year" class="h-full bg-yellow-500 progress-bar w-0 shadow-[0_0_10px_#eab308]"></div>
+            </div>
+            <p class="text-right text-[10px] text-gray-500 mt-2" id="rem-year">Remains: 0d</p>
+        </div>
+
+    </div>
+
+    <script>
+        function update() {
+            const now = new Date();
+            document.getElementById('current-time').innerText = now.toLocaleString();
+
+            // Day
+            const startDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const endDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+            const pctDay = (now - startDay) / (endDay - startDay) * 100;
+            const remDayHours = (endDay - now) / 3600000;
+
+            updateBar('day', pctDay, remDayHours.toFixed(1) + ' hrs');
+
+            // Week (Start Monday)
+            const day = now.getDay() || 7; // 1-7
+            const startWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 1);
+            const endWeek = new Date(startWeek.getTime() + 7 * 24 * 60 * 60 * 1000);
+            const pctWeek = (now - startWeek) / (endWeek - startWeek) * 100;
+            const remWeekDays = (endWeek - now) / (24 * 3600000);
+
+            updateBar('week', pctWeek, remWeekDays.toFixed(1) + ' days');
+
+            // Month
+            const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const endMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            const pctMonth = (now - startMonth) / (endMonth - startMonth) * 100;
+            const remMonthDays = (endMonth - now) / (24 * 3600000);
+
+            updateBar('month', pctMonth, remMonthDays.toFixed(1) + ' days');
+
+            // Year
+            const startYear = new Date(now.getFullYear(), 0, 1);
+            const endYear = new Date(now.getFullYear() + 1, 0, 1);
+            const pctYear = (now - startYear) / (endYear - startYear) * 100;
+            const remYearDays = (endYear - now) / (24 * 3600000);
+
+            updateBar('year', pctYear, Math.floor(remYearDays) + ' days');
+        }
+
+        function updateBar(id, pct, rem) {
+            document.getElementById(`bar-${id}`).style.width = pct + '%';
+            document.getElementById(`pct-${id}`).innerText = pct.toFixed(1) + '%';
+            document.getElementById(`rem-${id}`).innerText = 'Remains: ' + rem;
+        }
+
+        setInterval(update, 1000); // 1s update enough? Or faster? 
+        // For smooth day progress, 1s is okay. The CSS transition is 1s linear.
+        // It matches nicely.
+        update();
+    </script>
+</body>
+
+</html>

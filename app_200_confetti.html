@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>200 里程碑礼炮</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            cursor: pointer;
+            background-color: #1a1a1a;
+        }
+
+        .text-glow {
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5), 0 0 20px rgba(255, 215, 0, 0.3);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
+        <div class="text-center text-glow">
+            <p class="text-yellow-400 text-xl font-bold uppercase tracking-widest mb-2">Milestone Reached</p>
+            <h1 class="text-8xl md:text-9xl font-black text-white">200</h1>
+            <p class="text-white/60 mt-4 text-sm font-mono">Apps Created</p>
+        </div>
+    </div>
+
+    <div class="absolute bottom-10 w-full text-center z-20">
+        <p class="text-white/30 text-xs mb-4">Click anywhere to celebrate!</p>
+        <a href="./navigation.html"
+            class="pointer-events-auto bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-full backdrop-blur border border-white/10 transition text-sm font-bold">Back
+            to Navigation</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let confetti = [];
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Confetti {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                // Random direction upwards
+                const angle = Math.random() * Math.PI - Math.PI; // -PI to 0 (top half)
+                // Actually visual upward is -PI/2. Range -PI to 0.
+
+                const speed = Math.random() * 15 + 10;
+                this.vx = (Math.random() - 0.5) * speed * 1.5;
+                this.vy = (Math.random() - 1) * speed - 5; // Upward bias
+
+                this.gravity = 0.2;
+                this.friction = 0.96;
+
+                this.size = Math.random() * 10 + 5;
+                this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                this.rotation = Math.random() * 360;
+                this.rotSpeed = (Math.random() - 0.5) * 10;
+
+                this.life = 1;
+                this.decay = Math.random() * 0.005 + 0.002;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += this.gravity;
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+
+                this.rotation += this.rotSpeed;
+                this.life -= this.decay;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation * Math.PI / 180);
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.life;
+                // Draw rectangle
+                ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+                ctx.restore();
+            }
+        }
+
+        function fire(x, y) {
+            for (let i = 0; i < 30; i++) {
+                confetti.push(new Confetti(x, y));
+            }
+        }
+
+        function loop() {
+            ctx.clearRect(0, 0, width, height);
+
+            for (let i = confetti.length - 1; i >= 0; i--) {
+                const c = confetti[i];
+                c.update();
+                c.draw();
+                if (c.life <= 0 || c.y > height + 50) {
+                    confetti.splice(i, 1);
+                }
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        // Auto fire center
+        function autoFire() {
+            fire(width / 2, height / 1.5);
+            if (Math.random() > 0.5) {
+                setTimeout(autoFire, 800);
+            } else {
+                setTimeout(autoFire, 200);
+            }
+        }
+
+        window.addEventListener('mousedown', e => fire(e.clientX, e.clientY));
+        window.addEventListener('touchstart', e => {
+            e.preventDefault();
+            fire(e.touches[0].clientX, e.touches[0].clientY);
+        });
+
+        loop();
+        // Start celebration sequence
+        setTimeout(autoFire, 500);
+        setTimeout(() => fire(width / 4, height / 2), 1000);
+        setTimeout(() => fire(width * 3 / 4, height / 2), 1200);
+
+    </script>
+</body>
+
+</html>

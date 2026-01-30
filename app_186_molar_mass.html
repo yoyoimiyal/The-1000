@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>摩尔质量计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .formula-input {
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+
+<body class="bg-cyan-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-700">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-3xl shadow-xl border border-cyan-100">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-cyan-800 flex items-center gap-2">
+                <span class="text-2xl">🧪</span> Molar Mass Calc
+            </h1>
+            <a href="./navigation.html" class="text-sm text-cyan-600 hover:underline">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">输入化学式 (Formula)</label>
+                <input type="text" id="formula"
+                    class="w-full p-4 text-2xl font-bold bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-cyan-500 transition formula-input placeholder-slate-300"
+                    placeholder="H2SO4" oninput="calculate()">
+                <p class="text-xs text-slate-400 mt-2">支持括号，如: Ca(NO3)2</p>
+            </div>
+
+            <div class="bg-cyan-50 p-6 rounded-2xl border border-cyan-100 text-center">
+                <p class="text-xs font-bold text-cyan-600 uppercase mb-1">摩尔质量 (Molar Mass)</p>
+                <div class="text-5xl font-black text-cyan-800 tracking-tight">
+                    <span id="result">0</span> <span class="text-lg font-bold text-cyan-600">g/mol</span>
+                </div>
+            </div>
+
+            <div id="details" class="hidden">
+                <h3 class="text-sm font-bold text-slate-500 mb-3 border-b border-slate-100 pb-2">元素构成 (Composition)</h3>
+                <div class="space-y-2 text-sm" id="elements-list">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Simplified Periodic Table (Common Elements)
+        const elements = {
+            'H': 1.008, 'He': 4.0026, 'Li': 6.94, 'Be': 9.0122, 'B': 10.81, 'C': 12.011, 'N': 14.007, 'O': 15.999, 'F': 18.998, 'Ne': 20.180,
+            'Na': 22.990, 'Mg': 24.305, 'Al': 26.982, 'Si': 28.085, 'P': 30.974, 'S': 32.06, 'Cl': 35.45, 'K': 39.098, 'Ar': 39.948, 'Ca': 40.078,
+            'Sc': 44.956, 'Ti': 47.867, 'V': 50.942, 'Cr': 51.996, 'Mn': 54.938, 'Fe': 55.845, 'Co': 58.933, 'Ni': 58.693, 'Cu': 63.546, 'Zn': 65.38,
+            'Ga': 69.723, 'Ge': 72.630, 'As': 74.922, 'Se': 78.96, 'Br': 79.904, 'Kr': 83.798, 'Rb': 85.468, 'Sr': 87.62, 'Y': 88.906, 'Zr': 91.224,
+            'Ag': 107.87, 'Sn': 118.71, 'I': 126.90, 'Ba': 137.33, 'Au': 196.97, 'Hg': 200.59, 'Pb': 207.2
+        };
+
+        function calculate() {
+            const input = document.getElementById('formula').value.trim();
+            const resultEl = document.getElementById('result');
+            const listEl = document.getElementById('elements-list');
+            const detailsDiv = document.getElementById('details');
+
+            if (!input) {
+                resultEl.innerText = '0';
+                detailsDiv.classList.add('hidden');
+                return;
+            }
+
+            try {
+                const composition = parseFormula(input);
+                let totalMass = 0;
+                listEl.innerHTML = '';
+
+                for (const [el, count] of Object.entries(composition)) {
+                    if (!elements[el]) throw new Error(`Unknown element: ${el}`);
+                    const mass = elements[el] * count;
+                    totalMass += mass;
+                }
+
+                resultEl.innerText = totalMass.toFixed(3);
+
+                // Show breakdown
+                let breakdownHTML = '';
+                const sortedEls = Object.keys(composition).sort();
+                for (const el of sortedEls) {
+                    const count = composition[el];
+                    const mass = elements[el] * count;
+                    const pct = ((mass / totalMass) * 100).toFixed(2);
+
+                    breakdownHTML += `
+                        <div class="flex justify-between items-center bg-slate-50 p-2 rounded">
+                            <div>
+                                <span class="font-bold text-slate-700">${el}</span>
+                                <span class="text-slate-400 text-xs ml-1">x ${count}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="font-mono text-cyan-600 font-bold">${mass.toFixed(3)}</span>
+                                <span class="text-xs text-slate-400 ml-2">(${pct}%)</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                listEl.innerHTML = breakdownHTML;
+                detailsDiv.classList.remove('hidden');
+
+            } catch (e) {
+                resultEl.innerText = "Error";
+                // console.error(e);
+            }
+        }
+
+        function parseFormula(formula) {
+            const composition = {};
+
+            // Regex to match Element (Upper + optional Lower) and Count
+            // Handle parentheses via recursion or stack? 
+            // Simple stack parser for brackets
+
+            const stack = [{}]; // Stack of composition objects
+
+            let i = 0;
+            while (i < formula.length) {
+                const char = formula[i];
+
+                if (char === '(') {
+                    stack.push({});
+                    i++;
+                } else if (char === ')') {
+                    i++;
+                    // Check for multiplier after )
+                    let numStr = "";
+                    while (i < formula.length && /[0-9]/.test(formula[i])) {
+                        numStr += formula[i];
+                        i++;
+                    }
+                    const multiplier = numStr === "" ? 1 : parseInt(numStr);
+                    const popped = stack.pop();
+                    const current = stack[stack.length - 1];
+
+                    for (const [el, count] of Object.entries(popped)) {
+                        current[el] = (current[el] || 0) + count * multiplier;
+                    }
+                } else if (/[A-Z]/.test(char)) {
+                    // Start of element
+                    let el = char;
+                    i++;
+                    // Check for lower case
+                    while (i < formula.length && /[a-z]/.test(formula[i])) {
+                        el += formula[i];
+                        i++;
+                    }
+
+                    // Check for number
+                    let numStr = "";
+                    while (i < formula.length && /[0-9]/.test(formula[i])) {
+                        numStr += formula[i];
+                        i++;
+                    }
+                    const count = numStr === "" ? 1 : parseInt(numStr);
+
+                    const current = stack[stack.length - 1];
+                    current[el] = (current[el] || 0) + count;
+                } else {
+                    // Invalid char or space, skip
+                    i++;
+                }
+            }
+
+            return stack[0];
+        }
+    </script>
+</body>
+
+</html>

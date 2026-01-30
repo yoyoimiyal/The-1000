@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>盲文翻译器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .braille-font {
+            font-size: 2rem;
+            line-height: 1.5;
+            letter-spacing: 0.1em;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6 text-gray-800">
+
+    <div class="w-full max-w-3xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-gray-700">
+                <span class="text-2xl">⠃</span> Braille Translator
+            </h1>
+            <a href="./navigation.html" class="text-sm text-gray-400 hover:text-gray-600">退出</a>
+        </header>
+
+        <div class="flex flex-col gap-6">
+
+            <!-- Input -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">普通文本 (English/Number)</label>
+                <textarea id="input"
+                    class="w-full h-32 resize-none outline-none text-lg text-gray-700 placeholder-gray-300"
+                    placeholder="Type here..." oninput="translateToBraille()"></textarea>
+                <div class="flex justify-between items-center mt-2">
+                    <span class="text-xs text-gray-400">目前仅支持英文字母和数字</span>
+                    <button onclick="document.getElementById('input').value=''"
+                        class="text-xs text-red-400 hover:text-red-600">清空</button>
+                </div>
+            </div>
+
+            <!-- Output -->
+            <div class="bg-gray-800 p-6 rounded-2xl shadow-lg text-white">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">布莱叶盲文 (Braille)</label>
+                <div id="output" class="braille-font min-h-[8rem] break-words">
+                    <!-- Braille here -->
+                </div>
+                <div class="text-right mt-4">
+                    <button onclick="copyResult()"
+                        class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded transition text-white">复制盲文</button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Cheat Sheet -->
+        <div class="mt-8 bg-white p-6 rounded-xl border border-gray-200">
+            <h3 class="text-sm font-bold text-gray-500 mb-4 uppercase">对照表</h3>
+            <div class="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-4 text-center">
+                <div><span class="block text-gray-400 text-xs">a</span><span class="text-xl">⠁</span></div>
+                <div><span class="block text-gray-400 text-xs">b</span><span class="text-xl">⠃</span></div>
+                <div><span class="block text-gray-400 text-xs">c</span><span class="text-xl">⠉</span></div>
+                <div><span class="block text-gray-400 text-xs">d</span><span class="text-xl">⠙</span></div>
+                <div><span class="block text-gray-400 text-xs">e</span><span class="text-xl">⠑</span></div>
+                <div><span class="block text-gray-400 text-xs">f</span><span class="text-xl">⠋</span></div>
+                <div><span class="block text-gray-400 text-xs">g</span><span class="text-xl">⠛</span></div>
+                <div><span class="block text-gray-400 text-xs">h</span><span class="text-xl">⠓</span></div>
+                <div><span class="block text-gray-400 text-xs">i</span><span class="text-xl">⠊</span></div>
+                <div><span class="block text-gray-400 text-xs">j</span><span class="text-xl">⠚</span></div>
+                <div><span class="block text-gray-400 text-xs">k</span><span class="text-xl">⠅</span></div>
+                <div><span class="block text-gray-400 text-xs">l</span><span class="text-xl">⠇</span></div>
+                <div><span class="block text-gray-400 text-xs">m</span><span class="text-xl">⠍</span></div>
+                <div><span class="block text-gray-400 text-xs">n</span><span class="text-xl">⠝</span></div>
+                <div><span class="block text-gray-400 text-xs">o</span><span class="text-xl">⠕</span></div>
+                <div><span class="block text-gray-400 text-xs">p</span><span class="text-xl">⠏</span></div>
+                <div><span class="block text-gray-400 text-xs">q</span><span class="text-xl">⠟</span></div>
+                <div><span class="block text-gray-400 text-xs">r</span><span class="text-xl">⠗</span></div>
+                <div><span class="block text-gray-400 text-xs">s</span><span class="text-xl">⠎</span></div>
+                <div><span class="block text-gray-400 text-xs">t</span><span class="text-xl">⠞</span></div>
+                <div><span class="block text-gray-400 text-xs">u</span><span class="text-xl">⠥</span></div>
+                <div><span class="block text-gray-400 text-xs">v</span><span class="text-xl">⠧</span></div>
+                <div><span class="block text-gray-400 text-xs">w</span><span class="text-xl">⠺</span></div>
+                <div><span class="block text-gray-400 text-xs">x</span><span class="text-xl">⠭</span></div>
+                <div><span class="block text-gray-400 text-xs">y</span><span class="text-xl">⠽</span></div>
+                <div><span class="block text-gray-400 text-xs">z</span><span class="text-xl">⠵</span></div>
+                <div><span class="block text-gray-400 text-xs">#</span><span class="text-xl">⠼</span></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const map = {
+            'a': '⠁', 'b': '⠃', 'c': '⠉', 'd': '⠙', 'e': '⠑', 'f': '⠋', 'g': '⠛', 'h': '⠓', 'i': '⠊', 'j': '⠚',
+            'k': '⠅', 'l': '⠇', 'm': '⠍', 'n': '⠝', 'o': '⠕', 'p': '⠏', 'q': '⠟', 'r': '⠗', 's': '⠎', 't': '⠞',
+            'u': '⠥', 'v': '⠧', 'w': '⠺', 'x': '⠭', 'y': '⠽', 'z': '⠵',
+            '1': '⠁', '2': '⠃', '3': '⠉', '4': '⠙', '5': '⠑', '6': '⠋', '7': '⠛', '8': '⠓', '9': '⠊', '0': '⠚',
+            ' ': ' ', ',': '⠂', ';': '⠆', ':': '⠒', '.': '⠲', '!': '⠖', '?': '⠦', '"': '⠶', "'": '⠦',
+            'capital': '⠠', 'number': '⠼'
+        };
+
+        const inputEl = document.getElementById('input');
+        const outputEl = document.getElementById('output');
+
+        function translateToBraille() {
+            const text = inputEl.value;
+            let result = "";
+            let numberMode = false;
+
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const lower = char.toLowerCase();
+
+                // Check Number
+                if (/[0-9]/.test(char)) {
+                    if (!numberMode) {
+                        result += map['number'];
+                        numberMode = true;
+                    }
+                    result += map[char];
+                } else {
+                    if (numberMode && char !== ' ') {
+                        // End number mode if not space? Usually space ends number context or specific symbol
+                        // Simplified: space resets
+                    }
+                    if (char === ' ') {
+                        numberMode = false;
+                        result += ' ';
+                        continue;
+                    }
+
+                    // Check Capital
+                    if (/[A-Z]/.test(char)) {
+                        result += map['capital'];
+                        numberMode = false;
+                    }
+
+                    if (map[lower]) {
+                        result += map[lower];
+                    } else {
+                        result += '?'; // Unknown
+                    }
+                    numberMode = false;
+                }
+            }
+
+            outputEl.innerText = result;
+        }
+
+        function copyResult() {
+            navigator.clipboard.writeText(outputEl.innerText);
+            alert("已复制!");
+        }
+    </script>
+</body>
+
+</html>

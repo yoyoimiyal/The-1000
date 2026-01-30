@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>空间记忆矩阵</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .grid-container {
+            display: grid;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .tile {
+            aspect-ratio: 1;
+            background-color: #334155;
+            /* slate-700 */
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .tile:active {
+            transform: scale(0.95);
+        }
+
+        .tile.active {
+            background-color: #f59e0b;
+            /* amber-500 (flash) */
+        }
+
+        .tile.correct {
+            background-color: #22c55e;
+            /* green-500 */
+        }
+
+        .tile.wrong {
+            background-color: #ef4444;
+            /* red-500 */
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 min-h-screen flex flex-col items-center justify-center p-6 text-white select-none">
+
+    <div class="w-full max-w-md">
+
+        <header class="flex justify-between items-center mb-10">
+            <div>
+                <h1 class="text-2xl font-bold">Memory Matrix</h1>
+                <p class="text-xs text-slate-400">Level: <span id="level" class="text-amber-400 font-bold">1</span></p>
+            </div>
+            <div class="flex gap-4">
+                <div class="text-right">
+                    <p class="text-[10px] text-slate-500 uppercase">Lives</p>
+                    <div id="lives" class="text-red-500">❤️❤️❤️</div>
+                </div>
+                <a href="./navigation.html"
+                    class="self-center text-xs text-slate-500 hover:text-white border border-slate-700 px-3 py-1 rounded transition">Exit</a>
+            </div>
+        </header>
+
+        <div class="flex justify-center mb-8">
+            <div id="grid" class="grid-container">
+                <!-- Tiles -->
+            </div>
+        </div>
+
+        <div id="message" class="text-center h-8 font-bold text-lg text-slate-300">
+            准备开始...
+        </div>
+
+        <button onclick="startGame()" id="start-btn"
+            class="w-full py-4 mt-8 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-lg transition">
+            开始挑战
+        </button>
+
+    </div>
+
+    <script>
+        const gridEl = document.getElementById('grid');
+        const msgEl = document.getElementById('message');
+        const levelEl = document.getElementById('level');
+        const livesEl = document.getElementById('lives');
+        const startBtn = document.getElementById('start-btn');
+
+        let level = 1;
+        let lives = 3;
+        let gridSize = 3;
+        let tilesToMemorize = 3;
+        let pattern = [];
+        let userPattern = [];
+        let isInputPhase = false;
+
+        function startGame() {
+            level = 1;
+            lives = 3;
+            gridSize = 3;
+            tilesToMemorize = 3;
+            updateUI();
+            startBtn.classList.add('hidden');
+            nextLevel();
+        }
+
+        function updateUI() {
+            levelEl.innerText = level;
+            livesEl.innerText = "❤️".repeat(lives);
+        }
+
+        function nextLevel() {
+            isInputPhase = false;
+            userPattern = [];
+            pattern = [];
+
+            // Config based on level
+            if (level <= 2) { gridSize = 3; tilesToMemorize = 3; }
+            else if (level <= 5) { gridSize = 4; tilesToMemorize = 4 + (level - 3); }
+            else if (level <= 8) { gridSize = 5; tilesToMemorize = 6 + (level - 6); }
+            else { gridSize = 6; tilesToMemorize = 8 + (level - 9); }
+
+            renderGrid();
+            msgEl.innerText = "记忆方块位置...";
+
+            // Generate pattern
+            const totalTiles = gridSize * gridSize;
+            const indices = Array.from({ length: totalTiles }, (_, i) => i);
+            // Shuffle
+            for (let i = indices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [indices[i], indices[j]] = [indices[j], indices[i]];
+            }
+            pattern = indices.slice(0, tilesToMemorize);
+
+            // Show pattern
+            setTimeout(() => {
+                pattern.forEach(idx => {
+                    const tile = document.getElementById(`tile-${idx}`);
+                    tile.classList.add('active');
+                });
+
+                // Hide pattern
+                setTimeout(() => {
+                    document.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
+                    isInputPhase = true;
+                    msgEl.innerText = "请复原图案";
+                }, 1000 + (level * 100)); // Time to memorize increases slightly? Or fixed? Usually fixed ~1.5s
+            }, 500);
+        }
+
+        function renderGrid() {
+            gridEl.innerHTML = '';
+            gridEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+            gridEl.style.width = `${gridSize * 50 + (gridSize - 1) * 8}px`; // 50px tile + gap
+
+            for (let i = 0; i < gridSize * gridSize; i++) {
+                const tile = document.createElement('div');
+                tile.className = "tile w-[50px] h-[50px]";
+                tile.id = `tile-${i}`;
+                tile.onclick = () => handleInput(i, tile);
+                gridEl.appendChild(tile);
+            }
+        }
+
+        function handleInput(idx, tile) {
+            if (!isInputPhase) return;
+            if (tile.classList.contains('correct')) return; // Already clicked
+
+            if (pattern.includes(idx)) {
+                // Correct
+                tile.classList.add('correct');
+                userPattern.push(idx);
+
+                if (userPattern.length === pattern.length) {
+                    isInputPhase = false;
+                    msgEl.innerText = "正确! 下一关...";
+                    msgEl.className = "text-center h-8 font-bold text-lg text-green-400";
+                    level++;
+                    updateUI();
+                    setTimeout(() => {
+                        msgEl.className = "text-center h-8 font-bold text-lg text-slate-300";
+                        nextLevel();
+                    }, 1000);
+                }
+            } else {
+                // Wrong
+                tile.classList.add('wrong');
+                lives--;
+                updateUI();
+
+                if (lives <= 0) {
+                    gameOver();
+                } else {
+                    // Show missing tiles briefly then retry same level? Or just continue?
+                    // Classic logic: show missed, then restart level/pattern
+                    isInputPhase = false;
+                    msgEl.innerText = "错误!";
+                    msgEl.className = "text-center h-8 font-bold text-lg text-red-500";
+
+                    // Reveal missed
+                    pattern.forEach(p => {
+                        const t = document.getElementById(`tile-${p}`);
+                        t.classList.add('active'); // Show correct ones
+                    });
+
+                    setTimeout(() => {
+                        msgEl.className = "text-center h-8 font-bold text-lg text-slate-300";
+                        nextLevel(); // Retry (new pattern for same level)
+                    }, 1500);
+                }
+            }
+        }
+
+        function gameOver() {
+            isInputPhase = false;
+            msgEl.innerText = `游戏结束 (Level ${level})`;
+            startBtn.classList.remove('hidden');
+            startBtn.innerText = "再试一次";
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>赛博故障生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glitch-container {
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center p-6 text-cyan-400 font-mono">
+
+    <div class="w-full max-w-4xl">
+
+        <header class="flex justify-between items-center mb-8 border-b border-cyan-900 pb-4">
+            <h1 class="text-2xl font-bold flex items-center gap-2 uppercase tracking-widest text-shadow-neon">
+                <span class="text-3xl">⚡</span> Glitch Generator
+            </h1>
+            <a href="./navigation.html" class="text-sm text-cyan-700 hover:text-cyan-400">EXIT</a>
+        </header>
+
+        <div class="flex flex-col md:flex-row gap-8">
+
+            <!-- Controls -->
+            <div class="w-full md:w-80 bg-black/50 p-6 rounded-xl border border-cyan-800 shadow-lg">
+                <label
+                    class="block w-full py-3 border-2 border-dashed border-cyan-800 rounded-lg text-center cursor-pointer hover:bg-cyan-900/20 transition mb-6 group">
+                    <span class="text-cyan-600 group-hover:text-cyan-400 font-bold text-sm">📂 UPLOAD IMAGE</span>
+                    <input type="file" class="hidden" accept="image/*" onchange="loadImage(event)">
+                </label>
+
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-xs font-bold text-cyan-600 uppercase mb-2">Intensity (强度)</label>
+                        <input type="range" id="intensity" min="0" max="100" value="30"
+                            class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-cyan-600 uppercase mb-2">Seed (随机种子)</label>
+                        <input type="range" id="seed" min="0" max="1000" value="0"
+                            class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500">
+                    </div>
+
+                    <button onclick="render()"
+                        class="w-full py-3 bg-cyan-700 hover:bg-cyan-600 text-black font-bold rounded-lg transition shadow-[0_0_15px_rgba(6,182,212,0.5)]">
+                        GENERATE
+                    </button>
+
+                    <button onclick="download()"
+                        class="w-full py-3 border border-cyan-700 text-cyan-400 hover:bg-cyan-900/30 font-bold rounded-lg transition">
+                        DOWNLOAD
+                    </button>
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div class="flex-1 flex items-center justify-center bg-black rounded-xl border border-gray-800 min-h-[400px] relative overflow-hidden"
+                id="container">
+                <canvas id="canvas" class="max-w-full max-h-[70vh]"></canvas>
+                <div id="placeholder" class="absolute text-gray-600 text-xs">NO SIGNAL</div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const placeholder = document.getElementById('placeholder');
+
+        let originalImg = null;
+
+        // Default image
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.src = "https://images.unsplash.com/photo-1515630278258-407f66498911?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80";
+        img.onload = () => {
+            originalImg = img;
+            placeholder.style.display = 'none';
+            render();
+        };
+
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                const newImg = new Image();
+                newImg.onload = () => {
+                    originalImg = newImg;
+                    placeholder.style.display = 'none';
+                    render();
+                };
+                newImg.src = url;
+            }
+        }
+
+        function render() {
+            if (!originalImg) return;
+
+            const w = originalImg.width;
+            const h = originalImg.height;
+
+            // Limit preview size for performance
+            canvas.width = w;
+            canvas.height = h;
+
+            ctx.drawImage(originalImg, 0, 0);
+
+            const intensity = parseInt(document.getElementById('intensity').value);
+            const seed = parseInt(document.getElementById('seed').value);
+
+            if (intensity === 0) return;
+
+            // Simple Slice & Offset Glitch
+            const slices = Math.floor(h / 10); // Slice height approx 10px base
+            const maxOffset = w * (intensity / 100) * 0.2;
+
+            for (let i = 0; i < slices; i++) {
+                // Pseudo random based on seed + i
+                if (Math.sin(seed + i * 132.1) > 0.5) { // Random chance to slice
+                    const sliceH = Math.floor(Math.abs(Math.sin(seed + i * 23.4)) * 30) + 1;
+                    const sliceY = Math.floor(Math.random() * h);
+                    const offset = Math.floor((Math.random() - 0.5) * maxOffset);
+
+                    try {
+                        const sliceData = ctx.getImageData(0, sliceY, w, sliceH);
+                        ctx.putImageData(sliceData, offset, sliceY);
+                    } catch (e) { } // Ignore out of bounds
+                }
+            }
+
+            // RGB Split Effect (Chromatic Aberration)
+            if (intensity > 10) {
+                const splitOffset = Math.floor(intensity * 0.2);
+                const imageData = ctx.getImageData(0, 0, w, h);
+                const data = imageData.data;
+                const copy = new Uint8ClampedArray(data);
+
+                for (let i = 0; i < data.length; i += 4) {
+                    // Red channel offset
+                    const redIndex = i + (splitOffset * 4);
+                    if (redIndex < data.length) {
+                        data[i] = copy[redIndex]; // Shift Red
+                    }
+                    // Blue channel offset other way
+                    const blueIndex = i - (splitOffset * 4);
+                    if (blueIndex >= 0) {
+                        data[i + 2] = copy[blueIndex + 2];
+                    }
+                }
+                ctx.putImageData(imageData, 0, 0);
+            }
+
+            // Scanlines
+            ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+            for (let y = 0; y < h; y += 4) {
+                ctx.fillRect(0, y, w, 2);
+            }
+        }
+
+        function download() {
+            const link = document.createElement('a');
+            link.download = 'glitch.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+
+</html>

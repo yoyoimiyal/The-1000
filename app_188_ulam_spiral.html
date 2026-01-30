@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>乌拉姆质数螺旋</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            image-rendering: pixelated;
+            width: 100%;
+            max-width: 600px;
+            aspect-ratio: 1;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-white">
+
+    <div class="mb-6 flex justify-between w-full max-w-[600px] items-end">
+        <div>
+            <h1 class="text-2xl font-bold text-emerald-400">Ulam Spiral</h1>
+            <p class="text-xs text-gray-500">The Pattern of Primes</p>
+        </div>
+        <div class="text-right text-xs">
+            <span class="block text-gray-400">Green = Prime</span>
+            <a href="./navigation.html" class="hover:text-white">Exit</a>
+        </div>
+    </div>
+
+    <canvas id="canvas" width="401" height="401" class="rounded border border-gray-700 bg-black"></canvas>
+
+    <div class="mt-6 flex gap-4 bg-gray-800 p-3 rounded-xl border border-gray-700">
+        <button onclick="zoomOut()"
+            class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-xs font-bold transition">Zoom Out (-)</button>
+        <span id="range-display" class="font-mono text-sm self-center text-gray-300">Size: 401x401</span>
+        <button onclick="zoomIn()"
+            class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-xs font-bold transition">Zoom In (+)</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const display = document.getElementById('range-display');
+
+        let size = 401; // Grid dimension (odd number to have center)
+
+        function isPrime(num) {
+            if (num <= 1) return false;
+            if (num <= 3) return true;
+            if (num % 2 === 0 || num % 3 === 0) return false;
+            for (let i = 5; i * i <= num; i += 6) {
+                if (num % i === 0 || num % (i + 2) === 0) return false;
+            }
+            return true;
+        }
+
+        function draw() {
+            canvas.width = size;
+            canvas.height = size;
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, size, size);
+
+            const imgData = ctx.createImageData(size, size);
+            const data = imgData.data;
+
+            let x = Math.floor(size / 2);
+            let y = Math.floor(size / 2);
+            let num = 1;
+            let step = 1;
+            let direction = 0; // 0:Right, 1:Up, 2:Left, 3:Down
+            let stepCount = 0;
+            let stepChange = 0; // Increase step every 2 turns
+
+            // Max num is roughly size*size
+            const max = size * size;
+
+            while (num <= max) {
+                // Plot if prime
+                if (isPrime(num)) {
+                    const idx = (y * size + x) * 4;
+                    data[idx] = 16;   // R (dark green)
+                    data[idx + 1] = 185; // G (emerald-500)
+                    data[idx + 2] = 129; // B
+                    data[idx + 3] = 255; // A
+                }
+
+                // Move
+                switch (direction) {
+                    case 0: x++; break; // Right
+                    case 1: y--; break; // Up
+                    case 2: x--; break; // Left
+                    case 3: y++; break; // Down
+                }
+
+                num++;
+                stepCount++;
+
+                if (stepCount === step) {
+                    stepCount = 0;
+                    direction = (direction + 1) % 4;
+                    stepChange++;
+                    if (stepChange % 2 === 0) {
+                        step++;
+                    }
+                }
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+            display.innerText = `Size: ${size}x${size} (Max: ${size * size})`;
+        }
+
+        function zoomIn() {
+            if (size > 51) {
+                size -= 50;
+                draw();
+            }
+        }
+
+        function zoomOut() {
+            if (size < 800) { // Limit for performance
+                size += 50;
+                draw();
+            }
+        }
+
+        // Init
+        draw();
+    </script>
+</body>
+
+</html>

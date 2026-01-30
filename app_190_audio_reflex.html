@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>听觉反应测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            user-select: none;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-blue-600 h-screen w-screen flex flex-col items-center justify-center cursor-pointer text-white transition-colors duration-200"
+    id="body" onmousedown="handleClick()" ontouchstart="handleClick()">
+
+    <div class="text-center p-8 pointer-events-none">
+
+        <div id="icon" class="text-6xl mb-6 opacity-80">🎧</div>
+
+        <h1 class="text-4xl font-bold mb-4" id="main-text">Audio Reflex</h1>
+
+        <p class="text-xl opacity-90 max-w-md mx-auto" id="sub-text">
+            听到声音后立即点击屏幕。<br>点击开始。
+        </p>
+
+        <div id="result" class="hidden mt-8">
+            <div class="text-6xl font-black mb-2"><span id="time-ms">0</span> ms</div>
+            <button onclick="resetGame(event)"
+                class="mt-8 bg-white text-blue-900 px-8 py-3 rounded-full font-bold shadow-xl pointer-events-auto hover:bg-gray-100 transition">
+                再试一次
+            </button>
+        </div>
+
+    </div>
+
+    <div class="absolute bottom-8 w-full text-center pointer-events-none">
+        <a href="./navigation.html" class="text-white/50 text-sm hover:text-white pointer-events-auto underline">退出</a>
+    </div>
+
+    <script>
+        const body = document.getElementById('body');
+        const mainText = document.getElementById('main-text');
+        const subText = document.getElementById('sub-text');
+        const icon = document.getElementById('icon');
+        const resultDiv = document.getElementById('result');
+        const timeMs = document.getElementById('time-ms');
+
+        let state = 'waiting'; // waiting, ready, now, result
+        let audioCtx;
+        let startTime = 0;
+        let timeoutId;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function beep() {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.value = 800;
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        function handleClick() {
+            initAudio();
+
+            if (state === 'waiting') {
+                prepare();
+            } else if (state === 'ready') {
+                tooSoon();
+            } else if (state === 'now') {
+                finish();
+            }
+        }
+
+        function prepare() {
+            state = 'ready';
+            body.className = "bg-red-500 h-screen w-screen flex flex-col items-center justify-center cursor-pointer text-white transition-colors duration-200";
+            mainText.innerText = "等待声音...";
+            subText.innerText = "听到 BEEP 声立即点击";
+            icon.innerText = "👂";
+            resultDiv.classList.add('hidden');
+
+            const delay = Math.random() * 3000 + 2000; // 2-5s
+
+            timeoutId = setTimeout(() => {
+                if (state === 'ready') {
+                    state = 'now';
+                    body.className = "bg-green-500 h-screen w-screen flex flex-col items-center justify-center cursor-pointer text-white transition-colors duration-0"; // Instant change
+                    mainText.innerText = "点击!";
+                    icon.innerText = "🔊";
+                    beep();
+                    startTime = Date.now();
+                }
+            }, delay);
+        }
+
+        function tooSoon() {
+            state = 'waiting';
+            clearTimeout(timeoutId);
+            body.className = "bg-blue-600 h-screen w-screen flex flex-col items-center justify-center cursor-pointer text-white transition-colors duration-200";
+            mainText.innerText = "太快了!";
+            subText.innerText = "请等待声音响起后再点击。点击屏幕重试。";
+            icon.innerText = "⚠️";
+        }
+
+        function finish() {
+            const time = Date.now() - startTime;
+            state = 'result';
+            mainText.innerText = "测试结果";
+            subText.innerText = "";
+            resultDiv.classList.remove('hidden');
+            timeMs.innerText = time;
+
+            if (time < 200) icon.innerText = "⚡";
+            else if (time < 300) icon.innerText = "🐇";
+            else icon.innerText = "🐢";
+        }
+
+        function resetGame(e) {
+            e.stopPropagation();
+            state = 'waiting';
+            body.className = "bg-blue-600 h-screen w-screen flex flex-col items-center justify-center cursor-pointer text-white transition-colors duration-200";
+            mainText.innerText = "Audio Reflex";
+            subText.innerText = "听到声音后立即点击屏幕。\n点击开始。";
+            icon.innerText = "🎧";
+            resultDiv.classList.add('hidden');
+        }
+    </script>
+</body>
+
+</html>

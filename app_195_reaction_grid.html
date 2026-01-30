@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网格反应测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .grid-cell {
+            background-color: #334155;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.05s;
+        }
+
+        .grid-cell:active {
+            transform: scale(0.95);
+        }
+
+        .grid-cell.active {
+            background-color: #ef4444;
+            box-shadow: 0 0 15px #ef4444;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-4 select-none">
+
+    <div class="w-full max-w-md">
+
+        <header class="flex justify-between items-end mb-8 px-2">
+            <div>
+                <h1 class="text-xl font-bold text-white">Grid Reflex</h1>
+                <p class="text-xs text-gray-500">点击红色的格子!</p>
+            </div>
+            <div class="text-right">
+                <div class="text-3xl font-mono font-bold text-green-400" id="score">0</div>
+                <div class="text-xs text-gray-500">SCORE</div>
+            </div>
+        </header>
+
+        <!-- The Grid -->
+        <div id="grid" class="grid grid-cols-5 gap-3 aspect-square mb-8 bg-gray-800 p-3 rounded-2xl shadow-xl">
+            <!-- Cells injected -->
+        </div>
+
+        <div class="text-center h-12">
+            <div id="timer-bar" class="w-full h-2 bg-gray-700 rounded-full overflow-hidden hidden">
+                <div id="progress" class="h-full bg-yellow-500 w-full"></div>
+            </div>
+
+            <button onclick="startGame()" id="start-btn"
+                class="bg-white text-gray-900 px-8 py-3 rounded-full font-bold shadow-lg hover:bg-gray-200 transition transform hover:scale-105">
+                开始游戏 (30s)
+            </button>
+        </div>
+
+    </div>
+
+    <div class="mt-8 text-center">
+        <a href="./navigation.html"
+            class="text-xs text-gray-600 hover:text-white border border-gray-700 px-3 py-1 rounded">退出</a>
+    </div>
+
+    <script>
+        const grid = document.getElementById('grid');
+        const scoreEl = document.getElementById('score');
+        const startBtn = document.getElementById('start-btn');
+        const timerBar = document.getElementById('timer-bar');
+        const progressBar = document.getElementById('progress');
+
+        const size = 5; // 5x5
+        let score = 0;
+        let activeIndex = -1;
+        let timeLeft = 30;
+        let isPlaying = false;
+        let timerLoop;
+        let gameDuration = 30000;
+        let startTime;
+
+        function init() {
+            grid.innerHTML = '';
+            for (let i = 0; i < size * size; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell';
+                cell.dataset.id = i;
+                cell.addEventListener('mousedown', handleClick);
+                cell.addEventListener('touchstart', handleClick); // Mobile support
+                grid.appendChild(cell);
+            }
+        }
+
+        function startGame() {
+            if (isPlaying) return;
+
+            score = 0;
+            scoreEl.innerText = 0;
+            isPlaying = true;
+            startBtn.classList.add('hidden');
+            timerBar.classList.remove('hidden');
+
+            startTime = Date.now();
+
+            timerLoop = requestAnimationFrame(updateTimer);
+
+            spawnTarget();
+        }
+
+        function updateTimer() {
+            if (!isPlaying) return;
+
+            const elapsed = Date.now() - startTime;
+            const remaining = Math.max(0, gameDuration - elapsed);
+            const pct = (remaining / gameDuration) * 100;
+
+            progressBar.style.width = pct + '%';
+
+            if (pct > 60) progressBar.className = "h-full bg-green-500 w-full";
+            else if (pct > 30) progressBar.className = "h-full bg-yellow-500 w-full";
+            else progressBar.className = "h-full bg-red-500 w-full";
+
+            if (remaining <= 0) {
+                endGame();
+            } else {
+                requestAnimationFrame(updateTimer);
+            }
+        }
+
+        function spawnTarget() {
+            // Clear old
+            if (activeIndex !== -1) {
+                grid.children[activeIndex].classList.remove('active');
+            }
+
+            // New random index
+            let newIndex;
+            do {
+                newIndex = Math.floor(Math.random() * (size * size));
+            } while (newIndex === activeIndex);
+
+            activeIndex = newIndex;
+            grid.children[activeIndex].classList.add('active');
+        }
+
+        function handleClick(e) {
+            e.preventDefault(); // Prevent double fire on touch
+            if (!isPlaying) return;
+
+            const clickedIndex = parseInt(this.dataset.id);
+
+            if (clickedIndex === activeIndex) {
+                score++;
+                scoreEl.innerText = score;
+                spawnTarget();
+            } else {
+                // Penalty? Or just ignore
+                // Score penalty makes it harder
+                score = Math.max(0, score - 1);
+                scoreEl.innerText = score;
+                // Visual shake maybe?
+            }
+        }
+
+        function endGame() {
+            isPlaying = false;
+            cancelAnimationFrame(timerLoop);
+
+            if (activeIndex !== -1) {
+                grid.children[activeIndex].classList.remove('active');
+            }
+
+            timerBar.classList.add('hidden');
+            startBtn.classList.remove('hidden');
+            startBtn.innerText = "再玩一次";
+
+            alert(`时间到！最终得分: ${score}`);
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

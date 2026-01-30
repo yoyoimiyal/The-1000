@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打地鼠</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .hole {
+            width: 80px;
+            height: 80px;
+            background-color: #78350f;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 10px 10px rgba(0, 0, 0, 0.5);
+            border-bottom: 4px solid #92400e;
+        }
+
+        .mole {
+            width: 60px;
+            height: 60px;
+            background-color: #fca5a5;
+            border-radius: 50%;
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: top 0.2s;
+            cursor: pointer;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="30" cy="30" r="5" fill="black"/><circle cx="70" cy="30" r="5" fill="black"/><path d="M40 60 Q50 70 60 60" stroke="black" fill="none" stroke-width="3"/></svg>');
+            background-size: cover;
+        }
+
+        .mole.up {
+            top: 10px;
+        }
+
+        .mole:active {
+            transform: translateX(-50%) scale(0.9);
+            filter: brightness(0.8);
+        }
+
+        .dirt {
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background-color: #78350f;
+            border-radius: 50%;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body class="bg-green-100 min-h-screen flex flex-col items-center justify-center p-4 select-none">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-3xl shadow-xl border-b-8 border-green-200">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-black text-green-700 tracking-wider">WHACK-A-MOLE</h1>
+            <div class="text-right">
+                <div class="text-xs font-bold text-gray-400 uppercase">Score</div>
+                <div class="text-3xl font-black text-green-600" id="score">0</div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-3 gap-6 mb-8 justify-items-center">
+            <!-- Holes -->
+            <div class="hole">
+                <div class="mole" id="mole-0" onclick="bonk(0)"></div>
+                <div class="dirt"></div>
+            </div>
+            <div class="hole">
+                <div class="mole" id="mole-1" onclick="bonk(1)"></div>
+                <div class="dirt"></div>
+            </div>
+            <div class="hole">
+                <div class="mole" id="mole-2" onclick="bonk(2)"></div>
+                <div class="dirt"></div>
+            </div>
+            <div class="hole">
+                <div class="mole" id="mole-3" onclick="bonk(3)"></div>
+                <div class="dirt"></div>
+            </div>
+            <div class="hole">
+                <div class="mole" id="mole-4" onclick="bonk(4)"></div>
+                <div class="dirt"></div>
+            </div>
+            <div class="hole">
+                <div class="mole" id="mole-5" onclick="bonk(5)"></div>
+                <div class="dirt"></div>
+            </div>
+            <div class="hole">
+                <div class="mole" id="mole-6" onclick="bonk(6)"></div>
+                <div class="dirt"></div>
+            </div>
+            <div class="hole">
+                <div class="mole" id="mole-7" onclick="bonk(7)"></div>
+                <div class="dirt"></div>
+            </div>
+            <div class="hole">
+                <div class="mole" id="mole-8" onclick="bonk(8)"></div>
+                <div class="dirt"></div>
+            </div>
+        </div>
+
+        <div class="text-center">
+            <div class="text-xl font-bold text-gray-400 mb-4" id="time">Time: 30</div>
+            <button onclick="startGame()" id="start-btn"
+                class="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-full font-bold shadow-lg transition transform active:scale-95 text-lg">
+                开始游戏
+            </button>
+        </div>
+
+    </div>
+
+    <div class="mt-8 text-center">
+        <a href="./navigation.html" class="text-sm text-green-600 hover:underline">退出</a>
+    </div>
+
+    <script>
+        const holes = document.querySelectorAll('.mole');
+        const scoreBoard = document.getElementById('score');
+        const timeEl = document.getElementById('time');
+        const startBtn = document.getElementById('start-btn');
+
+        let lastHole;
+        let timeUp = false;
+        let score = 0;
+        let timeLeft = 30;
+        let gameTimer;
+        let peepTimer;
+
+        function randomTime(min, max) {
+            return Math.round(Math.random() * (max - min) + min);
+        }
+
+        function randomHole(holes) {
+            const idx = Math.floor(Math.random() * holes.length);
+            const hole = holes[idx];
+            if (hole === lastHole) {
+                return randomHole(holes);
+            }
+            lastHole = hole;
+            return hole;
+        }
+
+        function peep() {
+            const time = randomTime(400, 1000); // speed
+            const mole = randomHole(holes);
+            mole.classList.add('up');
+
+            peepTimer = setTimeout(() => {
+                mole.classList.remove('up');
+                if (!timeUp) peep();
+            }, time);
+        }
+
+        function startGame() {
+            if (gameTimer) clearInterval(gameTimer);
+            if (peepTimer) clearTimeout(peepTimer);
+
+            scoreBoard.textContent = 0;
+            score = 0;
+            timeUp = false;
+            timeLeft = 30;
+            timeEl.innerText = `Time: ${timeLeft}`;
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-50');
+            startBtn.innerText = "游戏进行中...";
+
+            peep();
+
+            gameTimer = setInterval(() => {
+                timeLeft--;
+                timeEl.innerText = `Time: ${timeLeft}`;
+                if (timeLeft <= 0) {
+                    clearInterval(gameTimer);
+                    timeUp = true;
+                    startBtn.disabled = false;
+                    startBtn.classList.remove('opacity-50');
+                    startBtn.innerText = "再玩一次";
+                    alert(`时间到！最终得分: ${score}`);
+                }
+            }, 1000);
+        }
+
+        function bonk(idx) {
+            const mole = document.getElementById(`mole-${idx}`);
+            if (!mole.classList.contains('up')) return;
+
+            mole.classList.remove('up');
+            score++;
+            scoreBoard.textContent = score;
+        }
+    </script>
+</body>
+
+</html>

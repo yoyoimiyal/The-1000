@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生物节律计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-purple-50 min-h-screen flex flex-col items-center p-6 text-slate-700">
+
+    <div class="w-full max-w-4xl bg-white p-8 rounded-3xl shadow-xl border border-purple-100">
+
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-xl font-bold text-purple-900 flex items-center gap-2">
+                <span class="text-2xl">🧬</span> Biorhythm
+            </h1>
+            <a href="./navigation.html" class="text-sm text-purple-500 hover:text-purple-700">退出</a>
+        </header>
+
+        <div class="flex flex-col md:flex-row gap-6 mb-8 items-end">
+            <div class="flex-1 w-full">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">出生日期</label>
+                <input type="date" id="dob"
+                    class="w-full p-2 border border-purple-200 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 text-purple-900 font-bold"
+                    onchange="calculate()">
+            </div>
+            <div class="flex-1 w-full">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">目标日期</label>
+                <input type="date" id="target"
+                    class="w-full p-2 border border-purple-200 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
+                    onchange="calculate()">
+            </div>
+            <button onclick="calculate()"
+                class="bg-purple-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-purple-700 transition">分析</button>
+        </div>
+
+        <div class="h-64 mb-8">
+            <canvas id="chart"></canvas>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 text-center">
+            <div class="bg-green-50 p-4 rounded-xl border border-green-100">
+                <p class="text-xs font-bold text-green-600 uppercase mb-1">体力 (Physical)</p>
+                <p class="text-2xl font-bold text-green-800" id="val-phys">0%</p>
+                <p class="text-[10px] text-green-500 mt-1">23 天周期</p>
+            </div>
+            <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                <p class="text-xs font-bold text-red-600 uppercase mb-1">情绪 (Emotional)</p>
+                <p class="text-2xl font-bold text-red-800" id="val-emo">0%</p>
+                <p class="text-[10px] text-red-500 mt-1">28 天周期</p>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                <p class="text-xs font-bold text-blue-600 uppercase mb-1">智力 (Intellectual)</p>
+                <p class="text-2xl font-bold text-blue-800" id="val-intel">0%</p>
+                <p class="text-[10px] text-blue-500 mt-1">33 天周期</p>
+            </div>
+        </div>
+
+        <p class="mt-8 text-center text-xs text-slate-400 italic">
+            * 这是一个伪科学理论，仅供娱乐参考。请相信科学和自身感受。
+        </p>
+
+    </div>
+
+    <script>
+        let chart;
+
+        function init() {
+            const today = new Date();
+            document.getElementById('target').valueAsDate = today;
+
+            // Default dob: 2000-01-01
+            const def = new Date();
+            def.setFullYear(2000, 0, 1);
+            document.getElementById('dob').valueAsDate = def;
+
+            calculate();
+        }
+
+        function calculate() {
+            const dob = new Date(document.getElementById('dob').value);
+            const target = new Date(document.getElementById('target').value);
+
+            // Calculate days alive
+            const diffTime = target - dob;
+            const daysAlive = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+            // Generate data for +/- 15 days
+            const labels = [];
+            const dataP = [];
+            const dataE = [];
+            const dataI = [];
+
+            for (let i = -14; i <= 14; i++) {
+                const t = daysAlive + i;
+                const date = new Date(target);
+                date.setDate(target.getDate() + i);
+
+                labels.push(i === 0 ? "今天" : date.getDate());
+
+                // Formulas: sin(2 * PI * t / Period)
+                dataP.push(Math.sin(2 * Math.PI * t / 23) * 100);
+                dataE.push(Math.sin(2 * Math.PI * t / 28) * 100);
+                dataI.push(Math.sin(2 * Math.PI * t / 33) * 100);
+            }
+
+            // Current values
+            const currP = Math.round(Math.sin(2 * Math.PI * daysAlive / 23) * 100);
+            const currE = Math.round(Math.sin(2 * Math.PI * daysAlive / 28) * 100);
+            const currI = Math.round(Math.sin(2 * Math.PI * daysAlive / 33) * 100);
+
+            document.getElementById('val-phys').innerText = currP + '%';
+            document.getElementById('val-emo').innerText = currE + '%';
+            document.getElementById('val-intel').innerText = currI + '%';
+
+            renderChart(labels, dataP, dataE, dataI);
+        }
+
+        function renderChart(labels, p, e, i) {
+            const ctx = document.getElementById('chart').getContext('2d');
+
+            if (chart) chart.destroy();
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: '体力', data: p, borderColor: '#16a34a', tension: 0.4, pointRadius: 0, borderWidth: 2 },
+                        { label: '情绪', data: e, borderColor: '#dc2626', tension: 0.4, pointRadius: 0, borderWidth: 2 },
+                        { label: '智力', data: i, borderColor: '#2563eb', tension: 0.4, pointRadius: 0, borderWidth: 2 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        annotation: {
+                            annotations: {
+                                line1: {
+                                    type: 'line',
+                                    xMin: 14, xMax: 14,
+                                    borderColor: 'rgba(0,0,0,0.5)',
+                                    borderWidth: 2,
+                                    borderDash: [5, 5]
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { min: -100, max: 100, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>双摆混沌模拟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            width: 100%;
+            max-width: 600px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="absolute top-6 left-6 text-white pointer-events-none">
+        <h1 class="text-2xl font-bold">Double Pendulum</h1>
+        <p class="text-xs text-gray-400">Chaos Theory Visualization</p>
+    </div>
+
+    <div
+        class="controls bg-gray-900/80 backdrop-blur p-4 rounded-xl border border-gray-700 flex flex-wrap gap-4 justify-center items-center">
+        <button onclick="reset()"
+            class="px-4 py-2 bg-white text-black font-bold rounded text-xs hover:bg-gray-200">Reset</button>
+        <button onclick="toggleTrace()"
+            class="px-4 py-2 border border-white text-white font-bold rounded text-xs hover:bg-white/10"
+            id="btn-trace">Trace: ON</button>
+        <div class="flex gap-2 items-center">
+            <label class="text-xs text-gray-400 uppercase">Mass 2</label>
+            <input type="range" id="mass" min="5" max="30" value="10"
+                class="w-24 h-1 bg-gray-600 rounded appearance-none" oninput="reset()">
+        </div>
+        <a href="./navigation.html" class="text-xs text-gray-500 hover:text-white ml-auto">Exit</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const massInput = document.getElementById('mass');
+
+        let width, height, cx, cy;
+
+        // Physics constants
+        const r1 = 125;
+        const r2 = 125;
+        const m1 = 10;
+        let m2 = 10;
+        let a1 = Math.PI / 2;
+        let a2 = Math.PI / 2;
+        let a1_v = 0;
+        let a2_v = 0;
+        const g = 1;
+
+        let path = [];
+        let showTrace = true;
+        let traceCanvas;
+        let traceCtx;
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            cx = width / 2;
+            cy = height / 3;
+
+            // Offscreen canvas for trails to avoid clearing every frame
+            traceCanvas = document.createElement('canvas');
+            traceCanvas.width = width;
+            traceCanvas.height = height;
+            traceCtx = traceCanvas.getContext('2d');
+            traceCtx.lineWidth = 2;
+            path = [];
+        }
+        window.addEventListener('resize', resize);
+
+        function reset() {
+            m2 = parseInt(massInput.value);
+            a1 = Math.PI / 2;
+            a2 = Math.PI / 2;
+            a1_v = 0;
+            a2_v = 0;
+            path = [];
+            traceCtx.clearRect(0, 0, width, height);
+        }
+
+        function toggleTrace() {
+            showTrace = !showTrace;
+            document.getElementById('btn-trace').innerText = `Trace: ${showTrace ? 'ON' : 'OFF'}`;
+            if (!showTrace) {
+                traceCtx.clearRect(0, 0, width, height);
+            }
+        }
+
+        function draw() {
+            // Physics Formula (Lagrangian mechanics)
+            let num1 = -g * (2 * m1 + m2) * Math.sin(a1);
+            let num2 = -m2 * g * Math.sin(a1 - 2 * a2);
+            let num3 = -2 * Math.sin(a1 - a2) * m2;
+            let num4 = a2_v * a2_v * r2 + a1_v * a1_v * r1 * Math.cos(a1 - a2);
+            let den = r1 * (2 * m1 + m2 - m2 * Math.cos(2 * a1 - 2 * a2));
+            let a1_a = (num1 + num2 + num3 * num4) / den;
+
+            num1 = 2 * Math.sin(a1 - a2);
+            num2 = (a1_v * a1_v * r1 * (m1 + m2));
+            num3 = g * (m1 + m2) * Math.cos(a1);
+            num4 = a2_v * a2_v * r2 * m2 * Math.cos(a1 - a2);
+            den = r2 * (2 * m1 + m2 - m2 * Math.cos(2 * a1 - 2 * a2));
+            let a2_a = (num1 * (num2 + num3 + num4)) / den;
+
+            a1_v += a1_a;
+            a2_v += a2_a;
+            a1 += a1_v;
+            a2 += a2_v;
+
+            // Damping (friction)
+            // a1_v *= 0.999;
+            // a2_v *= 0.999;
+
+            // Positions
+            let x1 = r1 * Math.sin(a1);
+            let y1 = r1 * Math.cos(a1);
+            let x2 = x1 + r2 * Math.sin(a2);
+            let y2 = y1 + r2 * Math.cos(a2);
+
+            // Draw
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, width, height);
+
+            if (showTrace) {
+                // Draw to trace canvas
+                if (path.length > 0) {
+                    const prev = path[path.length - 1];
+                    traceCtx.beginPath();
+                    traceCtx.moveTo(cx + prev.x, cy + prev.y);
+                    traceCtx.lineTo(cx + x2, cy + y2);
+                    // Color based on velocity? Or just rainbow cycle?
+                    traceCtx.strokeStyle = `hsl(${path.length % 360}, 100%, 50%)`;
+                    traceCtx.stroke();
+
+                    // Fade logic? 
+                    // traceCtx.fillStyle = 'rgba(0,0,0,0.005)';
+                    // traceCtx.fillRect(0,0,width,height);
+                }
+                path.push({ x: x2, y: y2 });
+                if (path.length > 2000) path.shift(); // Limit path length memory, but canvas persists visuals
+
+                ctx.drawImage(traceCanvas, 0, 0);
+            }
+
+            ctx.translate(cx, cy);
+
+            // Rods
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#fff';
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+
+            // Bobs
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(x1, y1, m1, 0, 2 * Math.PI);
+            ctx.fill();
+
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(x2, y2, m2, 0, 2 * Math.PI);
+            ctx.fill();
+
+            ctx.translate(-cx, -cy);
+
+            requestAnimationFrame(draw);
+        }
+
+        resize();
+        reset();
+        draw();
+    </script>
+</body>
+
+</html>

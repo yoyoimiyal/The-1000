@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSL 色彩实验室</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type=range] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            margin-top: -7px;
+        }
+
+        /* Gradients for sliders */
+        #slider-h {
+            background: linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%);
+        }
+
+        #slider-s {
+            background: linear-gradient(to right, #808080, #f00);
+        }
+
+        /* Will be updated dynamically */
+        #slider-l {
+            background: linear-gradient(to right, #000, #f00, #fff);
+        }
+
+        /* Will be updated dynamically */
+    </style>
+</head>
+
+<body
+    class="bg-slate-100 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800 transition-colors duration-500"
+    id="body-bg">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-3xl shadow-2xl border border-white/50 backdrop-blur-sm">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                🎨 HSL Explorer
+            </h1>
+            <a href="./navigation.html" class="text-sm opacity-50 hover:opacity-100">退出</a>
+        </header>
+
+        <!-- Color Box -->
+        <div id="color-box"
+            class="w-full h-48 rounded-2xl shadow-inner mb-8 flex items-center justify-center transition-colors duration-100 border border-slate-200">
+            <span id="hex-code"
+                class="bg-white/90 px-4 py-2 rounded-lg font-mono font-bold text-lg shadow-sm">#FF0000</span>
+        </div>
+
+        <div class="space-y-8">
+
+            <!-- Hue -->
+            <div>
+                <div class="flex justify-between text-xs font-bold uppercase mb-2">
+                    <span>Hue (色相)</span>
+                    <span id="val-h">0°</span>
+                </div>
+                <input type="range" id="slider-h" min="0" max="360" value="0" oninput="update()">
+                <p class="text-[10px] text-slate-400 mt-1">颜色的种类 (0-360)</p>
+            </div>
+
+            <!-- Saturation -->
+            <div>
+                <div class="flex justify-between text-xs font-bold uppercase mb-2">
+                    <span>Saturation (饱和度)</span>
+                    <span id="val-s">100%</span>
+                </div>
+                <input type="range" id="slider-s" min="0" max="100" value="100" oninput="update()">
+                <p class="text-[10px] text-slate-400 mt-1">颜色的鲜艳程度 (0-100)</p>
+            </div>
+
+            <!-- Lightness -->
+            <div>
+                <div class="flex justify-between text-xs font-bold uppercase mb-2">
+                    <span>Lightness (亮度)</span>
+                    <span id="val-l">50%</span>
+                </div>
+                <input type="range" id="slider-l" min="0" max="100" value="50" oninput="update()">
+                <p class="text-[10px] text-slate-400 mt-1">颜色的明暗程度 (0=黑, 100=白)</p>
+            </div>
+
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center cursor-pointer hover:bg-slate-100 active:bg-slate-200 transition"
+                onclick="copyCSS()">
+                <code id="css-val" class="text-sm font-mono text-indigo-600">hsl(0, 100%, 50%)</code>
+                <div class="text-[10px] text-slate-400 mt-1">点击复制 CSS</div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const hIn = document.getElementById('slider-h');
+        const sIn = document.getElementById('slider-s');
+        const lIn = document.getElementById('slider-l');
+
+        const box = document.getElementById('color-box');
+        const hexEl = document.getElementById('hex-code');
+        const cssEl = document.getElementById('css-val');
+        const body = document.getElementById('body-bg');
+
+        function update() {
+            const h = hIn.value;
+            const s = sIn.value;
+            const l = lIn.value;
+
+            document.getElementById('val-h').innerText = h + '°';
+            document.getElementById('val-s').innerText = s + '%';
+            document.getElementById('val-l').innerText = l + '%';
+
+            const color = `hsl(${h}, ${s}%, ${l}%)`;
+
+            box.style.backgroundColor = color;
+            cssEl.innerText = color;
+
+            // Dynamic Slider Backgrounds to visualize effect
+            sIn.style.background = `linear-gradient(to right, hsl(${h}, 0%, ${l}%), hsl(${h}, 100%, ${l}%))`;
+            lIn.style.background = `linear-gradient(to right, hsl(${h}, ${s}%, 0%), hsl(${h}, ${s}%, 50%), hsl(${h}, ${s}%, 100%))`;
+
+            // Convert to Hex for display
+            hexEl.innerText = HSLToHex(h, s, l);
+
+            // Subtle body tint
+            body.style.backgroundColor = `hsl(${h}, 50%, 95%)`;
+        }
+
+        function HSLToHex(h, s, l) {
+            s /= 100;
+            l /= 100;
+
+            let c = (1 - Math.abs(2 * l - 1)) * s,
+                x = c * (1 - Math.abs((h / 60) % 2 - 1)),
+                m = l - c / 2,
+                r = 0,
+                g = 0,
+                b = 0;
+
+            if (0 <= h && h < 60) { r = c; g = x; b = 0; }
+            else if (60 <= h && h < 120) { r = x; g = c; b = 0; }
+            else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
+            else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
+            else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
+            else if (300 <= h && h < 360) { r = c; g = 0; b = x; }
+
+            // Convert to Hex
+            r = Math.round((r + m) * 255).toString(16);
+            g = Math.round((g + m) * 255).toString(16);
+            b = Math.round((b + m) * 255).toString(16);
+
+            if (r.length == 1) r = "0" + r;
+            if (g.length == 1) g = "0" + g;
+            if (b.length == 1) b = "0" + b;
+
+            return "#" + r + g + b;
+        }
+
+        function copyCSS() {
+            navigator.clipboard.writeText(cssEl.innerText);
+            alert("CSS 已复制!");
+        }
+
+        update();
+    </script>
+</body>
+
+</html>

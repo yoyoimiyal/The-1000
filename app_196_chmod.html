@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux 权限计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .check-grid {
+            display: grid;
+            grid-template-columns: auto repeat(3, 1fr);
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .cb-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+            border: 2px solid #e2e8f0;
+        }
+
+        .cb-label:hover {
+            border-color: #94a3b8;
+        }
+
+        input:checked+.cb-label {
+            background-color: #3b82f6;
+            border-color: #3b82f6;
+            color: white;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-slate-700">
+                <span class="bg-slate-800 text-white px-2 py-1 rounded text-xs font-mono">$</span> Chmod Calculator
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-blue-600">退出</a>
+        </header>
+
+        <div class="check-grid mb-8 text-sm font-bold text-slate-600">
+            <!-- Headers -->
+            <div class="text-xs text-slate-400 uppercase text-right pr-2">Scope</div>
+            <div class="text-center">Read (4)</div>
+            <div class="text-center">Write (2)</div>
+            <div class="text-center">Execute (1)</div>
+
+            <!-- Owner -->
+            <div class="text-right pr-2">Owner</div>
+            <label>
+                <input type="checkbox" class="hidden" id="or" checked onchange="calc()">
+                <div class="cb-label py-2">r</div>
+            </label>
+            <label>
+                <input type="checkbox" class="hidden" id="ow" checked onchange="calc()">
+                <div class="cb-label py-2">w</div>
+            </label>
+            <label>
+                <input type="checkbox" class="hidden" id="ox" checked onchange="calc()">
+                <div class="cb-label py-2">x</div>
+            </label>
+
+            <!-- Group -->
+            <div class="text-right pr-2">Group</div>
+            <label>
+                <input type="checkbox" class="hidden" id="gr" checked onchange="calc()">
+                <div class="cb-label py-2">r</div>
+            </label>
+            <label>
+                <input type="checkbox" class="hidden" id="gw" onchange="calc()">
+                <div class="cb-label py-2">w</div>
+            </label>
+            <label>
+                <input type="checkbox" class="hidden" id="gx" checked onchange="calc()">
+                <div class="cb-label py-2">x</div>
+            </label>
+
+            <!-- Public -->
+            <div class="text-right pr-2">Public</div>
+            <label>
+                <input type="checkbox" class="hidden" id="pr" checked onchange="calc()">
+                <div class="cb-label py-2">r</div>
+            </label>
+            <label>
+                <input type="checkbox" class="hidden" id="pw" onchange="calc()">
+                <div class="cb-label py-2">w</div>
+            </label>
+            <label>
+                <input type="checkbox" class="hidden" id="px" checked onchange="calc()">
+                <div class="cb-label py-2">x</div>
+            </label>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-slate-100 p-4 rounded-xl border border-slate-200">
+                <p class="text-xs text-slate-400 uppercase font-bold mb-1">Octal (八进制)</p>
+                <p class="text-4xl font-mono font-bold text-blue-600" id="octal">755</p>
+            </div>
+            <div class="bg-slate-100 p-4 rounded-xl border border-slate-200">
+                <p class="text-xs text-slate-400 uppercase font-bold mb-1">Symbolic (符号)</p>
+                <p class="text-xl font-mono font-bold text-slate-700 mt-2" id="symbolic">-rwxr-xr-x</p>
+            </div>
+        </div>
+
+        <div class="mt-6 bg-slate-800 text-green-400 p-4 rounded-lg font-mono text-xs flex justify-between items-center cursor-pointer hover:bg-slate-700 transition"
+            onclick="copyCmd()">
+            <span id="cmd">chmod 755 filename</span>
+            <span class="text-slate-500 text-[10px] uppercase">Copy</span>
+        </div>
+
+    </div>
+
+    <script>
+        function calc() {
+            let o = (document.getElementById('or').checked ? 4 : 0) +
+                (document.getElementById('ow').checked ? 2 : 0) +
+                (document.getElementById('ox').checked ? 1 : 0);
+
+            let g = (document.getElementById('gr').checked ? 4 : 0) +
+                (document.getElementById('gw').checked ? 2 : 0) +
+                (document.getElementById('gx').checked ? 1 : 0);
+
+            let p = (document.getElementById('pr').checked ? 4 : 0) +
+                (document.getElementById('pw').checked ? 2 : 0) +
+                (document.getElementById('px').checked ? 1 : 0);
+
+            const octal = `${o}${g}${p}`;
+            document.getElementById('octal').innerText = octal;
+
+            // Symbolic
+            const sym =
+                (document.getElementById('or').checked ? 'r' : '-') +
+                (document.getElementById('ow').checked ? 'w' : '-') +
+                (document.getElementById('ox').checked ? 'x' : '-') +
+                (document.getElementById('gr').checked ? 'r' : '-') +
+                (document.getElementById('gw').checked ? 'w' : '-') +
+                (document.getElementById('gx').checked ? 'x' : '-') +
+                (document.getElementById('pr').checked ? 'r' : '-') +
+                (document.getElementById('pw').checked ? 'w' : '-') +
+                (document.getElementById('px').checked ? 'x' : '-');
+
+            document.getElementById('symbolic').innerText = '-' + sym;
+            document.getElementById('cmd').innerText = `chmod ${octal} filename`;
+        }
+
+        function copyCmd() {
+            const txt = document.getElementById('cmd').innerText;
+            navigator.clipboard.writeText(txt);
+            alert("命令已复制");
+        }
+
+        calc();
+    </script>
+</body>
+
+</html>

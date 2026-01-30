@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备信息检测</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #f1f5f9;
+            padding: 12px 0;
+        }
+
+        .info-label {
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+
+        .info-val {
+            font-family: monospace;
+            font-weight: 500;
+            color: #334155;
+            word-break: break-all;
+            text-align: right;
+            margin-left: 1rem;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen p-6 flex flex-col items-center">
+
+    <div class="w-full max-w-2xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-slate-800">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Device Info
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-blue-600">退出</a>
+        </header>
+
+        <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
+
+            <!-- Screen -->
+            <div class="mb-8">
+                <h2 class="text-lg font-bold text-slate-800 mb-4 pb-2 border-b-2 border-blue-500 inline-block">显示
+                    (Screen)</h2>
+
+                <div class="info-row">
+                    <span class="info-label">Window Size</span>
+                    <span class="info-val" id="win-size">...</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Screen Resolution</span>
+                    <span class="info-val" id="screen-res">...</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Pixel Ratio (DPR)</span>
+                    <span class="info-val text-blue-600" id="dpr">...</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Color Depth</span>
+                    <span class="info-val" id="color-depth">...</span>
+                </div>
+                <div class="info-row border-none">
+                    <span class="info-label">Orientation</span>
+                    <span class="info-val" id="orientation">...</span>
+                </div>
+            </div>
+
+            <!-- System -->
+            <div class="mb-8">
+                <h2 class="text-lg font-bold text-slate-800 mb-4 pb-2 border-b-2 border-purple-500 inline-block">系统
+                    (System)</h2>
+
+                <div class="info-row">
+                    <span class="info-label">Browser (UA)</span>
+                    <span class="info-val text-xs" id="ua">...</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Platform</span>
+                    <span class="info-val" id="platform">...</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Language</span>
+                    <span class="info-val" id="lang">...</span>
+                </div>
+                <div class="info-row border-none">
+                    <span class="info-label">Cores (Threads)</span>
+                    <span class="info-val" id="cores">...</span>
+                </div>
+            </div>
+
+            <!-- Network -->
+            <div>
+                <h2 class="text-lg font-bold text-slate-800 mb-4 pb-2 border-b-2 border-green-500 inline-block">网络
+                    (Network)</h2>
+
+                <div class="info-row">
+                    <span class="info-label">Online Status</span>
+                    <span class="info-val" id="online">...</span>
+                </div>
+                <div class="info-row border-none">
+                    <span class="info-label">Connection Type</span>
+                    <span class="info-val" id="conn-type">Unknown</span>
+                </div>
+            </div>
+
+        </div>
+
+        <button onclick="copyInfo()"
+            class="mt-6 w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition shadow">
+            复制全部信息
+        </button>
+
+    </div>
+
+    <script>
+        function update() {
+            document.getElementById('win-size').innerText = `${window.innerWidth} x ${window.innerHeight}`;
+            document.getElementById('screen-res').innerText = `${window.screen.width} x ${window.screen.height}`;
+            document.getElementById('dpr').innerText = window.devicePixelRatio;
+            document.getElementById('color-depth').innerText = window.screen.colorDepth + ' bit';
+            document.getElementById('orientation').innerText = screen.orientation ? screen.orientation.type : 'N/A';
+
+            document.getElementById('ua').innerText = navigator.userAgent;
+            document.getElementById('platform').innerText = navigator.platform;
+            document.getElementById('lang').innerText = navigator.language;
+            document.getElementById('cores').innerText = navigator.hardwareConcurrency || 'N/A';
+
+            const isOnline = navigator.onLine;
+            const onlineEl = document.getElementById('online');
+            onlineEl.innerText = isOnline ? "Online" : "Offline";
+            onlineEl.className = `info-val ${isOnline ? 'text-green-600' : 'text-red-500'}`;
+
+            if (navigator.connection) {
+                document.getElementById('conn-type').innerText = navigator.connection.effectiveType || 'Unknown';
+            }
+        }
+
+        function copyInfo() {
+            const info = `
+Device Info Report
+------------------
+Window: ${window.innerWidth}x${window.innerHeight}
+Screen: ${window.screen.width}x${window.screen.height}
+DPR: ${window.devicePixelRatio}
+UA: ${navigator.userAgent}
+Platform: ${navigator.platform}
+Cores: ${navigator.hardwareConcurrency}
+`.trim();
+            navigator.clipboard.writeText(info);
+            alert("信息已复制");
+        }
+
+        window.addEventListener('resize', update);
+        update();
+    </script>
+</body>
+
+</html>

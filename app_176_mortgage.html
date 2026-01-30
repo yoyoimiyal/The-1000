@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>房贷计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .result-card {
+            transition: all 0.3s;
+        }
+
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body class="bg-blue-50 min-h-screen flex flex-col items-center p-6 text-slate-700">
+
+    <div class="w-full max-w-4xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-blue-900 flex items-center gap-2">
+                <span class="text-3xl">🏠</span> Mortgage Calc
+            </h1>
+            <a href="./navigation.html" class="text-sm text-blue-500 hover:text-blue-700">退出</a>
+        </header>
+
+        <div class="flex flex-col md:flex-row gap-8">
+
+            <!-- Inputs -->
+            <div class="w-full md:w-1/3 space-y-6 bg-white p-6 rounded-2xl shadow-sm border border-blue-100">
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">贷款金额 (万)</label>
+                    <div class="relative">
+                        <input type="number" id="amount"
+                            class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-lg font-bold"
+                            value="100" oninput="calculate()">
+                        <span class="absolute right-4 top-4 text-slate-400 text-xs">CNY</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">年限 (Years)</label>
+                    <select id="years"
+                        class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        onchange="calculate()">
+                        <option value="5">5 年 (60 期)</option>
+                        <option value="10">10 年 (120 期)</option>
+                        <option value="15">15 年 (180 期)</option>
+                        <option value="20">20 年 (240 期)</option>
+                        <option value="25">25 年 (300 期)</option>
+                        <option value="30" selected>30 年 (360 期)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">年利率 (%)</label>
+                    <input type="number" id="rate"
+                        class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                        value="3.5" step="0.05" oninput="calculate()">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">还款方式</label>
+                    <div class="flex gap-2">
+                        <button onclick="setType('type1')" id="btn-type1"
+                            class="flex-1 py-2 rounded-lg border border-blue-500 bg-blue-500 text-white font-bold text-sm transition">等额本息</button>
+                        <button onclick="setType('type2')" id="btn-type2"
+                            class="flex-1 py-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 font-bold text-sm transition">等额本金</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Results -->
+            <div class="flex-1 space-y-6">
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 result-card">
+                        <p class="text-xs font-bold text-slate-400 uppercase mb-1">每月供款</p>
+                        <p class="text-3xl font-black text-blue-600">¥<span id="monthly">0</span></p>
+                        <p class="text-xs text-orange-500 mt-1 hidden" id="decrease-note">首月，后逐月递减</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 result-card">
+                        <p class="text-xs font-bold text-slate-400 uppercase mb-1">支付利息总额</p>
+                        <p class="text-2xl font-bold text-slate-700">¥<span id="total-interest">0</span></p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <p class="text-xs font-bold text-slate-400 uppercase">还款总额</p>
+                        <p class="text-xl font-bold text-slate-800">¥<span id="total-payment">0</span></p>
+                    </div>
+
+                    <!-- Visual Bar -->
+                    <div class="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                        <div id="bar-principal" class="h-full bg-blue-400 w-1/2"></div>
+                        <div id="bar-interest" class="h-full bg-orange-400 w-1/2"></div>
+                    </div>
+                    <div class="flex justify-between mt-2 text-xs font-bold">
+                        <span class="text-blue-400">● 本金 (<span id="pct-principal">50%</span>)</span>
+                        <span class="text-orange-400">● 利息 (<span id="pct-interest">50%</span>)</span>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        let repaymentType = 'type1'; // type1: 等额本息, type2: 等额本金
+
+        function setType(type) {
+            repaymentType = type;
+            const btn1 = document.getElementById('btn-type1');
+            const btn2 = document.getElementById('btn-type2');
+            const note = document.getElementById('decrease-note');
+
+            if (type === 'type1') {
+                btn1.className = "flex-1 py-2 rounded-lg border border-blue-500 bg-blue-500 text-white font-bold text-sm transition";
+                btn2.className = "flex-1 py-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 font-bold text-sm transition";
+                note.classList.add('hidden');
+            } else {
+                btn1.className = "flex-1 py-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 font-bold text-sm transition";
+                btn2.className = "flex-1 py-2 rounded-lg border border-blue-500 bg-blue-500 text-white font-bold text-sm transition";
+                note.classList.remove('hidden');
+            }
+            calculate();
+        }
+
+        function calculate() {
+            const amountWan = parseFloat(document.getElementById('amount').value) || 0;
+            const years = parseInt(document.getElementById('years').value);
+            const rateYear = parseFloat(document.getElementById('rate').value) || 0;
+
+            const principal = amountWan * 10000;
+            const months = years * 12;
+            const rateMonth = rateYear / 100 / 12;
+
+            let monthlyPayment = 0;
+            let totalPayment = 0;
+            let totalInterest = 0;
+
+            if (repaymentType === 'type1') {
+                // 等额本息
+                // M = P * [ i * (1+i)^n ] / [ (1+i)^n - 1 ]
+                if (rateMonth === 0) {
+                    monthlyPayment = principal / months;
+                    totalPayment = principal;
+                    totalInterest = 0;
+                } else {
+                    const pow = Math.pow(1 + rateMonth, months);
+                    monthlyPayment = principal * (rateMonth * pow) / (pow - 1);
+                    totalPayment = monthlyPayment * months;
+                    totalInterest = totalPayment - principal;
+                }
+            } else {
+                // 等额本金 (Calculation for first month for display, total interest summation)
+                // Monthly Principal = P / n
+                // Interest(m) = (P - PaidPrincipal) * i
+                const monthlyPrincipal = principal / months;
+
+                // First month payment
+                monthlyPayment = monthlyPrincipal + (principal * rateMonth);
+
+                // Total Interest
+                // Total Interest = (n+1) * P * i / 2
+                totalInterest = (months + 1) * principal * rateMonth / 2;
+                totalPayment = principal + totalInterest;
+            }
+
+            // Update UI
+            document.getElementById('monthly').innerText = Math.round(monthlyPayment).toLocaleString();
+            document.getElementById('total-interest').innerText = (totalInterest / 10000).toFixed(2) + "万";
+            document.getElementById('total-payment').innerText = (totalPayment / 10000).toFixed(2) + "万";
+
+            // Bar
+            const pctPrincipal = (principal / totalPayment) * 100;
+            const pctInterest = 100 - pctPrincipal;
+
+            document.getElementById('bar-principal').style.width = pctPrincipal + '%';
+            document.getElementById('bar-interest').style.width = pctInterest + '%';
+            document.getElementById('pct-principal').innerText = Math.round(pctPrincipal) + '%';
+            document.getElementById('pct-interest').innerText = Math.round(pctInterest) + '%';
+        }
+
+        // Init
+        calculate();
+    </script>
+</body>
+
+</html>
