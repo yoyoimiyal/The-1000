@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>程序员计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .base-row {
+            transition: background-color 0.2s;
+        }
+
+        .base-row.active {
+            background-color: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .key-btn {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+        }
+
+        .key-btn:active {
+            transform: translateY(2px);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex flex-col items-center justify-center p-4 text-slate-800">
+
+    <div class="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+
+        <!-- Header -->
+        <header class="bg-slate-800 p-4 flex justify-between items-center text-white">
+            <h1 class="text-lg font-bold flex items-center gap-2">
+                <span class="text-green-400 font-mono">0x</span> Programmer Calc
+            </h1>
+            <a href="./navigation.html" class="text-xs text-slate-400 hover:text-white">EXIT</a>
+        </header>
+
+        <!-- Display Area -->
+        <div class="p-4 space-y-2 bg-slate-50 border-b border-slate-200">
+            <!-- Hex -->
+            <div class="base-row p-2 rounded cursor-pointer flex justify-between items-center group"
+                onclick="setMode(16)" id="row-16">
+                <span class="text-xs font-bold text-slate-400 w-8">HEX</span>
+                <span class="font-mono text-lg text-slate-700 font-bold group-hover:text-blue-600" id="disp-16">0</span>
+            </div>
+            <!-- Dec -->
+            <div class="base-row active p-2 rounded cursor-pointer flex justify-between items-center group"
+                onclick="setMode(10)" id="row-10">
+                <span class="text-xs font-bold text-slate-400 w-8">DEC</span>
+                <span class="font-mono text-lg text-slate-700 font-bold group-hover:text-blue-600" id="disp-10">0</span>
+            </div>
+            <!-- Oct -->
+            <div class="base-row p-2 rounded cursor-pointer flex justify-between items-center group"
+                onclick="setMode(8)" id="row-8">
+                <span class="text-xs font-bold text-slate-400 w-8">OCT</span>
+                <span class="font-mono text-lg text-slate-700 font-bold group-hover:text-blue-600" id="disp-8">0</span>
+            </div>
+            <!-- Bin -->
+            <div class="base-row p-2 rounded cursor-pointer flex justify-between items-center group"
+                onclick="setMode(2)" id="row-2">
+                <span class="text-xs font-bold text-slate-400 w-8">BIN</span>
+                <span class="font-mono text-sm text-slate-700 font-bold break-all text-right group-hover:text-blue-600"
+                    id="disp-2">0</span>
+            </div>
+        </div>
+
+        <!-- Keypad -->
+        <div class="p-4 bg-slate-100 grid grid-cols-4 gap-2">
+            <!-- Row 1 -->
+            <button class="key-btn h-12 rounded bg-slate-200 text-slate-400 disabled:opacity-30" onclick="input('D')"
+                disabled id="btn-D">D</button>
+            <button class="key-btn h-12 rounded bg-slate-200 text-slate-400 disabled:opacity-30" onclick="input('E')"
+                disabled id="btn-E">E</button>
+            <button class="key-btn h-12 rounded bg-slate-200 text-slate-400 disabled:opacity-30" onclick="input('F')"
+                disabled id="btn-F">F</button>
+            <button class="key-btn h-12 rounded bg-red-100 text-red-500 hover:bg-red-200"
+                onclick="clearAll()">AC</button>
+
+            <!-- Row 2 -->
+            <button class="key-btn h-12 rounded bg-slate-200 text-slate-400 disabled:opacity-30" onclick="input('A')"
+                disabled id="btn-A">A</button>
+            <button class="key-btn h-12 rounded bg-slate-200 text-slate-400 disabled:opacity-30" onclick="input('B')"
+                disabled id="btn-B">B</button>
+            <button class="key-btn h-12 rounded bg-slate-200 text-slate-400 disabled:opacity-30" onclick="input('C')"
+                disabled id="btn-C">C</button>
+            <button class="key-btn h-12 rounded bg-orange-100 text-orange-600 hover:bg-orange-200"
+                onclick="op('/')">÷</button>
+
+            <!-- Row 3 -->
+            <button class="key-btn h-12 rounded bg-white text-slate-700 shadow-sm disabled:opacity-30"
+                onclick="input('7')" id="btn-7">7</button>
+            <button class="key-btn h-12 rounded bg-white text-slate-700 shadow-sm disabled:opacity-30"
+                onclick="input('8')" id="btn-8">8</button>
+            <button class="key-btn h-12 rounded bg-white text-slate-700 shadow-sm disabled:opacity-30"
+                onclick="input('9')" id="btn-9">9</button>
+            <button class="key-btn h-12 rounded bg-orange-100 text-orange-600 hover:bg-orange-200"
+                onclick="op('*')">×</button>
+
+            <!-- Row 4 -->
+            <button class="key-btn h-12 rounded bg-white text-slate-700 shadow-sm disabled:opacity-30"
+                onclick="input('4')" id="btn-4">4</button>
+            <button class="key-btn h-12 rounded bg-white text-slate-700 shadow-sm disabled:opacity-30"
+                onclick="input('5')" id="btn-5">5</button>
+            <button class="key-btn h-12 rounded bg-white text-slate-700 shadow-sm disabled:opacity-30"
+                onclick="input('6')" id="btn-6">6</button>
+            <button class="key-btn h-12 rounded bg-orange-100 text-orange-600 hover:bg-orange-200"
+                onclick="op('-')">-</button>
+
+            <!-- Row 5 -->
+            <button class="key-btn h-12 rounded bg-white text-slate-700 shadow-sm disabled:opacity-30"
+                onclick="input('1')" id="btn-1">1</button>
+            <button class="key-btn h-12 rounded bg-white text-slate-700 shadow-sm disabled:opacity-30"
+                onclick="input('2')" id="btn-2">2</button>
+            <button class="key-btn h-12 rounded bg-white text-slate-700 shadow-sm disabled:opacity-30"
+                onclick="input('3')" id="btn-3">3</button>
+            <button class="key-btn h-12 rounded bg-orange-100 text-orange-600 hover:bg-orange-200"
+                onclick="op('+')">+</button>
+
+            <!-- Row 6 -->
+            <button class="key-btn h-12 rounded bg-white text-slate-700 shadow-sm disabled:opacity-30 col-span-2"
+                onclick="input('0')" id="btn-0">0</button>
+            <button class="key-btn h-12 rounded bg-slate-200 text-slate-600 hover:bg-slate-300"
+                onclick="del()">⌫</button>
+            <button class="key-btn h-12 rounded bg-blue-600 text-white hover:bg-blue-700 shadow-md"
+                onclick="calc()">=</button>
+        </div>
+
+    </div>
+
+    <script>
+        let currentBase = 10;
+        let currentVal = "0"; // String representation in current base
+        let operand = null;
+        let operator = null;
+
+        function setMode(base) {
+            // If we have a value, convert it to new base
+            const intVal = parseInt(currentVal, currentBase);
+            if (!isNaN(intVal)) {
+                currentVal = intVal.toString(base).toUpperCase();
+            } else {
+                currentVal = "0";
+            }
+
+            currentBase = base;
+            updateUI();
+            updateKeys();
+        }
+
+        function updateUI() {
+            // Highlight active row
+            document.querySelectorAll('.base-row').forEach(el => el.classList.remove('active'));
+            document.getElementById(`row-${currentBase}`).classList.add('active');
+
+            // Parse current value to integer for display in all bases
+            let intVal = parseInt(currentVal, currentBase);
+            if (isNaN(intVal)) intVal = 0;
+
+            // Update all displays
+            document.getElementById('disp-16').innerText = intVal.toString(16).toUpperCase();
+            document.getElementById('disp-10').innerText = intVal.toString(10);
+            document.getElementById('disp-8').innerText = intVal.toString(8);
+
+            // Binary formatting (groups of 4)
+            let bin = intVal.toString(2);
+            // Pad to 8, 16, 32... optional but raw is fine. 
+            // Add spaces every 4 bits for readability
+            bin = bin.replace(/(.{4})/g, "$1 ").trim();
+            // Wait, replace adds spaces after. Better:
+            // Standard approach: don't space for simple calc, or custom format.
+            document.getElementById('disp-2').innerText = intVal.toString(2);
+        }
+
+        function updateKeys() {
+            // Enable/Disable keys based on base
+            const allKeys = "0123456789ABCDEF".split('');
+            allKeys.forEach(k => {
+                const btn = document.getElementById(`btn-${k}`);
+                const digit = parseInt(k, 16);
+                if (digit < currentBase) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-30');
+                    // Style differentiation
+                    if (k >= 'A') btn.classList.add('text-indigo-600');
+                    else btn.classList.add('text-slate-700');
+                } else {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-30');
+                }
+            });
+        }
+
+        function input(digit) {
+            if (currentVal === "0") currentVal = digit;
+            else currentVal += digit;
+            updateUI();
+        }
+
+        function del() {
+            if (currentVal.length > 1) {
+                currentVal = currentVal.slice(0, -1);
+            } else {
+                currentVal = "0";
+            }
+            updateUI();
+        }
+
+        function clearAll() {
+            currentVal = "0";
+            operand = null;
+            operator = null;
+            updateUI();
+        }
+
+        function op(o) {
+            // Store current as operand
+            operand = parseInt(currentVal, currentBase);
+            operator = o;
+            currentVal = "0"; // Reset for next input
+            // Flash op?
+        }
+
+        function calc() {
+            if (operator && operand !== null) {
+                const second = parseInt(currentVal, currentBase);
+                let res = 0;
+                switch (operator) {
+                    case '+': res = operand + second; break;
+                    case '-': res = operand - second; break;
+                    case '*': res = operand * second; break;
+                    case '/': res = Math.floor(operand / second); break; // Integer division
+                }
+                currentVal = res.toString(currentBase).toUpperCase();
+                operand = null;
+                operator = null;
+                updateUI();
+            }
+        }
+
+        // Init
+        updateKeys();
+    </script>
+</body>
+
+</html>

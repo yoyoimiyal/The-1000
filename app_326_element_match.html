@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>元素配对挑战</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .draggable {
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .draggable:active {
+            cursor: grabbing;
+        }
+
+        .dropzone {
+            transition: all 0.2s;
+        }
+
+        .dropzone.hover {
+            background-color: #e0e7ff;
+            border-color: #6366f1;
+            transform: scale(1.05);
+        }
+
+        .dropzone.correct {
+            background-color: #dcfce7;
+            border-color: #22c55e;
+            color: #15803d;
+        }
+
+        .fade-out {
+            animation: fadeOut 0.5s forwards;
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: scale(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-4xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-slate-700 flex items-center gap-2">
+                <span class="text-2xl">⚛️</span> Element Match
+            </h1>
+            <div class="text-sm font-bold text-indigo-600">Score: <span id="score">0</span></div>
+        </header>
+
+        <div class="flex flex-col md:flex-row gap-8 min-h-[400px]">
+
+            <!-- Draggables (Symbols) -->
+            <div class="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <p class="text-xs font-bold text-slate-400 uppercase mb-4 text-center">拖拽符号 (Symbols)</p>
+                <div id="symbols-container" class="flex flex-wrap gap-4 justify-center content-start">
+                    <!-- Injected -->
+                </div>
+            </div>
+
+            <!-- Dropzones (Names) -->
+            <div class="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <p class="text-xs font-bold text-slate-400 uppercase mb-4 text-center">放置到对应名称 (Names)</p>
+                <div id="names-container" class="grid grid-cols-2 gap-4">
+                    <!-- Injected -->
+                </div>
+            </div>
+
+        </div>
+
+        <div id="victory-msg" class="hidden mt-8 text-center">
+            <h2 class="text-2xl font-bold text-green-600 mb-2">🎉 完成挑战!</h2>
+            <button onclick="initGame()"
+                class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full font-bold shadow transition">再来一局</button>
+        </div>
+
+        <div class="mt-8 text-center">
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </div>
+
+    </div>
+
+    <script>
+        const elements = [
+            { s: 'H', n: '氢' }, { s: 'He', n: '氦' }, { s: 'Li', n: '锂' }, { s: 'Be', n: '铍' },
+            { s: 'B', n: '硼' }, { s: 'C', n: '碳' }, { s: 'N', n: '氮' }, { s: 'O', n: '氧' },
+            { s: 'F', n: '氟' }, { s: 'Ne', n: '氖' }, { s: 'Na', n: '钠' }, { s: 'Mg', n: '镁' },
+            { s: 'Al', n: '铝' }, { s: 'Si', n: '硅' }, { s: 'P', n: '磷' }, { s: 'S', n: '硫' },
+            { s: 'Cl', n: '氯' }, { s: 'K', n: '钾' }, { s: 'Ca', n: '钙' }, { s: 'Fe', n: '铁' },
+            { s: 'Cu', n: '铜' }, { s: 'Zn', n: '锌' }, { s: 'Ag', n: '银' }, { s: 'Au', n: '金' }
+        ];
+
+        let currentSet = [];
+        let score = 0;
+        let matches = 0;
+
+        const symContainer = document.getElementById('symbols-container');
+        const nameContainer = document.getElementById('names-container');
+        const scoreEl = document.getElementById('score');
+        const victoryEl = document.getElementById('victory-msg');
+
+        let draggedItem = null;
+
+        function initGame() {
+            score = 0;
+            matches = 0;
+            scoreEl.innerText = 0;
+            victoryEl.classList.add('hidden');
+
+            // Pick 8 random elements
+            const shuffled = [...elements].sort(() => 0.5 - Math.random());
+            currentSet = shuffled.slice(0, 8);
+
+            render();
+        }
+
+        function render() {
+            symContainer.innerHTML = '';
+            nameContainer.innerHTML = '';
+
+            // Render Symbols (Draggables)
+            const symbolOrder = [...currentSet].sort(() => 0.5 - Math.random());
+            symbolOrder.forEach(el => {
+                const div = document.createElement('div');
+                div.className = "draggable w-16 h-16 bg-indigo-100 text-indigo-700 font-bold text-2xl flex items-center justify-center rounded-xl shadow-sm border-2 border-indigo-200 hover:scale-110 transition-transform";
+                div.draggable = true;
+                div.innerText = el.s;
+                div.id = `sym-${el.s}`;
+
+                // Drag Events
+                div.addEventListener('dragstart', (e) => {
+                    draggedItem = el;
+                    e.dataTransfer.setData('text/plain', el.s);
+                    setTimeout(() => div.classList.add('opacity-50'), 0);
+                });
+                div.addEventListener('dragend', () => {
+                    div.classList.remove('opacity-50');
+                    draggedItem = null;
+                });
+
+                // Touch support
+                div.addEventListener('touchstart', (e) => {
+                    draggedItem = el;
+                    div.classList.add('opacity-50');
+                });
+                div.addEventListener('touchend', (e) => {
+                    div.classList.remove('opacity-50');
+                    // Simple drop check for touch (check element under finger)
+                    const touch = e.changedTouches[0];
+                    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                    if (target && target.closest('.dropzone')) {
+                        handleDrop(target.closest('.dropzone'), el.s);
+                    }
+                    draggedItem = null;
+                });
+
+                symContainer.appendChild(div);
+            });
+
+            // Render Names (Dropzones)
+            const nameOrder = [...currentSet].sort(() => 0.5 - Math.random());
+            nameOrder.forEach(el => {
+                const div = document.createElement('div');
+                div.className = "dropzone h-16 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center text-slate-500 font-bold";
+                div.innerText = el.n;
+                div.dataset.symbol = el.s;
+
+                div.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    if (!div.classList.contains('correct')) div.classList.add('hover');
+                });
+                div.addEventListener('dragleave', () => div.classList.remove('hover'));
+                div.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    div.classList.remove('hover');
+                    const s = e.dataTransfer.getData('text/plain');
+                    handleDrop(div, s);
+                });
+
+                nameContainer.appendChild(div);
+            });
+        }
+
+        function handleDrop(target, symbol) {
+            if (target.classList.contains('correct')) return;
+
+            if (target.dataset.symbol === symbol) {
+                // Correct
+                target.classList.add('correct');
+                target.innerText = `${symbol} - ${target.innerText}`;
+
+                const source = document.getElementById(`sym-${symbol}`);
+                if (source) source.classList.add('fade-out'); // Animate removal
+
+                score += 10;
+                matches++;
+                scoreEl.innerText = score;
+
+                if (matches === currentSet.length) {
+                    victoryEl.classList.remove('hidden');
+                }
+            } else {
+                // Wrong
+                target.classList.add('bg-red-100', 'border-red-300', 'text-red-500');
+                setTimeout(() => target.classList.remove('bg-red-100', 'border-red-300', 'text-red-500'), 500);
+                score = Math.max(0, score - 5);
+                scoreEl.innerText = score;
+            }
+        }
+
+        initGame();
+    </script>
+</body>
+
+</html>

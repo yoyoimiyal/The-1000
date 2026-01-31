@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音阶探索者</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .piano-key {
+            border: 1px solid #cbd5e1;
+            border-radius: 0 0 4px 4px;
+            height: 120px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 10px;
+            font-weight: bold;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .piano-key.black {
+            background-color: #1e293b;
+            color: white;
+            height: 70px;
+            width: 30px;
+            margin-left: -15px;
+            margin-right: -15px;
+            z-index: 10;
+            border-radius: 0 0 4px 4px;
+            border: 1px solid black;
+            position: absolute;
+            top: 0;
+        }
+
+        .piano-key.white {
+            background-color: white;
+            width: 40px;
+            z-index: 1;
+        }
+
+        .piano-key.active {
+            background-color: #3b82f6 !important;
+            color: white !important;
+            transform: translateY(2px);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .piano-key.in-scale::after {
+            content: '';
+            position: absolute;
+            bottom: 25px;
+            width: 8px;
+            height: 8px;
+            background-color: #3b82f6;
+            border-radius: 50%;
+            opacity: 0.5;
+        }
+
+        .black.in-scale::after {
+            bottom: 10px;
+            background-color: #60a5fa;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-slate-700 flex items-center gap-2">
+                <span class="text-3xl">🎹</span> Scale Explorer
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="flex gap-4 mb-8">
+            <div class="flex-1">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">根音 (Root)</label>
+                <select id="root"
+                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none"
+                    onchange="updateScale()">
+                    <option value="0">C</option>
+                    <option value="1">C# / Db</option>
+                    <option value="2">D</option>
+                    <option value="3">D# / Eb</option>
+                    <option value="4">E</option>
+                    <option value="5">F</option>
+                    <option value="6">F# / Gb</option>
+                    <option value="7">G</option>
+                    <option value="8">G# / Ab</option>
+                    <option value="9">A</option>
+                    <option value="10">A# / Bb</option>
+                    <option value="11">B</option>
+                </select>
+            </div>
+            <div class="flex-[2]">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">调式 (Scale)</label>
+                <select id="scale"
+                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none"
+                    onchange="updateScale()">
+                    <option value="major">Major (大调)</option>
+                    <option value="minor">Natural Minor (自然小调)</option>
+                    <option value="harmonic_minor">Harmonic Minor (和声小调)</option>
+                    <option value="pent_major">Major Pentatonic (大调五声)</option>
+                    <option value="pent_minor">Minor Pentatonic (小调五声)</option>
+                    <option value="blues">Blues (布鲁斯)</option>
+                    <option value="dorian">Dorian</option>
+                    <option value="lydian">Lydian</option>
+                    <option value="mixolydian">Mixolydian</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Piano -->
+        <div class="relative h-[120px] flex justify-center select-none mb-8" id="piano">
+            <!-- Keys injected -->
+        </div>
+
+        <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 text-center">
+            <p class="text-xs text-indigo-400 font-bold uppercase mb-2">音符构成 (Notes)</p>
+            <div class="text-xl font-bold text-indigo-900" id="notes-display">C D E F G A B</div>
+        </div>
+
+        <button onclick="playScale()"
+            class="w-full mt-4 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow hover:bg-indigo-700 transition">
+            播放音阶
+        </button>
+
+    </div>
+
+    <script>
+        const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        const scales = {
+            major: [0, 2, 4, 5, 7, 9, 11],
+            minor: [0, 2, 3, 5, 7, 8, 10],
+            harmonic_minor: [0, 2, 3, 5, 7, 8, 11],
+            pent_major: [0, 2, 4, 7, 9],
+            pent_minor: [0, 3, 5, 7, 10],
+            blues: [0, 3, 5, 6, 7, 10],
+            dorian: [0, 2, 3, 5, 7, 9, 10],
+            lydian: [0, 2, 4, 6, 7, 9, 11],
+            mixolydian: [0, 2, 4, 5, 7, 9, 10]
+        };
+
+        const pianoEl = document.getElementById('piano');
+        const notesDisplay = document.getElementById('notes-display');
+        let activeNotes = [];
+        let audioCtx;
+
+        function init() {
+            // Build Piano (2 Octaves)
+            // C4 to B5
+            // 24 keys approx
+            let html = '';
+            let blackKeys = [];
+
+            // Generate keys logic is tricky for HTML flow. 
+            // Simple mapping: 14 white keys. 10 black keys positioned absolutely.
+
+            let whiteKeysHTML = '';
+            let blackKeysHTML = '';
+            let xPos = 0;
+
+            for (let i = 0; i < 24; i++) { // 2 Octaves
+                const noteIndex = i % 12;
+                const isBlack = [1, 3, 6, 8, 10].includes(noteIndex);
+
+                if (!isBlack) {
+                    whiteKeysHTML += `<div class="piano-key white" id="key-${i}" onclick="playNote(${i})"></div>`;
+                    xPos += 40;
+                } else {
+                    // Position relative to previous white key right edge
+                    // Black key centers on line between white keys
+                    // Current xPos is right edge of previous white key
+                    blackKeysHTML += `<div class="piano-key black" id="key-${i}" style="left: ${xPos - 15}px;" onclick="playNote(${i})"></div>`;
+                }
+            }
+
+            pianoEl.innerHTML = whiteKeysHTML + blackKeysHTML;
+            updateScale();
+        }
+
+        function updateScale() {
+            const root = parseInt(document.getElementById('root').value);
+            const scaleType = document.getElementById('scale').value;
+            const intervals = scales[scaleType];
+
+            activeNotes = [];
+            const displayNames = [];
+
+            // Reset UI
+            document.querySelectorAll('.piano-key').forEach(k => k.classList.remove('in-scale', 'active'));
+
+            // Calculate Scale Notes across 2 octaves
+            // We just highlight valid keys
+            for (let i = 0; i < 24; i++) {
+                const noteInOctave = i % 12;
+                // Check if this note is in the scale relative to root
+                // Interval = (note - root + 12) % 12
+                const interval = (noteInOctave - root + 12) % 12;
+
+                if (intervals.includes(interval)) {
+                    document.getElementById(`key-${i}`).classList.add('in-scale');
+                    if (i < 12 || (i === 12 && intervals.includes(0))) { // Only collect names for 1 octave + root
+                        // Avoid duplicates in name list
+                        const name = noteNames[noteInOctave];
+                        if (!displayNames.includes(name)) displayNames.push(name);
+                    }
+                    activeNotes.push(i);
+                }
+            }
+
+            // Re-sort display names starting from root
+            // Just regenerate list based on intervals
+            const orderedNames = intervals.map(interval => noteNames[(root + interval) % 12]);
+            notesDisplay.innerText = orderedNames.join(' - ');
+        }
+
+        function playNote(i) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            // C4 is index 0 (approx midi 60). Frequency calculation.
+            // A4 is 440 (index 9).
+            // freq = 440 * 2^((n-9)/12)
+            const freq = 440 * Math.pow(2, (i - 9) / 12);
+
+            osc.frequency.value = freq;
+            osc.type = 'triangle';
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.5, now + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+            osc.start(now);
+            osc.stop(now + 0.5);
+
+            // Visual
+            const key = document.getElementById(`key-${i}`);
+            key.classList.add('active');
+            setTimeout(() => key.classList.remove('active'), 200);
+        }
+
+        function playScale() {
+            // Play first octave of active notes
+            // Filter activeNotes to be sequential
+            // Just grab from intervals
+            const root = parseInt(document.getElementById('root').value);
+            const scaleType = document.getElementById('scale').value;
+            const intervals = scales[scaleType];
+
+            let time = 0;
+            intervals.forEach((interval, idx) => {
+                setTimeout(() => {
+                    playNote(root + interval);
+                }, idx * 300);
+                time += 300;
+            });
+            // Play octave root at end
+            setTimeout(() => {
+                playNote(root + 12);
+            }, time);
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>太空侵略者</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #000;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+            border: 2px solid #333;
+            margin: auto;
+            max-width: 100%;
+            max-height: 80vh;
+        }
+
+        .pixel-font {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col items-center justify-center h-screen text-white">
+
+    <div class="mb-4 text-center w-full max-w-[600px] flex justify-between items-end px-2">
+        <div>
+            <h1 class="text-xl font-bold text-green-400 pixel-font tracking-widest">INVADERS</h1>
+            <p class="text-xs text-gray-500">Left/Right to Move, Space/Tap to Fire</p>
+        </div>
+        <div class="text-right">
+            <div class="text-xs text-gray-500 uppercase">Score</div>
+            <div class="text-2xl font-bold font-mono" id="score">0</div>
+        </div>
+    </div>
+
+    <div class="relative">
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+
+        <div id="overlay" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-10">
+            <h2 class="text-3xl font-bold mb-4 text-green-500 pixel-font">READY?</h2>
+            <button onclick="startGame()"
+                class="px-8 py-2 border-2 border-green-500 text-green-500 hover:bg-green-500 hover:text-black font-bold font-mono transition">START</button>
+        </div>
+    </div>
+
+    <div class="mt-8 flex gap-4">
+        <a href="./navigation.html"
+            class="text-xs text-gray-600 hover:text-white border border-gray-800 px-3 py-1 rounded">EXIT</a>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div class="absolute bottom-4 w-full px-4 flex justify-between md:hidden z-20">
+        <div class="flex gap-2">
+            <button
+                class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center text-2xl font-bold active:bg-white/30"
+                ontouchstart="keys.Left=true" ontouchend="keys.Left=false">←</button>
+            <button
+                class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center text-2xl font-bold active:bg-white/30"
+                ontouchstart="keys.Right=true" ontouchend="keys.Right=false">→</button>
+        </div>
+        <button
+            class="w-16 h-16 bg-red-500/50 rounded-full flex items-center justify-center text-sm font-bold active:bg-red-500/80"
+            ontouchstart="fire()">FIRE</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const overlay = document.getElementById('overlay');
+
+        let isPlaying = false;
+        let score = 0;
+        let player = { x: 300, y: 380, w: 30, h: 20, speed: 5 };
+        let bullets = [];
+        let enemies = [];
+        let enemyDir = 1; // 1: right, -1: left
+        let enemySpeed = 1;
+        let frame = 0;
+        let keys = { Left: false, Right: false };
+
+        const enemyRows = 4;
+        const enemyCols = 8;
+        const enemyW = 30;
+        const enemyH = 20;
+        const enemyGap = 15;
+
+        function initEnemies() {
+            enemies = [];
+            const startX = (canvas.width - (enemyCols * (enemyW + enemyGap))) / 2;
+            for (let r = 0; r < enemyRows; r++) {
+                for (let c = 0; c < enemyCols; c++) {
+                    enemies.push({
+                        x: startX + c * (enemyW + enemyGap),
+                        y: 40 + r * (enemyH + enemyGap),
+                        w: enemyW, h: enemyH,
+                        active: true
+                    });
+                }
+            }
+            enemySpeed = 1;
+        }
+
+        function startGame() {
+            isPlaying = true;
+            score = 0;
+            scoreEl.innerText = 0;
+            bullets = [];
+            player.x = canvas.width / 2 - player.w / 2;
+            initEnemies();
+            overlay.classList.add('hidden');
+            loop();
+        }
+
+        function fire() {
+            if (!isPlaying) return;
+            bullets.push({ x: player.x + player.w / 2, y: player.y, w: 4, h: 10, speed: 7 });
+        }
+
+        function gameOver(win) {
+            isPlaying = false;
+            overlay.classList.remove('hidden');
+            const title = overlay.querySelector('h2');
+            const btn = overlay.querySelector('button');
+            if (win) {
+                title.innerText = "VICTORY!";
+                title.classList.replace('text-red-500', 'text-green-500');
+            } else {
+                title.innerText = "GAME OVER";
+                title.classList.replace('text-green-500', 'text-red-500');
+            }
+            btn.innerText = "RESTART";
+        }
+
+        function loop() {
+            if (!isPlaying) return;
+
+            // Clear
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Player Move
+            if (keys.Left && player.x > 0) player.x -= player.speed;
+            if (keys.Right && player.x < canvas.width - player.w) player.x += player.speed;
+
+            // Draw Player
+            ctx.fillStyle = '#0f0';
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+            ctx.fillRect(player.x + 12, player.y - 5, 6, 5); // turret
+
+            // Bullets
+            ctx.fillStyle = '#fff';
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.y -= b.speed;
+                ctx.fillRect(b.x - b.w / 2, b.y, b.w, b.h);
+                if (b.y < 0) bullets.splice(i, 1);
+            }
+
+            // Enemies Logic
+            let hitEdge = false;
+            let activeCount = 0;
+
+            enemies.forEach(e => {
+                if (!e.active) return;
+                activeCount++;
+
+                // Draw (Pixel Invader)
+                ctx.fillStyle = '#ef4444'; // Red
+                ctx.fillRect(e.x, e.y, e.w, e.h);
+                // Eyes
+                ctx.fillStyle = 'black';
+                ctx.fillRect(e.x + 5, e.y + 5, 5, 5);
+                ctx.fillRect(e.x + e.w - 10, e.y + 5, 5, 5);
+
+                // Collision with Bullet
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    let b = bullets[j];
+                    if (b.x > e.x && b.x < e.x + e.w && b.y > e.y && b.y < e.y + e.h) {
+                        e.active = false;
+                        bullets.splice(j, 1);
+                        score += 10;
+                        scoreEl.innerText = score;
+                        break;
+                    }
+                }
+
+                // Collision with Player or Bottom
+                if (e.y + e.h >= player.y) {
+                    gameOver(false);
+                }
+            });
+
+            if (activeCount === 0) {
+                gameOver(true);
+                return;
+            }
+
+            // Move Enemies
+            // Check edge first
+            enemies.forEach(e => {
+                if (!e.active) return;
+                if ((e.x <= 0 && enemyDir === -1) || (e.x + e.w >= canvas.width && enemyDir === 1)) {
+                    hitEdge = true;
+                }
+            });
+
+            if (hitEdge) {
+                enemyDir *= -1;
+                enemies.forEach(e => e.y += 20); // Move down
+                enemySpeed += 0.2; // Speed up
+            } else {
+                enemies.forEach(e => e.x += enemySpeed * enemyDir);
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        // Keyboard
+        document.addEventListener('keydown', e => {
+            if (e.code === 'ArrowLeft') keys.Left = true;
+            if (e.code === 'ArrowRight') keys.Right = true;
+            if (e.code === 'Space') fire();
+        });
+        document.addEventListener('keyup', e => {
+            if (e.code === 'ArrowLeft') keys.Left = false;
+            if (e.code === 'ArrowRight') keys.Right = false;
+        });
+
+    </script>
+</body>
+
+</html>

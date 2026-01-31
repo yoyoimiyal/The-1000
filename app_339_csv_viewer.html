@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV 表格查看器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .table-container {
+            max-height: 70vh;
+            overflow: auto;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            background: #f8fafc;
+            z-index: 10;
+        }
+
+        td,
+        th {
+            white-space: nowrap;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.875rem;
+        }
+
+        tr:hover td {
+            background-color: #f1f5f9;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen p-6 flex flex-col items-center text-slate-800">
+
+    <div class="w-full max-w-6xl flex flex-col h-full">
+
+        <header class="flex justify-between items-center mb-6 shrink-0">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-700">
+                <span class="bg-green-600 text-white px-2 py-1 rounded text-xs font-mono">CSV</span> Viewer
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <!-- Toolbar -->
+        <div
+            class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-wrap gap-4 items-center shrink-0">
+
+            <label
+                class="cursor-pointer bg-indigo-50 text-indigo-600 px-4 py-2 rounded-lg font-bold hover:bg-indigo-100 transition text-xs flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Open CSV
+                <input type="file" class="hidden" accept=".csv" onchange="loadFile(event)">
+            </label>
+
+            <div class="h-6 w-px bg-slate-200"></div>
+
+            <input type="text" id="search" placeholder="Search..."
+                class="p-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 w-48"
+                onkeyup="filterTable()">
+
+            <span class="text-xs text-slate-400 ml-auto" id="status">No file loaded</span>
+
+        </div>
+
+        <!-- Table -->
+        <div
+            class="bg-white rounded-xl shadow-xl border border-slate-200 flex-1 overflow-hidden flex flex-col relative">
+            <div class="table-container flex-1" id="table-wrapper">
+                <table class="w-full text-left" id="csv-table">
+                    <thead class="text-xs font-bold text-slate-500 uppercase bg-slate-50">
+                        <!-- Headers -->
+                    </thead>
+                    <tbody class="text-slate-600">
+                        <!-- Rows -->
+                        <tr>
+                            <td class="text-center py-10 text-slate-400">请上传 CSV 文件以查看内容</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const table = document.getElementById('csv-table');
+        const status = document.getElementById('status');
+        const searchInput = document.getElementById('search');
+
+        let headers = [];
+        let rows = [];
+
+        function loadFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            status.innerText = `Loading ${file.name}...`;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const text = event.target.result;
+                parseCSV(text);
+                status.innerText = `${rows.length} rows loaded`;
+            };
+            reader.readAsText(file);
+        }
+
+        function parseCSV(text) {
+            // Simple CSV parser (doesn't handle complex quotes/newlines inside cells perfectly, but good for simple files)
+            const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+            if (lines.length === 0) return;
+
+            headers = lines[0].split(',').map(h => h.trim());
+            rows = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(','); // Simple split
+                // Handle basic quoted commas? 
+                // Let's stick to simple split for MVP or use Regex: /,(?=(?:(?:[^"]*"){2})*[^"]*$)/
+                // Using regex for better robustness:
+                // const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/^"|"$/g, '').trim());
+                // Simple version:
+                rows.push(cols.map(c => c.trim()));
+            }
+
+            renderTable(rows);
+        }
+
+        function renderTable(data) {
+            // Render Head
+            const thead = table.querySelector('thead');
+            thead.innerHTML = '<tr>' + headers.map((h, i) => `<th onclick="sortTable(${i})" class="cursor-pointer hover:bg-slate-100 select-none">${h} ↕</th>`).join('') + '</tr>';
+
+            // Render Body
+            const tbody = table.querySelector('tbody');
+            tbody.innerHTML = '';
+
+            // Limit render to 1000 rows for DOM performance if huge
+            const displayData = data.slice(0, 1000);
+
+            displayData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('');
+                tbody.appendChild(tr);
+            });
+
+            if (data.length > 1000) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td colspan="${headers.length}" class="text-center text-slate-400 italic">... 显示前 1000 行 (共 ${data.length} 行) ...</td>`;
+                tbody.appendChild(tr);
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function filterTable() {
+            const query = searchInput.value.toLowerCase();
+            const filtered = rows.filter(row => {
+                return row.some(cell => cell.toLowerCase().includes(query));
+            });
+            renderTable(filtered);
+        }
+
+        let sortDir = 1;
+        function sortTable(colIndex) {
+            sortDir *= -1;
+            rows.sort((a, b) => {
+                const valA = a[colIndex] || '';
+                const valB = b[colIndex] || '';
+                // Try number sort
+                const numA = parseFloat(valA);
+                const numB = parseFloat(valB);
+
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    return (numA - numB) * sortDir;
+                }
+                return valA.localeCompare(valB) * sortDir;
+            });
+            renderTable(rows);
+        }
+
+        // Demo data if needed?
+        // No, force user upload is cleaner for "Utility" feel.
+    </script>
+</body>
+
+</html>

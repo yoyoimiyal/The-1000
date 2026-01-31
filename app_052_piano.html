@@ -1,255 +1,363 @@
 <!DOCTYPE html>
+
 <html lang="zh-CN">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>口袋钢琴</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>(并非)口袋键盘 Piano</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .piano-container {
-            display: flex;
-            justify-content: center;
+        body {
+            background: #111827;
+            color: white;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            height: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+
+        .piano-wrapper {
+            overflow-x: auto;
+            overflow-y: hidden;
+            width: 100%;
+            /* 改为弹性高度，适配不同屏幕 */
+            flex-grow: 1;
             position: relative;
-            user-select: none;
-            -webkit-user-select: none;
+            background: #1f2937;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+            /* Hide scrollbar on Firefox */
+            scrollbar-width: thin;
+            scrollbar-color: #4b5563 #1f2937;
+            /* 允许水平滚动 */
+            touch-action: pan-x;
+        }
+
+        .piano-container {
+            /* 高度跟随父容器 */
+            height: 100%;
+            position: relative;
+            margin: 0 auto;
+            /* width will be set by JS */
         }
 
         .white-key {
-            width: 60px;
-            height: 200px;
+            width: 40px;
+            /* 高度占满容器 */
+            height: 100%;
             background: white;
-            border: 1px solid #ccc;
-            border-bottom-left-radius: 8px;
-            border-bottom-right-radius: 8px;
-            box-shadow: 0 5px 5px rgba(0, 0, 0, 0.1);
+            border: 1px solid #999;
+            border-top: none;
+            border-bottom-left-radius: 4px;
+            border-bottom-right-radius: 4px;
+            box-shadow: inset 0 -5px 10px rgba(0, 0, 0, 0.1);
             z-index: 1;
             cursor: pointer;
-            transition: background 0.1s, transform 0.05s, box-shadow 0.05s;
+            position: absolute;
+            top: 0;
+            transition: background 0.1s, transform 0.05s;
             display: flex;
             align-items: flex-end;
             justify-content: center;
             padding-bottom: 10px;
-            color: #aaa;
-            font-size: 12px;
-            position: relative;
+            color: #9ca3af;
+            font-size: 10px;
+            user-select: none;
+            /* 解决移动端点击高亮问题 */
+            -webkit-tap-highlight-color: transparent;
         }
 
         .white-key:active,
         .white-key.active {
-            background: linear-gradient(to bottom, #fff 0%, #e0e0e0 100%);
+            background: linear-gradient(to bottom, #fff 0%, #e5e5e5 100%);
             transform: translateY(2px);
-            box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
+            box-shadow: inset 0 -2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .white-key.middle-c {
+            background: #f3f4f6;
+        }
+
+        .key-label {
+            pointer-events: none;
+            font-weight: bold;
         }
 
         .black-key {
-            width: 40px;
-            height: 120px;
+            width: 24px;
+            /* 黑键高度设为百分比，适配扁平屏幕 */
+            height: 60%;
             background: linear-gradient(to bottom, #333 0%, #000 100%);
-            border-radius: 0 0 6px 6px;
+            border-bottom-left-radius: 3px;
+            border-bottom-right-radius: 3px;
             position: absolute;
+            top: 0;
             z-index: 10;
             cursor: pointer;
-            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
-            transition: background 0.1s, transform 0.05s, box-shadow 0.05s;
+            box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+            transition: background 0.1s, transform 0.05s;
         }
 
         .black-key:active,
         .black-key.active {
-            background: #000;
+            background: #111;
             transform: translateY(2px);
-            box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
         }
 
-        /* 黑键位置计算 (基于白键宽度60px) */
-        /* C#4 */
-        .bk-1 {
-            left: 40px;
+        /* 键盘快捷键提示 */
+        .keyboard-hint {
+            position: absolute;
+            bottom: 30px;
+            color: #ef4444;
+            font-weight: bold;
+            font-size: 10px;
+            pointer-events: none;
         }
 
-        /* D#4 */
-        .bk-2 {
-            left: 100px;
+        .black-key .keyboard-hint {
+            bottom: 10px;
+            color: #fca5a5;
+            left: 50%;
+            transform: translateX(-50%);
         }
 
-        /* F#4 */
-        .bk-3 {
-            left: 220px;
-        }
+        /* 移动端横屏适配：隐藏多余UI，最大化键盘区域 */
+        @media (max-height: 500px) and (orientation: landscape) {
+            #app-header {
+                display: none !important;
+            }
 
-        /* G#4 */
-        .bk-4 {
-            left: 280px;
-        }
+            #app-footer {
+                padding: 4px !important;
+                border-top: none !important;
+                background: rgba(17, 24, 39, 0.8) !important;
+                position: absolute;
+                bottom: 10px;
+                right: 10px;
+                z-index: 50;
+                width: auto !important;
+                justify-content: flex-end !important;
+                pointer-events: none;
+            }
 
-        /* A#4 */
-        .bk-5 {
-            left: 340px;
-        }
+            #app-footer button {
+                pointer-events: auto;
+                padding: 4px 8px;
+                font-size: 10px;
+                opacity: 0.7;
+            }
 
-        /* 新增的高音黑键 */
-        /* C#5 (在 C5 和 D5 之间: 420+60-20) */
-        .bk-6 {
-            left: 460px;
-        }
+            /* 调整滚动条在横屏下不占用太多空间 */
+            ::-webkit-scrollbar {
+                height: 6px;
+            }
 
-        /* D#5 (在 D5 和 E5 之间: 480+60-20) */
-        .bk-7 {
-            left: 520px;
+            .keyboard-hint {
+                display: none;
+                /* 手机端不需要显示键盘快捷键 */
+            }
         }
     </style>
 </head>
 
-<body class="bg-gray-800 min-h-screen flex flex-col items-center justify-center p-4">
+<body class="flex flex-col h-screen w-screen bg-gray-900">
 
-    <div class="mb-8 text-center text-white">
-        <h1 class="text-3xl font-bold mb-2">Pocket Piano</h1>
+    <div id="app-header" class="flex-none p-4 text-center bg-gray-900 border-b border-gray-700 shadow-lg z-20">
+        <h1 class="text-2xl font-bold text-white tracking-wider mb-1">Grand Piano</h1>
+        <p class="text-gray-400 text-xs">横屏以获得最佳体验 (Rotate for full size)</p>
     </div>
 
-    <div class="bg-gray-900 p-4 pt-8 rounded-xl shadow-2xl border-t-8 border-gray-700 relative">
-        <div class="piano-container relative">
-            <div class="white-key" data-note="C4" data-key="a" onmousedown="play('C4')" ontouchstart="play('C4')">A
+    <div class="flex-grow flex items-stretch justify-center bg-gray-800 relative overflow-hidden">
+        <div class="piano-wrapper" id="pianoWrapper">
+            <div class="piano-container" id="piano">
             </div>
-            <div class="white-key" data-note="D4" data-key="s" onmousedown="play('D4')" ontouchstart="play('D4')">S
-            </div>
-            <div class="white-key" data-note="E4" data-key="d" onmousedown="play('E4')" ontouchstart="play('E4')">D
-            </div>
-            <div class="white-key" data-note="F4" data-key="f" onmousedown="play('F4')" ontouchstart="play('F4')">F
-            </div>
-            <div class="white-key" data-note="G4" data-key="g" onmousedown="play('G4')" ontouchstart="play('G4')">G
-            </div>
-            <div class="white-key" data-note="A4" data-key="h" onmousedown="play('A4')" ontouchstart="play('A4')">H
-            </div>
-            <div class="white-key" data-note="B4" data-key="j" onmousedown="play('B4')" ontouchstart="play('B4')">J
-            </div>
-
-            <div class="white-key" data-note="C5" data-key="k" onmousedown="play('C5')" ontouchstart="play('C5')">K
-            </div>
-
-            <div class="white-key" data-note="D5" data-key="l" onmousedown="play('D5')" ontouchstart="play('D5')">L
-            </div>
-            <div class="white-key" data-note="E5" data-key=";" onmousedown="play('E5')" ontouchstart="play('E5')">;
-            </div>
-
-            <div class="black-key bk-1" data-note="C#4" data-key="w" onmousedown="play('C#4')"
-                ontouchstart="play('C#4')"></div>
-            <div class="black-key bk-2" data-note="D#4" data-key="e" onmousedown="play('D#4')"
-                ontouchstart="play('D#4')"></div>
-            <div class="black-key bk-3" data-note="F#4" data-key="t" onmousedown="play('F#4')"
-                ontouchstart="play('F#4')"></div>
-            <div class="black-key bk-4" data-note="G#4" data-key="y" onmousedown="play('G#4')"
-                ontouchstart="play('G#4')"></div>
-            <div class="black-key bk-5" data-note="A#4" data-key="u" onmousedown="play('A#4')"
-                ontouchstart="play('A#4')"></div>
-
-            <div class="black-key bk-6" data-note="C#5" data-key="o" onmousedown="play('C#5')"
-                ontouchstart="play('C#5')"></div>
-            <div class="black-key bk-7" data-note="D#5" data-key="p" onmousedown="play('D#5')"
-                ontouchstart="play('D#5')"></div>
         </div>
     </div>
 
-    <div class="mt-8">
-        <a href="#" onclick="window.location.reload()"
-            class="text-gray-500 hover:text-white text-sm border border-gray-600 px-4 py-2 rounded-full transition">重置</a>
+    <div id="app-footer"
+        class="flex-none bg-gray-900 p-4 border-t border-gray-700 flex justify-center gap-4 z-20 w-full">
+        <button onclick="scrollToMiddle()"
+            class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm text-white font-medium transition shadow-lg">
+            重置视图 (Center)
+        </button>
     </div>
 
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const pianoContainer = document.getElementById('piano');
+        const pianoWrapper = document.getElementById('pianoWrapper');
 
-        const frequencies = {
-            'C4': 261.63, 'C#4': 277.18,
-            'D4': 293.66, 'D#4': 311.13,
-            'E4': 329.63,
-            'F4': 349.23, 'F#4': 369.99,
-            'G4': 392.00, 'G#4': 415.30,
-            'A4': 440.00, 'A#4': 466.16,
-            'B4': 493.88,
-            'C5': 523.25,
+        // Piano Config
+        const totalKeys = 88;
+        const startNoteMIDI = 21; // A0
+        const whiteKeyWidth = 40;
+        const blackKeyWidth = 24;
 
-            // 新增高音频率
-            'C#5': 554.37,
-            'D5': 587.33, // 高音Re (2.)
-            'D#5': 622.25,
-            'E5': 659.25  // 高音Mi (3.)
+        // Mappings
+        const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        const keyMap = {}; // Maps keyboard char to MIDI note
+
+        const keyboardLayout = {
+            // Lower Octave (C3)
+            'z': 48, 's': 49, 'x': 50, 'd': 51, 'c': 52, 'v': 53, 'g': 54, 'b': 55, 'h': 56, 'n': 57, 'j': 58, 'm': 59,
+            // Middle Octave (C4)
+            'q': 60, '2': 61, 'w': 62, '3': 63, 'e': 64, 'r': 65, '5': 66, 't': 67, '6': 68, 'y': 69, '7': 70, 'u': 71, 'i': 72
         };
 
-        const keyMap = {
-            'a': 'C4', 'w': 'C#4',
-            's': 'D4', 'e': 'D#4',
-            'd': 'E4',
-            'f': 'F4', 't': 'F#4',
-            'g': 'G4', 'y': 'G#4',
-            'h': 'A4', 'u': 'A#4',
-            'j': 'B4',
-            'k': 'C5',
+        function getFrequency(midiNote) {
+            return 440 * Math.pow(2, (midiNote - 69) / 12);
+        }
 
-            // 新增映射
-            'o': 'C#5',
-            'l': 'D5',
-            'p': 'D#5',
-            ';': 'E5'
-        };
+        function getNoteName(midiNote) {
+            return noteNames[midiNote % 12] + (Math.floor(midiNote / 12) - 1);
+        }
 
-        const animationTimers = {};
+        function isBlack(midiNote) {
+            const n = midiNote % 12;
+            return n === 1 || n === 3 || n === 6 || n === 8 || n === 10;
+        }
 
-        function play(note) {
-            if (event && event.type === 'touchstart') event.preventDefault();
+        function createPiano() {
+            let whiteKeyIndex = 0;
+
+            for (let i = 0; i < totalKeys; i++) {
+                const midiNote = startNoteMIDI + i;
+                const isBlackKey = isBlack(midiNote);
+                const noteName = getNoteName(midiNote);
+
+                const keyEl = document.createElement('div');
+                keyEl.dataset.note = midiNote;
+
+                let keyLabel = '';
+                const mappedKey = Object.keys(keyboardLayout).find(k => keyboardLayout[k] === midiNote);
+                if (mappedKey) {
+                    keyLabel = `<span class="keyboard-hint">${mappedKey.toUpperCase()}</span>`;
+                }
+
+                if (isBlackKey) {
+                    keyEl.className = 'black-key';
+                    keyEl.style.left = `${(whiteKeyIndex * whiteKeyWidth) - (blackKeyWidth / 2)}px`;
+                    keyEl.innerHTML = keyLabel;
+                } else {
+                    keyEl.className = 'white-key';
+                    keyEl.style.left = `${whiteKeyIndex * whiteKeyWidth}px`;
+                    if (midiNote === 60) keyEl.classList.add('middle-c');
+
+                    if (midiNote % 12 === 0) {
+                        keyEl.innerHTML = `<span class="key-label">${noteName}</span>` + keyLabel;
+                    } else {
+                        keyEl.innerHTML = keyLabel;
+                    }
+                    whiteKeyIndex++;
+                }
+
+                // Event Listeners
+                const playFn = (e) => {
+                    // 移除 e.preventDefault() 以允许在按键上进行触摸滚动
+                    // 但由于 touch-action: pan-x，大多数现代浏览器会自动处理
+                    // 如果需要完全阻止默认行为（缩放等），可以在外部处理
+                    if (e.type === 'mousedown') {
+                        e.preventDefault(); // 鼠标点击仍然阻止默认以保持焦点
+                    }
+                    playNote(midiNote);
+                };
+
+                keyEl.addEventListener('mousedown', playFn);
+                keyEl.addEventListener('touchstart', playFn, { passive: true }); // passive true 优化滚动性能
+
+                pianoContainer.appendChild(keyEl);
+            }
+
+            pianoContainer.style.width = `${whiteKeyIndex * whiteKeyWidth}px`;
+        }
+
+        const activeOscillators = {};
+
+        function playNote(midiNote) {
             if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            if (activeOscillators[midiNote]) {
+                try {
+                    activeOscillators[midiNote].stop();
+                } catch (e) { }
+            }
 
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
 
             osc.type = 'triangle';
-            osc.frequency.value = frequencies[note];
+            osc.frequency.value = getFrequency(midiNote);
 
             osc.connect(gain);
             gain.connect(audioCtx.destination);
 
             const now = audioCtx.currentTime;
+
             gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(0.3, now + 0.02);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+            gain.gain.linearRampToValueAtTime(0.2, now + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
 
             osc.start(now);
-            osc.stop(now + 1.5);
+            osc.stop(now + 2.0);
 
-            if (event && (event.type === 'mousedown' || event.type === 'touchstart')) {
-                animateKeyStart(note);
-                setTimeout(() => animateKeyEnd(note), 150);
-            }
+            activeOscillators[midiNote] = osc;
+
+            animateKey(midiNote);
         }
 
-        function animateKeyStart(note) {
-            const el = document.querySelector(`[data-note="${note}"]`);
+        function animateKey(midiNote) {
+            const el = document.querySelector(`div[data-note="${midiNote}"]`);
             if (el) {
-                if (animationTimers[note]) clearTimeout(animationTimers[note]);
+                el.classList.remove('active');
+                void el.offsetWidth;
                 el.classList.add('active');
+                setTimeout(() => el.classList.remove('active'), 200);
             }
-        }
-
-        function animateKeyEnd(note) {
-            const el = document.querySelector(`[data-note="${note}"]`);
-            if (el) el.classList.remove('active');
         }
 
         document.addEventListener('keydown', (e) => {
             if (e.repeat) return;
             const key = e.key.toLowerCase();
-            if (keyMap[key]) {
-                const note = keyMap[key];
-                play(note);
-                animateKeyStart(note);
+            if (keyboardLayout[key]) {
+                playNote(keyboardLayout[key]);
             }
         });
 
         document.addEventListener('keyup', (e) => {
             const key = e.key.toLowerCase();
-            if (keyMap[key]) {
-                const note = keyMap[key];
-                animateKeyEnd(note);
+            if (keyboardLayout[key]) {
+                const el = document.querySelector(`div[data-note="${keyboardLayout[key]}"]`);
+                if (el) el.classList.remove('active');
             }
         });
+
+        function scrollToMiddle() {
+            const middlePos = (24 * whiteKeyWidth) - (pianoWrapper.clientWidth / 2);
+            pianoWrapper.scrollTo({ left: middlePos, behavior: 'smooth' });
+        }
+
+        createPiano();
+        window.onload = () => {
+            setTimeout(scrollToMiddle, 100);
+        };
+
     </script>
 </body>
 

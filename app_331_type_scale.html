@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排版尺度计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .preview-text {
+            line-height: 1.2;
+            font-weight: bold;
+            color: #1e293b;
+            transition: font-size 0.2s;
+        }
+
+        .scale-label {
+            font-family: monospace;
+            color: #64748b;
+            font-size: 0.75rem;
+            margin-right: 1rem;
+            width: 60px;
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-5xl flex flex-col md:flex-row gap-8 h-[90vh]">
+
+        <!-- Controls -->
+        <div
+            class="w-full md:w-80 bg-white p-6 rounded-2xl shadow-xl border border-slate-200 flex flex-col gap-6 shrink-0 h-fit">
+
+            <header class="flex justify-between items-center">
+                <h1 class="font-bold text-xl text-indigo-700">Type Scale</h1>
+                <a href="./navigation.html" class="text-xs text-slate-400 hover:text-indigo-600">退出</a>
+            </header>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">基准字号 (Base Size)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="base-size" value="16"
+                            class="w-full p-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-bold"
+                            oninput="update()">
+                        <span class="text-sm font-bold text-slate-500">px</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">比率 (Ratio)</label>
+                    <select id="ratio-select"
+                        class="w-full p-2 border border-slate-300 rounded-lg outline-none bg-white text-sm"
+                        onchange="setRatio()">
+                        <option value="1.067">1.067 - Minor Second</option>
+                        <option value="1.125">1.125 - Major Second</option>
+                        <option value="1.200">1.200 - Minor Third</option>
+                        <option value="1.250" selected>1.250 - Major Third</option>
+                        <option value="1.333">1.333 - Perfect Fourth</option>
+                        <option value="1.414">1.414 - Augmented Fourth</option>
+                        <option value="1.500">1.500 - Perfect Fifth</option>
+                        <option value="1.618">1.618 - Golden Ratio</option>
+                    </select>
+                    <input type="number" id="custom-ratio" value="1.250" step="0.001"
+                        class="w-full mt-2 p-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-bold"
+                        oninput="update()">
+                </div>
+            </div>
+
+            <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 text-xs text-indigo-800 leading-relaxed">
+                <p><strong>模块化尺度</strong> 是一系列和谐的数值，用于确定标题和正文的大小关系，让排版更具韵律感。</p>
+            </div>
+
+        </div>
+
+        <!-- Preview -->
+        <div class="flex-1 bg-white p-8 rounded-2xl shadow-sm border border-slate-200 overflow-y-auto">
+            <div id="scale-container" class="space-y-8">
+                <!-- Scales injected here -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const baseInput = document.getElementById('base-size');
+        const ratioInput = document.getElementById('custom-ratio');
+        const select = document.getElementById('ratio-select');
+        const container = document.getElementById('scale-container');
+
+        const levels = ['sm', 'base', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl'];
+        // Mapping levels to powers relative to base (base is index 1, power 0)
+        // sm: -1, base: 0, lg: 1, ...
+        const powers = [-1, 0, 1, 2, 3, 4, 5, 6];
+
+        function setRatio() {
+            ratioInput.value = select.value;
+            update();
+        }
+
+        function update() {
+            const base = parseFloat(baseInput.value) || 16;
+            const ratio = parseFloat(ratioInput.value) || 1.25;
+
+            container.innerHTML = '';
+
+            // Render from largest to smallest
+            [...powers].reverse().forEach(p => {
+                const size = base * Math.pow(ratio, p);
+                const sizeFixed = size.toFixed(2);
+                const rem = (size / 16).toFixed(3);
+
+                const row = document.createElement('div');
+                row.className = "flex items-baseline border-b border-slate-100 pb-4 last:border-0";
+
+                let label = "";
+                if (p === 0) label = "Body (1rem)";
+                else if (p > 0) label = `H${6 - (p - 1)}`; // H6, H5... H1
+                else label = "Small";
+
+                // Fix H levels logic:
+                // p=1 -> H6? Usually scale is: 
+                // p0 = body
+                // p1 = h6? p2 = h5? 
+                // Let's just use generic labels like "Level X"
+                const levelLabel = p === 0 ? "Base" : (p > 0 ? `Level +${p}` : `Level ${p}`);
+
+                row.innerHTML = `
+                    <div class="w-32 shrink-0 text-right pr-6 flex flex-col justify-center">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">${levelLabel}</span>
+                        <span class="font-mono text-xs text-indigo-600 font-bold">${sizeFixed}px</span>
+                        <span class="font-mono text-[10px] text-slate-400">${rem}rem</span>
+                    </div>
+                    <div class="flex-1">
+                        <p class="preview-text truncate" style="font-size: ${size}px">The quick brown fox jumps over the lazy dog</p>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        // Init
+        update();
+    </script>
+</body>
+
+</html>

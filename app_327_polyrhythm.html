@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多节奏节拍器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .beat-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #334155;
+            transition: transform 0.1s;
+        }
+
+        .beat-indicator.active {
+            transform: scale(1.5);
+            box-shadow: 0 0 10px currentColor;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-white">
+
+    <div class="w-full max-w-lg bg-gray-800 p-8 rounded-3xl shadow-2xl border border-gray-700">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <span class="text-2xl text-purple-400">🥁</span> Polyrhythm
+            </h1>
+            <a href="./navigation.html" class="text-sm text-gray-400 hover:text-white">退出</a>
+        </header>
+
+        <div class="mb-8 text-center">
+            <div class="text-5xl font-black text-white font-mono mb-2" id="bpm-display">60</div>
+            <p class="text-xs text-gray-500 font-bold uppercase tracking-widest">BPM</p>
+            <input type="range" id="bpm-slider" min="30" max="200" value="60"
+                class="w-full mt-4 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                oninput="updateBPM(this.value)">
+        </div>
+
+        <div class="grid grid-cols-2 gap-8 mb-8">
+
+            <!-- Rhythm 1 -->
+            <div class="bg-gray-700/50 p-6 rounded-2xl border border-blue-500/30 flex flex-col items-center">
+                <h3 class="text-blue-400 font-bold mb-4">Rhythm A</h3>
+                <div class="text-4xl font-bold mb-4" id="val-1">3</div>
+                <div class="flex gap-2 mb-4">
+                    <button onclick="changeBeat(1, -1)" class="w-8 h-8 rounded bg-gray-600 hover:bg-gray-500">-</button>
+                    <button onclick="changeBeat(1, 1)" class="w-8 h-8 rounded bg-gray-600 hover:bg-gray-500">+</button>
+                </div>
+                <div class="beat-indicator text-blue-500 bg-blue-900" id="ind-1"></div>
+            </div>
+
+            <!-- Rhythm 2 -->
+            <div class="bg-gray-700/50 p-6 rounded-2xl border border-red-500/30 flex flex-col items-center">
+                <h3 class="text-red-400 font-bold mb-4">Rhythm B</h3>
+                <div class="text-4xl font-bold mb-4" id="val-2">4</div>
+                <div class="flex gap-2 mb-4">
+                    <button onclick="changeBeat(2, -1)" class="w-8 h-8 rounded bg-gray-600 hover:bg-gray-500">-</button>
+                    <button onclick="changeBeat(2, 1)" class="w-8 h-8 rounded bg-gray-600 hover:bg-gray-500">+</button>
+                </div>
+                <div class="beat-indicator text-red-500 bg-red-900" id="ind-2"></div>
+            </div>
+
+        </div>
+
+        <button onclick="togglePlay()" id="play-btn"
+            class="w-full py-4 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl shadow-lg transition text-lg">
+            开始播放
+        </button>
+
+    </div>
+
+    <script>
+        let audioCtx;
+        let isPlaying = false;
+        let bpm = 60;
+        let beat1 = 3;
+        let beat2 = 4;
+
+        let nextNoteTime1 = 0;
+        let nextNoteTime2 = 0;
+        let timerID = null;
+
+        const lookahead = 25.0; // ms
+        const scheduleAheadTime = 0.1; // s
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function updateBPM(val) {
+            bpm = parseInt(val);
+            document.getElementById('bpm-display').innerText = bpm;
+        }
+
+        function changeBeat(id, delta) {
+            if (id === 1) {
+                beat1 = Math.max(1, Math.min(16, beat1 + delta));
+                document.getElementById('val-1').innerText = beat1;
+            } else {
+                beat2 = Math.max(1, Math.min(16, beat2 + delta));
+                document.getElementById('val-2').innerText = beat2;
+            }
+        }
+
+        function togglePlay() {
+            initAudio();
+            isPlaying = !isPlaying;
+
+            const btn = document.getElementById('play-btn');
+            if (isPlaying) {
+                btn.innerText = "停止";
+                btn.classList.replace('bg-purple-600', 'bg-red-600');
+                btn.classList.replace('hover:bg-purple-500', 'hover:bg-red-500');
+
+                nextNoteTime1 = audioCtx.currentTime + 0.1;
+                nextNoteTime2 = audioCtx.currentTime + 0.1;
+                scheduler();
+            } else {
+                btn.innerText = "开始播放";
+                btn.classList.replace('bg-red-600', 'bg-purple-600');
+                btn.classList.replace('hover:bg-red-500', 'hover:bg-purple-500');
+                clearTimeout(timerID);
+            }
+        }
+
+        function playTone(time, freq, id) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.frequency.value = freq;
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start(time);
+            gain.gain.setValueAtTime(0.5, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+            osc.stop(time + 0.05);
+
+            // Visual
+            const drawTime = (time - audioCtx.currentTime) * 1000;
+            setTimeout(() => {
+                const el = document.getElementById(`ind-${id}`);
+                el.style.backgroundColor = id === 1 ? '#3b82f6' : '#ef4444'; // Bright color
+                el.classList.add('active');
+                setTimeout(() => {
+                    el.classList.remove('active');
+                    el.style.backgroundColor = id === 1 ? '#1e3a8a' : '#7f1d1d'; // Dark color
+                }, 100);
+            }, Math.max(0, drawTime));
+        }
+
+        function scheduler() {
+            // Calculate interval for polyrhythm
+            // Master cycle is 1 bar (4 beats at BPM?) No, polyrhythm usually shares a bar duration.
+            // Let's assume BPM sets the "quarter note" speed, and we fit the polyrhythm into a measure?
+            // Or simpler: BPM is Beat 1 speed?
+            // Standard Polyrhythm Metronome: Both fit in same time span?
+            // Usually BPM defines the pulse of the main beat (e.g. beat 1).
+            // But let's assume we want X beats against Y beats in the SAME time duration (1 measure).
+            // Let measure duration = 60 / BPM * 4 seconds (4/4 time base).
+
+            const measureTime = (60 / bpm) * 4;
+            const intervalA = measureTime / beat1;
+            const intervalB = measureTime / beat2;
+
+            while (nextNoteTime1 < audioCtx.currentTime + scheduleAheadTime) {
+                playTone(nextNoteTime1, 880, 1); // High pitch A
+                nextNoteTime1 += intervalA;
+            }
+
+            while (nextNoteTime2 < audioCtx.currentTime + scheduleAheadTime) {
+                playTone(nextNoteTime2, 440, 2); // Low pitch A
+                nextNoteTime2 += intervalB;
+            }
+
+            timerID = setTimeout(scheduler, lookahead);
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心算冲刺</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-purple-600 min-h-screen flex flex-col items-center justify-center p-6 text-white select-none">
+
+    <div class="w-full max-w-md text-center">
+
+        <!-- Header -->
+        <header class="mb-8">
+            <h1 class="text-3xl font-black italic tracking-widest text-yellow-300">MATH SPRINT</h1>
+            <p class="text-xs text-purple-200">Solve as many as you can in 60s</p>
+        </header>
+
+        <!-- Game Box -->
+        <div class="bg-white text-slate-800 rounded-3xl shadow-2xl p-8 relative overflow-hidden">
+
+            <!-- Progress Bar -->
+            <div class="absolute top-0 left-0 w-full h-2 bg-slate-200">
+                <div id="progress" class="h-full bg-purple-500 w-full transition-all duration-1000 ease-linear"></div>
+            </div>
+
+            <!-- Question -->
+            <div id="game-view" class="hidden">
+                <div class="text-6xl font-black mb-8 mt-4" id="problem">12 + 5</div>
+
+                <input type="number" id="answer-input"
+                    class="w-32 text-center text-3xl font-bold border-b-4 border-purple-200 outline-none focus:border-purple-600 p-2 mb-8 bg-transparent"
+                    autofocus>
+
+                <div class="grid grid-cols-3 gap-2 font-bold text-xl">
+                    <button onclick="num(1)"
+                        class="p-4 bg-slate-100 rounded-lg hover:bg-slate-200 active:bg-slate-300">1</button>
+                    <button onclick="num(2)"
+                        class="p-4 bg-slate-100 rounded-lg hover:bg-slate-200 active:bg-slate-300">2</button>
+                    <button onclick="num(3)"
+                        class="p-4 bg-slate-100 rounded-lg hover:bg-slate-200 active:bg-slate-300">3</button>
+                    <button onclick="num(4)"
+                        class="p-4 bg-slate-100 rounded-lg hover:bg-slate-200 active:bg-slate-300">4</button>
+                    <button onclick="num(5)"
+                        class="p-4 bg-slate-100 rounded-lg hover:bg-slate-200 active:bg-slate-300">5</button>
+                    <button onclick="num(6)"
+                        class="p-4 bg-slate-100 rounded-lg hover:bg-slate-200 active:bg-slate-300">6</button>
+                    <button onclick="num(7)"
+                        class="p-4 bg-slate-100 rounded-lg hover:bg-slate-200 active:bg-slate-300">7</button>
+                    <button onclick="num(8)"
+                        class="p-4 bg-slate-100 rounded-lg hover:bg-slate-200 active:bg-slate-300">8</button>
+                    <button onclick="num(9)"
+                        class="p-4 bg-slate-100 rounded-lg hover:bg-slate-200 active:bg-slate-300">9</button>
+                    <button onclick="clearInput()"
+                        class="p-4 bg-red-100 text-red-500 rounded-lg hover:bg-red-200">C</button>
+                    <button onclick="num(0)"
+                        class="p-4 bg-slate-100 rounded-lg hover:bg-slate-200 active:bg-slate-300">0</button>
+                    <button onclick="submit()"
+                        class="p-4 bg-green-500 text-white rounded-lg hover:bg-green-600 shadow-lg">OK</button>
+                </div>
+            </div>
+
+            <!-- Start / Result Screen -->
+            <div id="menu-view" class="py-10">
+                <div class="text-6xl mb-4">🏆</div>
+                <h2 class="text-2xl font-bold mb-2 text-slate-700" id="menu-title">Ready?</h2>
+                <p class="text-slate-500 mb-8" id="menu-score"></p>
+                <button onclick="startGame()"
+                    class="px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-full shadow-lg transition transform hover:scale-105 text-lg">
+                    START
+                </button>
+            </div>
+
+        </div>
+
+        <div class="mt-8 flex justify-between px-4 text-xs font-bold text-purple-300 uppercase">
+            <span>Score: <span id="score">0</span></span>
+            <a href="./navigation.html" class="hover:text-white">Exit</a>
+        </div>
+
+    </div>
+
+    <script>
+        let score = 0;
+        let timeLeft = 60;
+        let timerId;
+        let currentAns = 0;
+        let isPlaying = false;
+
+        const gameView = document.getElementById('game-view');
+        const menuView = document.getElementById('menu-view');
+        const input = document.getElementById('answer-input');
+        const problem = document.getElementById('problem');
+        const progress = document.getElementById('progress');
+        const scoreEl = document.getElementById('score');
+
+        function startGame() {
+            score = 0;
+            timeLeft = 60;
+            scoreEl.innerText = 0;
+            menuView.classList.add('hidden');
+            gameView.classList.remove('hidden');
+            isPlaying = true;
+            nextProblem();
+            input.focus();
+
+            // Timer Loop
+            clearInterval(timerId);
+            timerId = setInterval(() => {
+                timeLeft--;
+                progress.style.width = (timeLeft / 60 * 100) + '%';
+
+                if (timeLeft <= 10) progress.classList.replace('bg-purple-500', 'bg-red-500');
+                else progress.classList.replace('bg-red-500', 'bg-purple-500');
+
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function nextProblem() {
+            input.value = '';
+            // Generate difficulty based on score?
+            const ops = ['+', '-', '*'];
+            const op = ops[Math.floor(Math.random() * (score > 10 ? 3 : 2))]; // Add multiply later
+
+            let a = Math.floor(Math.random() * 20) + 1;
+            let b = Math.floor(Math.random() * 20) + 1;
+
+            if (op === '*') {
+                a = Math.floor(Math.random() * 9) + 2;
+                b = Math.floor(Math.random() * 9) + 2;
+                currentAns = a * b;
+                problem.innerText = `${a} × ${b}`;
+            } else if (op === '-') {
+                if (a < b) [a, b] = [b, a]; // Ensure positive
+                currentAns = a - b;
+                problem.innerText = `${a} - ${b}`;
+            } else {
+                currentAns = a + b;
+                problem.innerText = `${a} + ${b}`;
+            }
+        }
+
+        function num(n) {
+            input.value += n;
+        }
+        function clearInput() {
+            input.value = '';
+        }
+
+        function submit() {
+            const val = parseInt(input.value);
+            if (val === currentAns) {
+                score++;
+                scoreEl.innerText = score;
+                // Add tiny time bonus?
+                // timeLeft += 1;
+                nextProblem();
+            } else {
+                // Wrong: Shake effect or just clear
+                input.classList.add('bg-red-100');
+                setTimeout(() => input.classList.remove('bg-red-100'), 200);
+                input.value = '';
+            }
+            input.focus();
+        }
+
+        function endGame() {
+            clearInterval(timerId);
+            isPlaying = false;
+            gameView.classList.add('hidden');
+            menuView.classList.remove('hidden');
+
+            document.getElementById('menu-title').innerText = "Time's Up!";
+            document.getElementById('menu-score').innerText = `Final Score: ${score}`;
+        }
+
+        // Keyboard
+        document.addEventListener('keydown', e => {
+            if (!isPlaying) {
+                if (e.key === 'Enter') startGame();
+                return;
+            }
+
+            if (e.key === 'Enter') submit();
+            // Numpad handled by input field default behavior mostly, but button feedback missing
+        });
+    </script>
+</body>
+
+</html>

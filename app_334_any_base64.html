@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>万能文件 Base64</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .mono-box {
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen p-6 flex flex-col items-center text-slate-800">
+
+    <div class="w-full max-w-4xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-slate-700">
+                <span class="bg-slate-200 px-2 py-1 rounded text-xs font-mono">B64</span> File Converter
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <!-- Drop Zone -->
+        <div class="bg-white border-2 border-dashed border-slate-300 rounded-2xl p-10 text-center cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 transition mb-6"
+            onclick="document.getElementById('file-input').click()" id="drop-zone">
+            <input type="file" id="file-input" class="hidden" onchange="handleFile(event)">
+            <p class="text-slate-500 font-bold mb-1">点击或拖拽文件到这里</p>
+            <p class="text-xs text-slate-400">支持 Font, PDF, Audio, Image, etc.</p>
+        </div>
+
+        <div id="progress-container" class="hidden mb-6">
+            <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div id="progress-bar" class="h-full bg-indigo-600 w-0 transition-all duration-200"></div>
+            </div>
+        </div>
+
+        <!-- Result Area -->
+        <div id="result-area" class="hidden flex flex-col gap-4">
+
+            <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-bold text-indigo-400 uppercase">File Info</p>
+                    <p class="font-bold text-slate-700" id="file-name">filename.ext</p>
+                    <p class="text-xs text-slate-500" id="file-size">0 KB</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs font-bold text-indigo-400 uppercase">MIME Type</p>
+                    <p class="text-sm font-mono text-slate-600" id="file-type">-</p>
+                </div>
+            </div>
+
+            <!-- Output -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+                <div class="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                    <span class="text-xs font-bold text-slate-500 uppercase">Base64 Output</span>
+                    <div class="flex gap-2">
+                        <button onclick="copyStr()"
+                            class="text-xs bg-white border px-2 py-1 rounded hover:bg-slate-100">Copy</button>
+                        <button onclick="downloadText()"
+                            class="text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700 font-bold">Download
+                            .txt</button>
+                    </div>
+                </div>
+                <textarea id="output-text"
+                    class="w-full h-64 p-4 resize-none outline-none mono-box text-xs text-slate-600 bg-white"
+                    readonly></textarea>
+            </div>
+
+            <div class="flex items-center gap-2 text-xs text-slate-500">
+                <input type="checkbox" id="data-uri" checked onchange="updateFormat()">
+                <label for="data-uri">包含 Data URI Scheme (data:mime;base64,...)</label>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const resultArea = document.getElementById('result-area');
+        const outputText = document.getElementById('output-text');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+
+        let rawBase64 = "";
+        let mimeType = "";
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            processFile(file);
+        }
+
+        // Drag and Drop
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('border-indigo-500', 'bg-indigo-50'); });
+        dropZone.addEventListener('dragleave', e => { e.preventDefault(); dropZone.classList.remove('border-indigo-500', 'bg-indigo-50'); });
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
+            if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]);
+        });
+
+        function processFile(file) {
+            // Check size limit (e.g. 5MB) to avoid crashing browser
+            if (file.size > 5 * 1024 * 1024) {
+                if (!confirm("文件较大 (>5MB)，处理可能会导致浏览器卡顿。是否继续？")) return;
+            }
+
+            document.getElementById('file-name').innerText = file.name;
+            document.getElementById('file-size').innerText = (file.size / 1024).toFixed(2) + " KB";
+            document.getElementById('file-type').innerText = file.type || "application/octet-stream";
+            mimeType = file.type || "application/octet-stream";
+
+            progressContainer.classList.remove('hidden');
+            resultArea.classList.add('hidden');
+            progressBar.style.width = '0%';
+
+            const reader = new FileReader();
+
+            reader.onprogress = (evt) => {
+                if (evt.lengthComputable) {
+                    const pct = (evt.loaded / evt.total) * 100;
+                    progressBar.style.width = pct + '%';
+                }
+            };
+
+            reader.onload = (evt) => {
+                const result = evt.target.result;
+                // result contains data:mime;base64,... 
+                // We want to store raw parts
+                rawBase64 = result;
+
+                updateFormat();
+
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                    resultArea.classList.remove('hidden');
+                }, 300);
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        function updateFormat() {
+            const includeScheme = document.getElementById('data-uri').checked;
+            if (includeScheme) {
+                outputText.value = rawBase64;
+            } else {
+                // Strip scheme
+                const parts = rawBase64.split(',');
+                if (parts.length > 1) outputText.value = parts[1];
+                else outputText.value = rawBase64;
+            }
+        }
+
+        function copyStr() {
+            outputText.select();
+            document.execCommand('copy');
+            alert("已复制!");
+        }
+
+        function downloadText() {
+            const blob = new Blob([outputText.value], { type: "text/plain;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = document.getElementById('file-name').innerText + ".b64.txt";
+            a.click();
+        }
+    </script>
+</body>
+
+</html>

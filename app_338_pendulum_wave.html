@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>钟摆波模拟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0f172a;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(5px);
+            padding: 10px 20px;
+            border-radius: 99px;
+            border: 1px solid #334155;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="absolute top-6 left-6 text-white pointer-events-none opacity-80">
+        <h1 class="text-2xl font-bold">Pendulum Wave</h1>
+        <p class="text-xs text-slate-400">Physics Simulation</p>
+    </div>
+
+    <div class="controls text-white text-xs font-bold uppercase">
+        <div class="flex items-center gap-2">
+            <span>Speed</span>
+            <input type="range" id="speed" min="0" max="2" step="0.1" value="1"
+                class="w-20 h-1 bg-slate-600 rounded appearance-none cursor-pointer accent-cyan-400">
+        </div>
+        <div class="flex items-center gap-2">
+            <span>Count</span>
+            <input type="range" id="count" min="10" max="50" step="1" value="20"
+                class="w-20 h-1 bg-slate-600 rounded appearance-none cursor-pointer accent-pink-400" oninput="init()">
+        </div>
+        <div class="w-px h-4 bg-slate-600"></div>
+        <a href="./navigation.html" class="hover:text-cyan-400 transition">Exit</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const speedInput = document.getElementById('speed');
+        const countInput = document.getElementById('count');
+
+        let width, height;
+        let pendulums = [];
+        let startTime;
+        // Physics constants
+        // To create the wave effect, the frequency of pendulums must be arithmetic progression
+        // Period T = 2*PI * sqrt(L/g). Freq f = 1/T.
+        // We set frequencies f_i = f_0 + i * delta
+
+        const baseDuration = 60; // seconds for full cycle where they realign
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            init();
+        }
+        window.addEventListener('resize', resize);
+
+        class Pendulum {
+            constructor(index, total) {
+                this.index = index;
+                // Calculate length based on desired frequency
+                // We want N oscillations in T seconds for first, N+1 for second...
+                // oscillations = cycles_base + index
+                const cycles = 50 + index; // Base cycles in the full period
+                const freq = cycles / baseDuration; // Hz
+
+                // L = g / (2*PI*f)^2. Let g = 9.8 * scale
+                // Simplified: Length is inversely proportional to freq^2
+                // We fit length visually
+                const maxLength = height * 0.8;
+                // Relative L ~ 1 / freq^2
+                // L_i = C / cycles^2
+                const C = maxLength * (50 * 50); // Scale constant using first pendulum (index 0, cycles 50)
+                this.length = C / (cycles * cycles);
+
+                this.x = width / 2;
+                this.y = 50; // Pivot y
+                this.angle = 0;
+                this.maxAngle = Math.PI / 6; // 30 deg swing
+                this.freq = freq;
+
+                // Color gradient
+                const hue = 180 + (index / total) * 120; // Cyan to Pink
+                this.color = `hsl(${hue}, 80%, 60%)`;
+            }
+
+            update(time) {
+                // Theta = ThetaMax * cos(2 * PI * freq * time)
+                const speedMult = parseFloat(speedInput.value);
+                this.angle = this.maxAngle * Math.cos(2 * Math.PI * this.freq * time * speedMult);
+            }
+
+            draw() {
+                const px = this.x + Math.sin(this.angle) * this.length;
+                const py = this.y + Math.cos(this.angle) * this.length;
+
+                // String (faint)
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(px, py);
+                ctx.strokeStyle = "rgba(255,255,255,0.1)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Bob
+                ctx.beginPath();
+                ctx.arc(px, py, 6 + (this.index % 2) * 2, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+
+                // Glow
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function init() {
+            const count = parseInt(countInput.value);
+            pendulums = [];
+            for (let i = 0; i < count; i++) {
+                pendulums.push(new Pendulum(i, count));
+            }
+            startTime = Date.now();
+        }
+
+        function loop() {
+            ctx.clearRect(0, 0, width, height);
+
+            // Pseudo-3D effect: draw tracks? No, clean look.
+
+            const time = (Date.now() - startTime) / 1000;
+
+            pendulums.forEach(p => {
+                p.update(time);
+                p.draw();
+            });
+
+            requestAnimationFrame(loop);
+        }
+
+        resize(); // Calls init
+        loop();
+    </script>
+</body>
+
+</html>

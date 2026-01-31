@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电阻读数测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .resistor-body {
+            background: linear-gradient(to bottom, #feca57, #eec046, #feca57);
+            border-radius: 50px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 -5px 10px rgba(0, 0, 0, 0.1), 0 10px 20px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            height: 100px;
+            margin: 0 auto;
+        }
+
+        .band {
+            position: absolute;
+            height: 100%;
+            width: 20px;
+        }
+
+        .wire {
+            height: 10px;
+            background: #9ca3af;
+            width: 400px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: -1;
+        }
+    </style>
+</head>
+
+<body class="bg-amber-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800 select-none">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-3xl shadow-xl border border-amber-100 text-center">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-amber-800">Resistor Quiz</h1>
+            <div class="text-sm font-bold text-amber-600">Score: <span id="score">0</span></div>
+        </header>
+
+        <div class="relative mb-12">
+            <div class="wire"></div>
+            <div class="resistor-body" id="resistor">
+                <!-- Bands injected -->
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <p class="text-sm text-slate-400 mb-2">该电阻的阻值是多少？</p>
+            <div class="grid grid-cols-2 gap-4" id="options">
+                <!-- Buttons -->
+            </div>
+        </div>
+
+        <div id="feedback" class="h-8 font-bold text-lg"></div>
+
+        <div class="mt-8 text-center">
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-amber-600">退出</a>
+        </div>
+
+    </div>
+
+    <script>
+        const colorMap = [
+            { name: 'Black', hex: '#000000', val: 0 }, { name: 'Brown', hex: '#8B4513', val: 1 },
+            { name: 'Red', hex: '#FF0000', val: 2 }, { name: 'Orange', hex: '#FFA500', val: 3 },
+            { name: 'Yellow', hex: '#FFFF00', val: 4 }, { name: 'Green', hex: '#008000', val: 5 },
+            { name: 'Blue', hex: '#0000FF', val: 6 }, { name: 'Violet', hex: '#EE82EE', val: 7 },
+            { name: 'Gray', hex: '#808080', val: 8 }, { name: 'White', hex: '#FFFFFF', val: 9 }
+        ];
+        // Multiplier: same colors, power of 10
+        // Gold/Silver for tolerance (ignore for value quiz usually, or just show them)
+
+        const resistorEl = document.getElementById('resistor');
+        const optionsEl = document.getElementById('options');
+        const scoreEl = document.getElementById('score');
+        const feedbackEl = document.getElementById('feedback');
+
+        let correctVal = 0;
+        let score = 0;
+
+        function generateResistor() {
+            feedbackEl.innerText = '';
+            resistorEl.innerHTML = '';
+
+            // 4-band resistor logic
+            const b1 = Math.floor(Math.random() * 9) + 1; // 1-9 (first band not 0)
+            const b2 = Math.floor(Math.random() * 10); // 0-9
+            const mul = Math.floor(Math.random() * 7); // 0-6 (1 to 1M multiplier)
+
+            const realVal = (b1 * 10 + b2) * Math.pow(10, mul);
+            correctVal = realVal;
+
+            // Render Bands
+            // Band 1
+            createBand(colorMap[b1].hex, 60);
+            // Band 2
+            createBand(colorMap[b2].hex, 100);
+            // Multiplier Band
+            createBand(colorMap[mul].hex, 140);
+            // Tolerance (Gold)
+            createBand('#FFD700', 220);
+
+            // Generate Options
+            const opts = [realVal];
+            while (opts.length < 4) {
+                // Generate wrong answers: similar values
+                // Wrong multiplier or wrong digits
+                const type = Math.random();
+                let fake = 0;
+                if (type < 0.5) {
+                    // Wrong Multiplier
+                    const fakeMul = (mul + Math.floor(Math.random() * 3) - 1 + 7) % 7;
+                    fake = (b1 * 10 + b2) * Math.pow(10, fakeMul);
+                } else {
+                    // Wrong Digits
+                    const fb1 = Math.floor(Math.random() * 9) + 1;
+                    const fb2 = Math.floor(Math.random() * 10);
+                    fake = (fb1 * 10 + fb2) * Math.pow(10, mul);
+                }
+
+                if (!opts.includes(fake) && fake !== realVal) opts.push(fake);
+            }
+            opts.sort(() => Math.random() - 0.5);
+
+            optionsEl.innerHTML = '';
+            opts.forEach(val => {
+                const btn = document.createElement('button');
+                btn.className = "py-3 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl font-bold transition shadow-sm border border-amber-200";
+                btn.innerText = formatRes(val);
+                btn.onclick = () => check(val);
+                optionsEl.appendChild(btn);
+            });
+        }
+
+        function createBand(color, left) {
+            const div = document.createElement('div');
+            div.className = 'band';
+            div.style.backgroundColor = color;
+            div.style.left = left + 'px';
+            resistorEl.appendChild(div);
+        }
+
+        function formatRes(ohms) {
+            if (ohms >= 1000000) return (ohms / 1000000) + ' MΩ';
+            if (ohms >= 1000) return (ohms / 1000) + ' kΩ';
+            return ohms + ' Ω';
+        }
+
+        function check(val) {
+            if (val === correctVal) {
+                score += 10;
+                feedbackEl.innerText = "正确! ✅";
+                feedbackEl.className = "h-8 font-bold text-lg text-green-600";
+            } else {
+                score = Math.max(0, score - 5);
+                feedbackEl.innerText = "错误 ❌";
+                feedbackEl.className = "h-8 font-bold text-lg text-red-500";
+            }
+            scoreEl.innerText = score;
+            setTimeout(generateResistor, 1000);
+        }
+
+        generateResistor();
+    </script>
+</body>
+
+</html>

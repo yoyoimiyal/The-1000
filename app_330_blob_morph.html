@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态流体壁纸</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1e1b4b, #312e81);
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            z-index: 10;
+        }
+
+        canvas {
+            filter: blur(40px);
+            /* Enhance blobby effect */
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="fixed top-4 left-4 text-white/30 z-10 pointer-events-none">
+        <h1 class="text-2xl font-bold">Lava Lamp</h1>
+    </div>
+
+    <div class="controls text-white text-xs font-bold uppercase">
+        <button onclick="changeColor('warm')" class="hover:text-yellow-300">Warm</button>
+        <button onclick="changeColor('cool')" class="hover:text-blue-300">Cool</button>
+        <button onclick="changeColor('neon')" class="hover:text-pink-300">Neon</button>
+        <div class="w-px h-4 bg-white/20"></div>
+        <a href="./navigation.html" class="hover:text-gray-300">Exit</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let blobs = [];
+        const blobCount = 8;
+        let palette = ['#fbbf24', '#f59e0b', '#ef4444']; // Warm default
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            initBlobs();
+        }
+        window.addEventListener('resize', resize);
+
+        class BlobObj {
+            constructor() {
+                this.init();
+            }
+            init() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.radius = Math.random() * 100 + 50;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.color = palette[Math.floor(Math.random() * palette.length)];
+                // Oscillation
+                this.t = Math.random() * Math.PI * 2;
+                this.dt = (Math.random() - 0.5) * 0.05;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.t += this.dt;
+
+                // Wall bounce
+                if (this.x < 0 || this.x > width) this.vx *= -1;
+                if (this.y < 0 || this.y > height) this.vy *= -1;
+
+                // Pulse size
+                this.currentRadius = this.radius + Math.sin(this.t) * 20;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.currentRadius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+        }
+
+        function initBlobs() {
+            blobs = [];
+            for (let i = 0; i < blobCount; i++) {
+                blobs.push(new BlobObj());
+            }
+        }
+
+        function loop() {
+            // No clear rect, just overdraw for some trails? No, standard clear.
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw blobs
+            // Note: CSS Blur creates the metaball/lava effect on the canvas element itself
+
+            blobs.forEach(b => {
+                b.update();
+                b.draw();
+            });
+
+            requestAnimationFrame(loop);
+        }
+
+        function changeColor(theme) {
+            if (theme === 'warm') palette = ['#fbbf24', '#f59e0b', '#ef4444'];
+            if (theme === 'cool') palette = ['#60a5fa', '#3b82f6', '#22d3ee'];
+            if (theme === 'neon') palette = ['#d946ef', '#8b5cf6', '#a855f7'];
+
+            // Update existing
+            blobs.forEach(b => b.color = palette[Math.floor(Math.random() * palette.length)]);
+
+            // Update BG
+            const body = document.body;
+            if (theme === 'warm') body.style.background = 'linear-gradient(135deg, #451a03, #7c2d12)';
+            if (theme === 'cool') body.style.background = 'linear-gradient(135deg, #0f172a, #1e3a8a)';
+            if (theme === 'neon') body.style.background = 'linear-gradient(135deg, #2e1065, #4c1d95)';
+        }
+
+        resize();
+        loop();
+    </script>
+</body>
+
+</html>

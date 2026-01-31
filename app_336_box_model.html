@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS 盒子模型演示</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .box-layer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.2s;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #475569;
+        }
+
+        .box-label {
+            position: absolute;
+            top: 2px;
+            left: 4px;
+            font-weight: bold;
+            opacity: 0.7;
+        }
+
+        /* Stripes for margin */
+        .margin-box {
+            background-color: #f9cc9d;
+            /* Orange-ish */
+            background-image: repeating-linear-gradient(45deg, #f9cc9d 0, #f9cc9d 10px, #ffdbb5 10px, #ffdbb5 20px);
+            border: 1px dashed #f97316;
+        }
+
+        .border-box {
+            background-color: #fde047;
+            /* Yellow */
+            border: 1px solid #eab308;
+        }
+
+        .padding-box {
+            background-color: #c3e6cb;
+            /* Green */
+            border: 1px solid #22c55e;
+        }
+
+        .content-box {
+            background-color: #93c5fd;
+            /* Blue */
+            border: 1px solid #3b82f6;
+            color: #1e3a8a;
+        }
+
+        input[type=range] {
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            background: #4f46e5;
+            border-radius: 50%;
+            margin-top: -6px;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col md:flex-row text-slate-800">
+
+    <!-- Preview -->
+    <div
+        class="flex-1 flex flex-col items-center justify-center p-8 bg-white border-b md:border-b-0 md:border-r border-slate-200 overflow-auto">
+
+        <div id="container"
+            class="relative bg-slate-100 border border-slate-300 w-full h-full flex items-center justify-center overflow-hidden">
+            <div class="absolute top-2 right-2 text-xs text-slate-400">Container</div>
+
+            <!-- Margin -->
+            <div id="margin-el" class="box-layer margin-box">
+                <span class="box-label text-orange-800">Margin</span>
+
+                <!-- Border -->
+                <div id="border-el" class="box-layer border-box">
+                    <span class="box-label text-yellow-800">Border</span>
+
+                    <!-- Padding -->
+                    <div id="padding-el" class="box-layer padding-box">
+                        <span class="box-label text-green-800">Padding</span>
+
+                        <!-- Content -->
+                        <div id="content-el" class="box-layer content-box">
+                            <span class="font-bold text-lg">Content</span>
+                            <span class="absolute bottom-1 right-2 text-[10px]" id="content-size">100x100</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 text-xs font-mono text-slate-500 bg-slate-100 p-2 rounded w-full text-center">
+            Total Width: <span id="total-width" class="font-bold text-indigo-600">0</span>px
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="w-full md:w-80 bg-white p-6 shadow-xl z-10 h-auto md:h-screen overflow-y-auto shrink-0">
+
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="font-bold text-lg text-slate-700">Box Model</h1>
+            <a href="./navigation.html" class="text-xs text-indigo-500 hover:underline">Exit</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <!-- Margin -->
+            <div class="p-3 bg-orange-50 rounded-lg border border-orange-100">
+                <div class="flex justify-between text-xs font-bold text-orange-600 mb-2 uppercase">
+                    <span>Margin</span> <span id="val-m">20px</span>
+                </div>
+                <input type="range" id="margin" min="0" max="100" value="20" class="w-full" oninput="update()">
+            </div>
+
+            <!-- Border -->
+            <div class="p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+                <div class="flex justify-between text-xs font-bold text-yellow-600 mb-2 uppercase">
+                    <span>Border</span> <span id="val-b">5px</span>
+                </div>
+                <input type="range" id="border" min="0" max="50" value="5" class="w-full" oninput="update()">
+            </div>
+
+            <!-- Padding -->
+            <div class="p-3 bg-green-50 rounded-lg border border-green-100">
+                <div class="flex justify-between text-xs font-bold text-green-600 mb-2 uppercase">
+                    <span>Padding</span> <span id="val-p">20px</span>
+                </div>
+                <input type="range" id="padding" min="0" max="100" value="20" class="w-full" oninput="update()">
+            </div>
+
+            <!-- Content -->
+            <div class="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <div class="flex justify-between text-xs font-bold text-blue-600 mb-2 uppercase">
+                    <span>Width</span> <span id="val-w">150px</span>
+                </div>
+                <input type="range" id="width" min="50" max="300" value="150" class="w-full" oninput="update()">
+
+                <div class="flex justify-between text-xs font-bold text-blue-600 mb-2 mt-4 uppercase">
+                    <span>Height</span> <span id="val-h">100px</span>
+                </div>
+                <input type="range" id="height" min="50" max="300" value="100" class="w-full" oninput="update()">
+            </div>
+
+            <div class="flex items-center gap-2 text-sm text-slate-600 mt-2">
+                <input type="checkbox" id="box-sizing" class="rounded text-indigo-600" onchange="update()">
+                <label for="box-sizing" class="font-bold cursor-pointer">box-sizing: border-box</label>
+            </div>
+
+            <div class="bg-slate-800 p-4 rounded-xl relative group mt-4">
+                <code id="css-code"
+                    class="text-[10px] text-green-400 font-mono break-all block leading-relaxed whitespace-pre"></code>
+                <button onclick="copyCSS()"
+                    class="absolute top-2 right-2 text-[10px] bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded">Copy</button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const mEl = document.getElementById('margin-el');
+        const bEl = document.getElementById('border-el');
+        const pEl = document.getElementById('padding-el');
+        const cEl = document.getElementById('content-el');
+        const cssOutput = document.getElementById('css-output');
+        const totalW = document.getElementById('total-width');
+
+        function update() {
+            const m = parseInt(document.getElementById('margin').value);
+            const b = parseInt(document.getElementById('border').value);
+            const p = parseInt(document.getElementById('padding').value);
+            const w = parseInt(document.getElementById('width').value);
+            const h = parseInt(document.getElementById('height').value);
+            const isBorderBox = document.getElementById('box-sizing').checked;
+
+            document.getElementById('val-m').innerText = m + 'px';
+            document.getElementById('val-b').innerText = b + 'px';
+            document.getElementById('val-p').innerText = p + 'px';
+            document.getElementById('val-w').innerText = w + 'px';
+            document.getElementById('val-h').innerText = h + 'px';
+
+            // Visual sizes
+            // In visualizer, we nest divs. Each parent size = child size + 2*thickness
+            // Content Size
+            let contentW = w;
+            let contentH = h;
+
+            if (isBorderBox) {
+                // If border-box, width includes padding + border.
+                // Visual content width = width - padding*2 - border*2
+                // We clamp to 0
+                contentW = Math.max(0, w - 2 * p - 2 * b);
+                contentH = Math.max(0, h - 2 * p - 2 * b);
+            }
+
+            cEl.style.width = contentW + 'px';
+            cEl.style.height = contentH + 'px';
+            document.getElementById('content-size').innerText = `${contentW}x${contentH}`;
+
+            // Padding Box size = content + 2*p
+            const padW = contentW + 2 * p;
+            const padH = contentH + 2 * p;
+            pEl.style.width = padW + 'px';
+            pEl.style.height = padH + 'px';
+
+            // Border Box size = paddingBox + 2*b
+            const borderW = padW + 2 * b;
+            const borderH = padH + 2 * b;
+            bEl.style.width = borderW + 'px';
+            bEl.style.height = borderH + 'px';
+
+            // Margin Box size = borderBox + 2*m
+            const marginW = borderW + 2 * m;
+            const marginH = borderH + 2 * m;
+            mEl.style.width = marginW + 'px';
+            mEl.style.height = marginH + 'px';
+
+            totalW.innerText = marginW;
+
+            // Generate CSS
+            const css = `.box {
+  width: ${w}px;
+  height: ${h}px;
+  margin: ${m}px;
+  border: ${b}px solid;
+  padding: ${p}px;
+  box-sizing: ${isBorderBox ? 'border-box' : 'content-box'};
+}`;
+            cssOutput.innerText = css;
+        }
+
+        function copyCSS() {
+            navigator.clipboard.writeText(cssOutput.innerText);
+            alert("CSS 已复制!");
+        }
+
+        update();
+    </script>
+</body>
+
+</html>

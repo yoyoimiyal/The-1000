@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>摩斯光信号发送器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            transition: background-color 0.05s;
+        }
+
+        .flash-on {
+            background-color: white !important;
+        }
+
+        .flash-off {
+            background-color: black !important;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-white transition-colors duration-200"
+    id="body">
+
+    <div id="ui" class="w-full max-w-md text-center transition-opacity duration-300">
+
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold mb-2">Visual Morse</h1>
+            <p class="text-sm text-gray-400">将文字转换为屏幕闪烁信号</p>
+        </header>
+
+        <div class="space-y-6">
+            <input type="text" id="input"
+                class="w-full p-4 bg-gray-800 border border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-white text-center text-lg uppercase font-bold tracking-widest"
+                placeholder="SOS">
+
+            <div class="flex gap-2 justify-center">
+                <div class="text-xs text-gray-500 font-mono">WPM (Speed)</div>
+                <input type="range" id="wpm" min="5" max="30" value="10"
+                    class="w-32 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-white">
+                <span id="wpm-val" class="text-xs font-bold w-6">10</span>
+            </div>
+
+            <button onclick="transmit()" id="btn-start"
+                class="w-full py-4 bg-white text-black font-bold rounded-2xl shadow-lg hover:bg-gray-200 transition text-xl">
+                发送信号 (TRANSMIT)
+            </button>
+
+            <div id="status" class="h-8 font-mono text-xl font-bold text-yellow-400"></div>
+        </div>
+
+        <div class="mt-12">
+            <a href="./navigation.html"
+                class="text-xs text-gray-600 hover:text-white border border-gray-800 px-4 py-2 rounded-full">退出</a>
+        </div>
+
+    </div>
+
+    <div id="stop-overlay" class="fixed inset-0 z-50 hidden flex-col items-center justify-center cursor-pointer"
+        onclick="stopTransmit()">
+        <p class="text-black bg-white/80 px-4 py-2 rounded-full font-bold mb-8 pointer-events-none">点击屏幕停止</p>
+        <div id="current-char"
+            class="text-9xl font-black text-white mix-blend-difference pointer-events-none opacity-50"></div>
+    </div>
+
+    <script>
+        const morseMap = {
+            'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
+            'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
+            'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.',
+            'S': '...', 'T': '-', 'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-',
+            'Y': '-.--', 'Z': '--..', '1': '.----', '2': '..---', '3': '...--',
+            '4': '....-', '5': '.....', '6': '-....', '7': '--...', '8': '---..',
+            '9': '----.', '0': '-----', ' ': '/'
+        };
+
+        const body = document.getElementById('body');
+        const ui = document.getElementById('ui');
+        const overlay = document.getElementById('stop-overlay');
+        const charDisplay = document.getElementById('current-char');
+        const status = document.getElementById('status');
+        const wpmInput = document.getElementById('wpm');
+
+        let isTransmitting = false;
+        let timeouts = [];
+
+        wpmInput.oninput = () => document.getElementById('wpm-val').innerText = wpmInput.value;
+
+        function transmit() {
+            const text = document.getElementById('input').value.toUpperCase().trim();
+            if (!text) return;
+
+            const wpm = parseInt(wpmInput.value);
+            const dotMs = 1200 / wpm;
+
+            isTransmitting = true;
+            ui.classList.add('opacity-0', 'pointer-events-none');
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+
+            let sequence = [];
+
+            for (let char of text) {
+                const code = morseMap[char];
+                if (code) {
+                    if (code === '/') {
+                        sequence.push({ state: false, duration: dotMs * 7, char: " " });
+                    } else {
+                        for (let symbol of code) {
+                            const len = symbol === '.' ? dotMs : dotMs * 3;
+                            sequence.push({ state: true, duration: len, char: char });
+                            sequence.push({ state: false, duration: dotMs, char: char });
+                        }
+                        sequence.push({ state: false, duration: dotMs * 2, char: "" });
+                    }
+                }
+            }
+
+            let currentTime = 0;
+
+            sequence.forEach(step => {
+                const t = setTimeout(() => {
+                    if (!isTransmitting) return;
+
+                    if (step.state) {
+                        body.classList.add('flash-on');
+                        body.classList.remove('bg-gray-900');
+                    } else {
+                        body.classList.remove('flash-on');
+                        body.classList.add('bg-gray-900');
+                    }
+
+                    if (step.char) charDisplay.innerText = step.char;
+
+                }, currentTime);
+                timeouts.push(t);
+
+                currentTime += step.duration;
+            });
+
+            const endT = setTimeout(() => {
+                stopTransmit();
+            }, currentTime + 500);
+            timeouts.push(endT);
+        }
+
+        function stopTransmit() {
+            isTransmitting = false;
+            timeouts.forEach(clearTimeout);
+            timeouts = [];
+
+            body.classList.remove('flash-on');
+            body.classList.add('bg-gray-900');
+
+            ui.classList.remove('opacity-0', 'pointer-events-none');
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flex');
+        }
+    </script>
+</body>
+
+</html>

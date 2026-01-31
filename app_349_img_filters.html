@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>滤镜画廊</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .filter-btn {
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .filter-btn img {
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body class="bg-stone-50 min-h-screen flex flex-col p-6 text-stone-800">
+
+    <div class="w-full max-w-5xl mx-auto flex flex-col h-[90vh]">
+
+        <header class="flex justify-between items-center mb-6 shrink-0">
+            <h1 class="text-xl font-bold text-stone-700 flex items-center gap-2">
+                <span class="text-2xl">📸</span> Filter Gallery
+            </h1>
+            <div class="flex gap-4">
+                <label class="cursor-pointer text-xs font-bold text-blue-600 hover:underline">
+                    打开图片
+                    <input type="file" class="hidden" accept="image/*" onchange="loadImage(event)">
+                </label>
+                <button onclick="download()" class="text-xs font-bold text-green-600 hover:underline">保存图片</button>
+                <a href="./navigation.html" class="text-xs font-bold text-stone-400 hover:text-stone-600">退出</a>
+            </div>
+        </header>
+
+        <div class="flex-1 flex flex-col md:flex-row gap-6 overflow-hidden">
+
+            <!-- Main Preview -->
+            <div
+                class="flex-1 bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex items-center justify-center relative overflow-hidden">
+                <img id="main-img" class="max-w-full max-h-full object-contain"
+                    src="https://images.unsplash.com/photo-1517423440428-a5a00ad493e8?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80">
+            </div>
+
+            <!-- Filters Sidebar -->
+            <div
+                class="w-full md:w-64 bg-white border border-stone-200 rounded-xl shadow-sm p-4 overflow-y-auto shrink-0 flex flex-col gap-4">
+                <p class="text-xs font-bold text-stone-400 uppercase">Presets</p>
+
+                <button onclick="applyFilter('')" class="filter-btn text-left">
+                    <div class="h-20 w-full bg-stone-100 rounded mb-1 overflow-hidden"><img src=""
+                            class="thumb w-full h-full object-cover"></div>
+                    <span class="text-xs font-bold">Normal</span>
+                </button>
+
+                <button onclick="applyFilter('grayscale(100%)')" class="filter-btn text-left">
+                    <div class="h-20 w-full bg-stone-100 rounded mb-1 overflow-hidden"><img src=""
+                            class="thumb w-full h-full object-cover" style="filter: grayscale(100%)"></div>
+                    <span class="text-xs font-bold">B&W</span>
+                </button>
+
+                <button onclick="applyFilter('sepia(100%)')" class="filter-btn text-left">
+                    <div class="h-20 w-full bg-stone-100 rounded mb-1 overflow-hidden"><img src=""
+                            class="thumb w-full h-full object-cover" style="filter: sepia(100%)"></div>
+                    <span class="text-xs font-bold">Sepia</span>
+                </button>
+
+                <button onclick="applyFilter('contrast(150%) brightness(110%)')" class="filter-btn text-left">
+                    <div class="h-20 w-full bg-stone-100 rounded mb-1 overflow-hidden"><img src=""
+                            class="thumb w-full h-full object-cover" style="filter: contrast(150%) brightness(110%)">
+                    </div>
+                    <span class="text-xs font-bold">Vivid</span>
+                </button>
+
+                <button onclick="applyFilter('hue-rotate(90deg)')" class="filter-btn text-left">
+                    <div class="h-20 w-full bg-stone-100 rounded mb-1 overflow-hidden"><img src=""
+                            class="thumb w-full h-full object-cover" style="filter: hue-rotate(90deg)"></div>
+                    <span class="text-xs font-bold">Alien</span>
+                </button>
+
+                <button onclick="applyFilter('invert(100%)')" class="filter-btn text-left">
+                    <div class="h-20 w-full bg-stone-100 rounded mb-1 overflow-hidden"><img src=""
+                            class="thumb w-full h-full object-cover" style="filter: invert(100%)"></div>
+                    <span class="text-xs font-bold">Negative</span>
+                </button>
+
+                <button onclick="applyFilter('blur(3px)')" class="filter-btn text-left">
+                    <div class="h-20 w-full bg-stone-100 rounded mb-1 overflow-hidden"><img src=""
+                            class="thumb w-full h-full object-cover" style="filter: blur(3px)"></div>
+                    <span class="text-xs font-bold">Blur</span>
+                </button>
+
+                <button onclick="applyFilter('saturate(0.5) brightness(1.2) sepia(0.2)')" class="filter-btn text-left">
+                    <div class="h-20 w-full bg-stone-100 rounded mb-1 overflow-hidden"><img src=""
+                            class="thumb w-full h-full object-cover"
+                            style="filter: saturate(0.5) brightness(1.2) sepia(0.2)"></div>
+                    <span class="text-xs font-bold">Vintage</span>
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Canvas for export -->
+    <canvas id="canvas" class="hidden"></canvas>
+
+    <script>
+        const mainImg = document.getElementById('main-img');
+        const thumbs = document.querySelectorAll('.thumb');
+        let currentFilter = '';
+
+        // Init thumbs
+        thumbs.forEach(t => t.src = mainImg.src);
+
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                mainImg.src = url;
+                thumbs.forEach(t => t.src = url);
+            }
+        }
+
+        function applyFilter(filter) {
+            currentFilter = filter;
+            mainImg.style.filter = filter;
+        }
+
+        function download() {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Note: filter context only works in recent browsers or requires manual pixel processing
+            // CSS filters on canvas context: ctx.filter
+
+            canvas.width = mainImg.naturalWidth;
+            canvas.height = mainImg.naturalHeight;
+
+            if (ctx.filter !== undefined) {
+                ctx.filter = currentFilter || 'none';
+                ctx.drawImage(mainImg, 0, 0);
+
+                const link = document.createElement('a');
+                link.download = 'filtered_photo.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            } else {
+                alert("抱歉，您的浏览器不支持 Canvas 滤镜导出功能。");
+            }
+        }
+    </script>
+</body>
+
+</html>

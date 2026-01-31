@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS 混合模式实验室</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .blend-layer {
+            position: absolute;
+            inset: 0;
+            transition: all 0.3s;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col md:flex-row text-slate-800">
+
+    <!-- Preview -->
+    <div
+        class="flex-1 flex items-center justify-center p-8 bg-slate-200 border-b md:border-b-0 md:border-r border-slate-300 relative overflow-hidden">
+        <div class="relative w-80 h-80 shadow-2xl rounded-2xl overflow-hidden bg-white">
+
+            <!-- Bottom Layer (Color/Image) -->
+            <div id="layer-bottom" class="absolute inset-0 bg-cover bg-center"
+                style="background-image: url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80');">
+            </div>
+
+            <!-- Top Layer (Color/Image) -->
+            <div id="layer-top" class="blend-layer bg-indigo-600 mix-blend-multiply flex items-center justify-center">
+                <span
+                    class="text-white font-bold text-2xl border-4 border-white p-4 uppercase tracking-widest opacity-80"
+                    id="text-overlay">BLEND</span>
+            </div>
+
+        </div>
+        <p class="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-slate-500 font-bold uppercase">
+            mix-blend-mode: <span id="current-mode" class="text-indigo-600">multiply</span></p>
+    </div>
+
+    <!-- Controls -->
+    <div class="w-full md:w-80 bg-white p-6 shadow-xl z-10 h-auto md:h-screen overflow-y-auto">
+
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="font-bold text-lg text-slate-700">Blend Modes</h1>
+            <a href="./navigation.html" class="text-xs text-indigo-500 hover:underline">Exit</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">混合模式 (Mode)</label>
+                <select id="mode-select"
+                    class="w-full p-2 border border-slate-200 rounded-lg outline-none bg-white text-sm"
+                    onchange="update()">
+                    <option value="normal">normal</option>
+                    <option value="multiply" selected>multiply (正片叠底)</option>
+                    <option value="screen">screen (滤色)</option>
+                    <option value="overlay">overlay (叠加)</option>
+                    <option value="darken">darken (变暗)</option>
+                    <option value="lighten">lighten (变亮)</option>
+                    <option value="color-dodge">color-dodge (颜色减淡)</option>
+                    <option value="color-burn">color-burn (颜色加深)</option>
+                    <option value="hard-light">hard-light (强光)</option>
+                    <option value="soft-light">soft-light (柔光)</option>
+                    <option value="difference">difference (差值)</option>
+                    <option value="exclusion">exclusion (排除)</option>
+                    <option value="hue">hue (色相)</option>
+                    <option value="saturation">saturation (饱和度)</option>
+                    <option value="color">color (颜色)</option>
+                    <option value="luminosity">luminosity (亮度)</option>
+                </select>
+            </div>
+
+            <div class="border-t border-slate-100 pt-4">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">顶层颜色 (Top Layer)</label>
+                <input type="color" id="top-color" value="#4F46E5"
+                    class="w-full h-10 rounded cursor-pointer border-0 p-0" oninput="updateColor()">
+                <div class="flex items-center gap-2 mt-2">
+                    <input type="checkbox" id="show-text" checked class="rounded text-indigo-600" onchange="update()">
+                    <span class="text-sm">显示文字</span>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 p-4 rounded-xl relative group">
+                <code id="css-code"
+                    class="text-[10px] text-green-400 font-mono break-all block leading-relaxed whitespace-pre"></code>
+                <button onclick="copyCSS()"
+                    class="absolute top-2 right-2 text-[10px] bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded">Copy</button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const topLayer = document.getElementById('layer-top');
+        const modeSelect = document.getElementById('mode-select');
+        const colorInput = document.getElementById('top-color');
+        const currentModeEl = document.getElementById('current-mode');
+        const cssOutput = document.getElementById('css-output');
+        const textOverlay = document.getElementById('text-overlay');
+        const showText = document.getElementById('show-text');
+
+        function update() {
+            const mode = modeSelect.value;
+            topLayer.style.mixBlendMode = mode;
+            currentModeEl.innerText = mode;
+
+            textOverlay.style.display = showText.checked ? 'block' : 'none';
+
+            const css = `.blend-element {
+  background-color: ${colorInput.value};
+  mix-blend-mode: ${mode};
+}`;
+            cssOutput.innerText = css;
+        }
+
+        function updateColor() {
+            topLayer.style.backgroundColor = colorInput.value;
+            update();
+        }
+
+        function copyCSS() {
+            navigator.clipboard.writeText(cssOutput.innerText);
+            alert("CSS 已复制!");
+        }
+
+        // Init
+        update();
+    </script>
+</body>
+
+</html>
