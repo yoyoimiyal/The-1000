@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科学计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .calc-btn {
+            height: 3rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            transition: all 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .calc-btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-num {
+            background-color: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .btn-num:hover {
+            background-color: #e2e8f0;
+        }
+
+        .btn-op {
+            background-color: #e0e7ff;
+            color: #4338ca;
+        }
+
+        .btn-op:hover {
+            background-color: #c7d2fe;
+        }
+
+        .btn-fn {
+            background-color: #f8fafc;
+            color: #475569;
+            font-size: 0.8rem;
+        }
+
+        .btn-fn:hover {
+            background-color: #f1f5f9;
+        }
+
+        .btn-eq {
+            background-color: #4f46e5;
+            color: white;
+        }
+
+        .btn-eq:hover {
+            background-color: #4338ca;
+        }
+
+        .btn-ac {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .btn-ac:hover {
+            background-color: #fecaca;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-sm bg-white p-6 rounded-3xl shadow-xl border border-slate-200">
+
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="font-bold text-slate-700">Scientific Calc</h1>
+            <a href="./navigation.html" class="text-xs text-slate-400 hover:text-indigo-600">Exit</a>
+        </header>
+
+        <!-- Display -->
+        <div class="mb-6">
+            <input type="text" id="display"
+                class="w-full p-4 text-right text-3xl font-mono bg-slate-50 border border-slate-200 rounded-xl outline-none text-slate-800"
+                readonly value="0">
+            <div class="text-right text-xs text-slate-400 mt-1 h-4" id="history"></div>
+        </div>
+
+        <div class="grid grid-cols-5 gap-2">
+
+            <!-- Row 1: Functions -->
+            <button class="calc-btn btn-fn" onclick="func('sin')">sin</button>
+            <button class="calc-btn btn-fn" onclick="func('cos')">cos</button>
+            <button class="calc-btn btn-fn" onclick="func('tan')">tan</button>
+            <button class="calc-btn btn-fn" onclick="func('log')">log</button>
+            <button class="calc-btn btn-fn" onclick="func('ln')">ln</button>
+
+            <!-- Row 2: Functions -->
+            <button class="calc-btn btn-fn" onclick="func('sqrt')">√</button>
+            <button class="calc-btn btn-fn" onclick="op('^')">^</button>
+            <button class="calc-btn btn-fn" onclick="func('pi')">π</button>
+            <button class="calc-btn btn-fn" onclick="func('e')">e</button>
+            <button class="calc-btn btn-fn" onclick="op('(')">(</button>
+
+            <!-- Row 3 -->
+            <button class="calc-btn btn-num" onclick="num(7)">7</button>
+            <button class="calc-btn btn-num" onclick="num(8)">8</button>
+            <button class="calc-btn btn-num" onclick="num(9)">9</button>
+            <button class="calc-btn btn-ac" onclick="clearAll()">AC</button>
+            <button class="calc-btn btn-fn" onclick="op(')')">)</button>
+
+            <!-- Row 4 -->
+            <button class="calc-btn btn-num" onclick="num(4)">4</button>
+            <button class="calc-btn btn-num" onclick="num(5)">5</button>
+            <button class="calc-btn btn-num" onclick="num(6)">6</button>
+            <button class="calc-btn btn-op" onclick="op('*')">×</button>
+            <button class="calc-btn btn-op" onclick="op('/')">÷</button>
+
+            <!-- Row 5 -->
+            <button class="calc-btn btn-num" onclick="num(1)">1</button>
+            <button class="calc-btn btn-num" onclick="num(2)">2</button>
+            <button class="calc-btn btn-num" onclick="num(3)">3</button>
+            <button class="calc-btn btn-op" onclick="op('+')">+</button>
+            <button class="calc-btn btn-op" onclick="op('-')">-</button>
+
+            <!-- Row 6 -->
+            <button class="calc-btn btn-num" onclick="num(0)">0</button>
+            <button class="calc-btn btn-num" onclick="num('.')">.</button>
+            <button class="calc-btn btn-num" onclick="del()">⌫</button>
+            <button class="calc-btn btn-eq col-span-2" onclick="calc()">=</button>
+
+        </div>
+
+    </div>
+
+    <script>
+        const display = document.getElementById('display');
+        const history = document.getElementById('history');
+        let currentExp = "";
+        let isResult = false;
+
+        function num(v) {
+            if (isResult) {
+                currentExp = "";
+                isResult = false;
+            }
+            if (currentExp === "0" && v !== ".") currentExp = "";
+            currentExp += v;
+            updateDisplay();
+        }
+
+        function op(v) {
+            isResult = false;
+            currentExp += v;
+            updateDisplay();
+        }
+
+        function func(f) {
+            isResult = false;
+            if (f === 'pi') currentExp += 'Math.PI';
+            else if (f === 'e') currentExp += 'Math.E';
+            else currentExp += `Math.${f}(`;
+            updateDisplay();
+        }
+
+        function del() {
+            if (isResult) {
+                currentExp = "";
+                isResult = false;
+            } else {
+                currentExp = currentExp.slice(0, -1);
+                if (currentExp === "") currentExp = "0";
+            }
+            updateDisplay();
+        }
+
+        function clearAll() {
+            currentExp = "0";
+            isResult = false;
+            history.innerText = "";
+            updateDisplay();
+        }
+
+        function calc() {
+            try {
+                // Safety replacement for power operator ^ to **
+                // Note: user might type Math.pow logic via UI
+                // Replace ^ with ** for JS eval
+                let evalExp = currentExp.replace(/\^/g, '**');
+
+                const res = eval(evalExp);
+
+                // Format
+                const formatted = parseFloat(res.toFixed(8)).toString(); // Remove trailing zeros
+
+                history.innerText = currentExp + " =";
+                currentExp = formatted;
+                isResult = true;
+            } catch (e) {
+                currentExp = "Error";
+                isResult = true;
+            }
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            // Clean up display for user readability (remove Math. prefix)
+            let view = currentExp.replace(/Math\./g, '').replace(/\*\*/g, '^');
+            display.value = view;
+        }
+    </script>
+</body>
+
+</html>

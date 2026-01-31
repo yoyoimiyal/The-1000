@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>恐龙快跑</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            image-rendering: pixelated;
+            touch-action: none;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-[600px] relative">
+
+        <canvas id="gameCanvas" width="600" height="200"
+            class="bg-white border-b-2 border-gray-400 w-full h-auto"></canvas>
+
+        <div id="overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-white/80 z-10">
+            <h1 class="text-2xl font-bold text-gray-800 mb-2">DINO RUN</h1>
+            <p class="text-sm text-gray-500 mb-6">按空格键或点击屏幕跳跃</p>
+            <button onclick="startGame()"
+                class="px-6 py-2 bg-gray-800 text-white rounded font-bold hover:bg-gray-700">开始游戏</button>
+        </div>
+
+        <div class="flex justify-between mt-2 text-gray-500 font-mono text-sm">
+            <a href="./navigation.html" class="hover:text-black">Exit</a>
+            <span>HI: <span id="high-score">00000</span></span>
+            <span>SCORE: <span id="score">00000</span></span>
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('overlay');
+        const scoreEl = document.getElementById('score');
+        const hiEl = document.getElementById('high-score');
+
+        // Game Constants
+        const GRAVITY = 0.6;
+        const JUMP = -10;
+        const BASE_SPEED = 5;
+
+        // State
+        let isPlaying = false;
+        let score = 0;
+        let speed = BASE_SPEED;
+        let frame = 0;
+        let obstacles = [];
+        let clouds = [];
+        let hi = localStorage.getItem('dino_hi') || 0;
+        hiEl.innerText = String(hi).padStart(5, '0');
+
+        // Dino
+        const dino = {
+            x: 50, y: 160, w: 20, h: 40,
+            vy: 0, grounded: true,
+            draw: function () {
+                ctx.fillStyle = "#555";
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+                // Eye
+                ctx.fillStyle = "#fff";
+                ctx.fillRect(this.x + 12, this.y + 4, 4, 4);
+            },
+            update: function () {
+                if (!this.grounded) {
+                    this.vy += GRAVITY;
+                    this.y += this.vy;
+                }
+
+                if (this.y >= 160) {
+                    this.y = 160;
+                    this.vy = 0;
+                    this.grounded = true;
+                }
+            },
+            jump: function () {
+                if (this.grounded) {
+                    this.vy = JUMP;
+                    this.grounded = false;
+                }
+            }
+        };
+
+        function startGame() {
+            if (isPlaying) return;
+            isPlaying = true;
+            overlay.style.display = 'none';
+            score = 0;
+            speed = BASE_SPEED;
+            frame = 0;
+            obstacles = [];
+            clouds = [];
+            dino.y = 160;
+            dino.vy = 0;
+            loop();
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            overlay.style.display = 'flex';
+            document.querySelector('#overlay h1').innerText = "GAME OVER";
+            if (score > hi) {
+                hi = score;
+                localStorage.setItem('dino_hi', hi);
+                hiEl.innerText = String(hi).padStart(5, '0');
+            }
+        }
+
+        function loop() {
+            if (!isPlaying) return;
+
+            // Clear
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Ground Line
+            ctx.fillStyle = "#aaa";
+            ctx.fillRect(0, 190, canvas.width, 2);
+
+            // Spawner
+            frame++;
+            score++;
+            scoreEl.innerText = String(Math.floor(score / 10)).padStart(5, '0');
+
+            // Speed up
+            if (frame % 1000 === 0) speed += 0.5;
+
+            // Clouds
+            if (Math.random() < 0.01) {
+                clouds.push({ x: canvas.width, y: Math.random() * 100, w: 40, h: 10 });
+            }
+
+            // Cactus
+            if (frame % 100 === 0) { // Simple interval, better is random
+                if (Math.random() > 0.5) {
+                    const type = Math.random();
+                    let w = 20, h = 30;
+                    if (type > 0.6) { w = 30; h = 20; } // Wide
+                    obstacles.push({ x: canvas.width, y: 190 - h, w: w, h: h });
+                }
+            }
+            // Ensure min distance between obstacles
+            if (obstacles.length > 0) {
+                const last = obstacles[obstacles.length - 1];
+                if (canvas.width - last.x < 150) {
+                    // Do nothing, wait space
+                } else if (Math.random() < 0.02) {
+                    obstacles.push({ x: canvas.width, y: 160, w: 20, h: 30 });
+                }
+            } else if (frame > 60) { // Initial delay
+                obstacles.push({ x: canvas.width, y: 160, w: 20, h: 30 });
+            }
+
+
+            // Update & Draw Clouds
+            ctx.fillStyle = "#eee";
+            for (let i = clouds.length - 1; i >= 0; i--) {
+                let c = clouds[i];
+                c.x -= speed * 0.2; // Parallax
+                ctx.fillRect(c.x, c.y, c.w, c.h);
+                if (c.x + c.w < 0) clouds.splice(i, 1);
+            }
+
+            // Update & Draw Obstacles
+            ctx.fillStyle = "#555";
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let o = obstacles[i];
+                o.x -= speed;
+                ctx.fillRect(o.x, o.y, o.w, o.h);
+
+                // Collision
+                if (
+                    dino.x < o.x + o.w &&
+                    dino.x + dino.w > o.x &&
+                    dino.y < o.y + o.h &&
+                    dino.y + dino.h > o.y
+                ) {
+                    gameOver();
+                    return;
+                }
+
+                if (o.x + o.w < 0) obstacles.splice(i, 1);
+            }
+
+            dino.update();
+            dino.draw();
+
+            requestAnimationFrame(loop);
+        }
+
+        // Input
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.key === 'ArrowUp') {
+                if (isPlaying) dino.jump();
+                else startGame();
+            }
+        });
+        document.addEventListener('touchstart', (e) => {
+            if (isPlaying) { e.preventDefault(); dino.jump(); }
+            else { e.preventDefault(); startGame(); }
+        });
+    </script>
+</body>
+
+</html>

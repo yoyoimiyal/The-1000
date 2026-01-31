@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL 解析器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        td:first-child {
+            font-weight: bold;
+            color: #64748b;
+            width: 120px;
+        }
+
+        td:last-child {
+            font-family: monospace;
+            color: #334155;
+            word-break: break-all;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-4xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-700">
+                <span class="bg-indigo-100 px-2 py-1 rounded text-xs font-mono">http://</span> URL Parser
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">输入 URL</label>
+            <div class="flex gap-2">
+                <input type="text" id="input-url"
+                    class="flex-1 p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
+                    placeholder="https://example.com:8080/path?query=1#hash" oninput="parse()">
+                <button onclick="loadSample()" class="text-xs text-indigo-500 hover:underline px-2">Sample</button>
+            </div>
+            <p id="error-msg" class="text-xs text-red-500 mt-2 h-4"></p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- Standard Components -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-slate-50 px-4 py-2 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
+                    基础组件 (Components)</div>
+                <table class="w-full text-sm">
+                    <tr>
+                        <td>Protocol</td>
+                        <td id="res-proto">-</td>
+                    </tr>
+                    <tr>
+                        <td>Host</td>
+                        <td id="res-host">-</td>
+                    </tr>
+                    <tr>
+                        <td>Port</td>
+                        <td id="res-port">-</td>
+                    </tr>
+                    <tr>
+                        <td>Path</td>
+                        <td id="res-path">-</td>
+                    </tr>
+                    <tr>
+                        <td>Hash</td>
+                        <td id="res-hash">-</td>
+                    </tr>
+                    <tr>
+                        <td>Origin</td>
+                        <td id="res-origin">-</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Query Params -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
+                <div class="bg-slate-50 px-4 py-2 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
+                    查询参数 (Query Params)</div>
+                <div class="flex-1 overflow-auto max-h-64">
+                    <table class="w-full text-sm" id="params-table">
+                        <!-- Params injected -->
+                        <tr>
+                            <td colspan="2" class="text-center text-slate-400 italic py-4 font-normal">No parameters
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const input = document.getElementById('input-url');
+        const errMsg = document.getElementById('error-msg');
+
+        function loadSample() {
+            input.value = "https://www.google.com/search?q=javascript+url+parser&hl=en&source=lnms#top";
+            parse();
+        }
+
+        function parse() {
+            const val = input.value.trim();
+            errMsg.innerText = "";
+
+            if (!val) {
+                reset();
+                return;
+            }
+
+            try {
+                const url = new URL(val);
+
+                document.getElementById('res-proto').innerText = url.protocol;
+                document.getElementById('res-host').innerText = url.hostname;
+                document.getElementById('res-port').innerText = url.port || (url.protocol === 'https:' ? '443' : (url.protocol === 'http:' ? '80' : '-'));
+                document.getElementById('res-path').innerText = url.pathname;
+                document.getElementById('res-hash').innerText = url.hash || '-';
+                document.getElementById('res-origin').innerText = url.origin;
+
+                // Params
+                const paramsTable = document.getElementById('params-table');
+                paramsTable.innerHTML = '';
+
+                if (Array.from(url.searchParams).length === 0) {
+                    paramsTable.innerHTML = '<tr><td colspan="2" class="text-center text-slate-400 italic py-4 font-normal">No parameters</td></tr>';
+                } else {
+                    url.searchParams.forEach((value, key) => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${key}</td><td>${value}</td>`;
+                        paramsTable.appendChild(tr);
+                    });
+                }
+
+            } catch (e) {
+                errMsg.innerText = "Invalid URL";
+                reset();
+            }
+        }
+
+        function reset() {
+            const ids = ['res-proto', 'res-host', 'res-port', 'res-path', 'res-hash', 'res-origin'];
+            ids.forEach(id => document.getElementById(id).innerText = '-');
+            document.getElementById('params-table').innerHTML = '<tr><td colspan="2" class="text-center text-slate-400 italic py-4 font-normal">No parameters</td></tr>';
+        }
+    </script>
+</body>
+
+</html>

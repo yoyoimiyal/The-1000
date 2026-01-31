@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG 噪点纹理生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-4xl flex flex-col md:flex-row gap-8 h-[85vh]">
+
+        <!-- Controls -->
+        <div
+            class="w-full md:w-80 bg-white p-6 rounded-2xl shadow-xl flex flex-col gap-6 shrink-0 z-10 overflow-y-auto">
+            <header class="flex justify-between items-center">
+                <h1 class="font-bold text-lg text-slate-700">SVG Noise Gen</h1>
+                <a href="./navigation.html" class="text-xs text-slate-400 hover:text-indigo-600">退出</a>
+            </header>
+
+            <div class="space-y-4">
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Base Frequency
+                        (Roughness)</label>
+                    <input type="range" id="freq" min="0.5" max="5" step="0.1" value="0.7"
+                        class="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer" oninput="generate()">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Num Octaves (Detail)</label>
+                    <input type="range" id="octaves" min="1" max="5" step="1" value="3"
+                        class="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer" oninput="generate()">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Opacity</label>
+                    <input type="range" id="opacity" min="0.1" max="1" step="0.1" value="0.5"
+                        class="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer" oninput="generate()">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Background Color</label>
+                    <input type="color" id="bg-color" value="#6366f1"
+                        class="w-full h-10 rounded cursor-pointer border-0" oninput="updateBg()">
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="color-noise" class="rounded text-indigo-600" onchange="generate()">
+                    <span class="text-sm font-bold text-slate-600">彩色噪点 (Color Noise)</span>
+                </div>
+
+                <div class="bg-slate-800 p-4 rounded-xl relative group mt-4">
+                    <code id="css-code"
+                        class="text-[10px] text-green-400 font-mono break-all block leading-relaxed overflow-hidden h-24"></code>
+                    <button onclick="copyCSS()"
+                        class="absolute top-2 right-2 text-[10px] bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded">Copy
+                        CSS</button>
+                </div>
+
+                <button onclick="downloadSVG()"
+                    class="w-full py-2 border border-slate-300 rounded-lg text-sm font-bold hover:bg-slate-50">Download
+                    SVG</button>
+
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="flex-1 rounded-2xl shadow-inner relative overflow-hidden" id="preview-container"
+            style="background-color: #6366f1;">
+
+            <!-- The SVG overlay -->
+            <div id="noise-layer" class="w-full h-full"></div>
+
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <h2 class="text-6xl font-black text-white mix-blend-overlay opacity-80">NOISE</h2>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const container = document.getElementById('preview-container');
+        const noiseLayer = document.getElementById('noise-layer');
+        const cssOutput = document.getElementById('css-code');
+
+        let svgString = "";
+
+        function updateBg() {
+            container.style.backgroundColor = document.getElementById('bg-color').value;
+        }
+
+        function generate() {
+            const freq = document.getElementById('freq').value;
+            const octaves = document.getElementById('octaves').value;
+            const opacity = document.getElementById('opacity').value;
+            const colorNoise = document.getElementById('color-noise').checked;
+
+            // SVG Filter
+            // feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"
+            const type = colorNoise ? 'type="turbulence"' : 'type="fractalNoise"';
+
+            svgString = `<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'>
+  <filter id='noiseFilter'>
+    <feTurbulence ${type} baseFrequency='${freq}' numOctaves='${octaves}' stitchTiles='stitch'/>
+  </filter>
+  <rect width='100%' height='100%' filter='url(#noiseFilter)' opacity='${opacity}'/>
+</svg>`;
+
+            // Data URI for CSS
+            const encoded = encodeURIComponent(svgString)
+                .replace(/'/g, '%27')
+                .replace(/"/g, '%22');
+
+            const dataUri = `url("data:image/svg+xml,${encoded}")`;
+
+            noiseLayer.style.backgroundImage = dataUri;
+
+            cssOutput.innerText = `background-image: ${dataUri};`;
+        }
+
+        function copyCSS() {
+            navigator.clipboard.writeText(cssOutput.innerText);
+            alert("CSS 已复制!");
+        }
+
+        function downloadSVG() {
+            const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "noise.svg";
+            link.click();
+        }
+
+        // Init
+        generate();
+    </script>
+</body>
+
+</html>

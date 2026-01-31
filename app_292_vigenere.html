@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>维吉尼亚密码</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        textarea {
+            font-family: monospace;
+            resize: none;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-3xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-slate-700">
+                <span class="bg-indigo-600 text-white px-2 py-1 rounded text-xs">V</span> Vigenère Cipher
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-200">
+
+            <!-- Key Input -->
+            <div class="mb-6">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">密钥 (Key)</label>
+                <input type="text" id="key"
+                    class="w-full p-3 border-2 border-indigo-100 rounded-lg outline-none focus:border-indigo-500 font-mono tracking-widest uppercase text-indigo-700 font-bold"
+                    placeholder="SECRET" oninput="process()">
+                <p class="text-xs text-slate-400 mt-1">仅限英文字母</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <!-- Plaintext -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-xs font-bold text-slate-400 uppercase">明文 (Plaintext)</label>
+                        <button onclick="clearAll()" class="text-xs text-red-400 hover:text-red-600">清空</button>
+                    </div>
+                    <textarea id="plain"
+                        class="w-full h-40 p-4 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
+                        placeholder="Hello World..." oninput="updateFromPlain()"></textarea>
+                </div>
+
+                <!-- Ciphertext -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-xs font-bold text-slate-400 uppercase">密文 (Ciphertext)</label>
+                        <button onclick="copy('cipher')" class="text-xs text-blue-500 hover:text-blue-700">复制</button>
+                    </div>
+                    <textarea id="cipher"
+                        class="w-full h-40 p-4 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500 bg-slate-50"
+                        placeholder="Zincs Pgvnu..." oninput="updateFromCipher()"></textarea>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="mt-6 text-center text-xs text-slate-500 max-w-lg mx-auto">
+            <p>维吉尼亚密码是一种多表代换密码，是凯撒密码的加强版。它使用一个关键词来控制字符的偏移量，密钥重复使用直到与明文等长。</p>
+        </div>
+
+    </div>
+
+    <script>
+        const keyEl = document.getElementById('key');
+        const plainEl = document.getElementById('plain');
+        const cipherEl = document.getElementById('cipher');
+
+        // Direction: 'encrypt' (plain->cipher) or 'decrypt' (cipher->plain)
+        // Since we have two textareas, input on one updates the other.
+
+        function updateFromPlain() {
+            run(true);
+        }
+
+        function updateFromCipher() {
+            run(false);
+        }
+
+        function process() {
+            // If key changes, update cipher based on plain (default flow)
+            run(true);
+        }
+
+        function run(encrypt) {
+            let key = keyEl.value.toUpperCase().replace(/[^A-Z]/g, '');
+            if (!key) key = "A"; // Default no shift
+
+            const inputVal = encrypt ? plainEl.value : cipherEl.value;
+            let outputVal = "";
+            let keyIndex = 0;
+
+            for (let i = 0; i < inputVal.length; i++) {
+                const char = inputVal[i];
+                const code = char.charCodeAt(0);
+                let shift = key.charCodeAt(keyIndex % key.length) - 65;
+
+                if (!encrypt) shift = (26 - shift) % 26; // Reverse shift for decrypt
+
+                // Uppercase A-Z
+                if (code >= 65 && code <= 90) {
+                    outputVal += String.fromCharCode(((code - 65 + shift) % 26) + 65);
+                    keyIndex++;
+                }
+                // Lowercase a-z
+                else if (code >= 97 && code <= 122) {
+                    outputVal += String.fromCharCode(((code - 97 + shift) % 26) + 97);
+                    keyIndex++;
+                }
+                // Non-alphabetic: keep as is, do not advance key index
+                else {
+                    outputVal += char;
+                }
+            }
+
+            if (encrypt) cipherEl.value = outputVal;
+            else plainEl.value = outputVal;
+        }
+
+        function clearAll() {
+            plainEl.value = "";
+            cipherEl.value = "";
+        }
+
+        function copy(id) {
+            const el = document.getElementById(id);
+            el.select();
+            document.execCommand('copy');
+            alert("已复制!");
+        }
+    </script>
+</body>
+
+</html>

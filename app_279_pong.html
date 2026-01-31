@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>复古乒乓球</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            display: block;
+            border: 4px solid #fff;
+        }
+    </style>
+</head>
+
+<body class="bg-black min-h-screen flex flex-col items-center justify-center p-4 text-white select-none">
+
+    <div class="mb-4 flex justify-between w-full max-w-[600px] items-center">
+        <h1 class="font-bold text-2xl tracking-widest font-mono">PONG</h1>
+        <div class="font-mono text-xl space-x-4">
+            <span class="text-blue-400" id="score-p">0</span>
+            <span class="text-gray-500">:</span>
+            <span class="text-red-400" id="score-c">0</span>
+        </div>
+    </div>
+
+    <div class="relative">
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+
+        <div id="overlay" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-10">
+            <h2 class="text-3xl font-bold mb-4">Ready?</h2>
+            <p class="text-sm text-gray-400 mb-8">鼠标/触摸控制蓝色挡板</p>
+            <button onclick="startGame()"
+                class="px-8 py-2 bg-white text-black font-bold font-mono hover:bg-gray-300 transition">START</button>
+        </div>
+    </div>
+
+    <div class="mt-8 text-center">
+        <a href="./navigation.html"
+            class="text-xs text-gray-500 hover:text-white border border-gray-700 px-4 py-1 rounded">EXIT GAME</a>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreP = document.getElementById('score-p');
+        const scoreC = document.getElementById('score-c');
+        const overlay = document.getElementById('overlay');
+
+        const paddleW = 10, paddleH = 80;
+        let playerY = 160;
+        let aiY = 160;
+
+        let ballX = 300, ballY = 200;
+        let ballSpeedX = 0, ballSpeedY = 0;
+        const ballSize = 8;
+
+        let pScore = 0, cScore = 0;
+        let isPlaying = false;
+
+        function startGame() {
+            pScore = 0; cScore = 0;
+            updateScore();
+            resetBall();
+            isPlaying = true;
+            overlay.style.display = 'none';
+            requestAnimationFrame(loop);
+        }
+
+        function resetBall() {
+            ballX = canvas.width / 2;
+            ballY = canvas.height / 2;
+            // Random direction
+            const dir = Math.random() > 0.5 ? 1 : -1;
+            ballSpeedX = dir * (4 + Math.random() * 2);
+            ballSpeedY = (Math.random() - 0.5) * 4;
+        }
+
+        function updateScore() {
+            scoreP.innerText = pScore;
+            scoreC.innerText = cScore;
+        }
+
+        function loop() {
+            if (!isPlaying) return;
+
+            // Move
+            ballX += ballSpeedX;
+            ballY += ballSpeedY;
+
+            // AI Movement (Simple tracking)
+            const aiCenter = aiY + paddleH / 2;
+            if (aiCenter < ballY - 35) aiY += 4;
+            else if (aiCenter > ballY + 35) aiY -= 4;
+            // Clamp AI
+            aiY = Math.max(0, Math.min(canvas.height - paddleH, aiY));
+
+            // Wall Collision
+            if (ballY < 0 || ballY > canvas.height) {
+                ballSpeedY = -ballSpeedY;
+            }
+
+            // Paddle Collision
+            // Player (Left)
+            if (ballX < 20 && ballX > 10) {
+                if (ballY > playerY && ballY < playerY + paddleH) {
+                    ballSpeedX = -ballSpeedX * 1.05; // Speed up
+                    // Add spin
+                    const deltaY = ballY - (playerY + paddleH / 2);
+                    ballSpeedY = deltaY * 0.2;
+                }
+            }
+            // AI (Right)
+            if (ballX > canvas.width - 20 && ballX < canvas.width - 10) {
+                if (ballY > aiY && ballY < aiY + paddleH) {
+                    ballSpeedX = -ballSpeedX * 1.05;
+                    const deltaY = ballY - (aiY + paddleH / 2);
+                    ballSpeedY = deltaY * 0.2;
+                }
+            }
+
+            // Score
+            if (ballX < 0) {
+                cScore++;
+                updateScore();
+                resetBall();
+            } else if (ballX > canvas.width) {
+                pScore++;
+                updateScore();
+                resetBall();
+            }
+
+            // Draw
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Net
+            ctx.strokeStyle = '#333';
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Paddles
+            ctx.fillStyle = '#60a5fa'; // Player Blue
+            ctx.fillRect(10, playerY, paddleW, paddleH);
+
+            ctx.fillStyle = '#f87171'; // AI Red
+            ctx.fillRect(canvas.width - 20, aiY, paddleW, paddleH);
+
+            // Ball
+            ctx.fillStyle = 'white';
+            ctx.fillRect(ballX - ballSize / 2, ballY - ballSize / 2, ballSize, ballSize);
+
+            requestAnimationFrame(loop);
+        }
+
+        // Input
+        function movePaddle(clientY) {
+            const rect = canvas.getBoundingClientRect();
+            // Map mouse Y to canvas scale
+            const scaleY = canvas.height / rect.height;
+            const y = (clientY - rect.top) * scaleY;
+
+            playerY = y - paddleH / 2;
+            // Clamp
+            playerY = Math.max(0, Math.min(canvas.height - paddleH, playerY));
+        }
+
+        window.addEventListener('mousemove', e => {
+            if (isPlaying) movePaddle(e.clientY);
+        });
+        window.addEventListener('touchmove', e => {
+            if (isPlaying) {
+                e.preventDefault();
+                movePaddle(e.touches[0].clientY);
+            }
+        }, { passive: false });
+
+    </script>
+</body>
+
+</html>

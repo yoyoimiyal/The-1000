@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>语音转文字笔记</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .recording-pulse {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-3xl flex-1 flex flex-col">
+
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-slate-700">
+                <span class="text-2xl">🎙️</span> Speech to Text
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div id="support-msg" class="hidden bg-red-100 text-red-700 p-4 rounded-xl mb-4 text-sm font-bold text-center">
+            您的浏览器不支持 Web Speech API，请尝试 Chrome 或 Edge。
+        </div>
+
+        <div
+            class="flex-1 bg-white p-6 rounded-2xl shadow-xl border border-slate-200 flex flex-col relative overflow-hidden">
+
+            <textarea id="result"
+                class="flex-1 w-full h-full resize-none outline-none text-lg leading-relaxed text-slate-700 placeholder-slate-300"
+                placeholder="点击麦克风开始说话..."></textarea>
+
+            <div class="absolute bottom-6 right-6 flex flex-col gap-4 items-end">
+                <div id="status"
+                    class="bg-black/70 text-white px-3 py-1 rounded-full text-xs font-bold backdrop-blur opacity-0 transition">
+                    正在聆听...</div>
+
+                <button onclick="toggleRecord()" id="mic-btn"
+                    class="w-16 h-16 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-lg transition transform hover:scale-105">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                </button>
+            </div>
+
+        </div>
+
+        <div class="mt-6 flex justify-between items-center">
+            <div class="flex gap-2">
+                <button onclick="copyText()"
+                    class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition">复制全文</button>
+                <button onclick="downloadText()"
+                    class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition">下载
+                    .txt</button>
+                <button onclick="clearText()"
+                    class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-red-400 hover:text-red-600 hover:bg-red-50 transition">清空</button>
+            </div>
+            <select id="lang"
+                class="bg-transparent text-sm text-slate-400 font-bold outline-none cursor-pointer hover:text-slate-600">
+                <option value="zh-CN">中文 (普通话)</option>
+                <option value="en-US">English (US)</option>
+                <option value="ja-JP">日本語</option>
+                <option value="yue-Hant-HK">粤语 (香港)</option>
+            </select>
+        </div>
+
+    </div>
+
+    <script>
+        const result = document.getElementById('result');
+        const micBtn = document.getElementById('mic-btn');
+        const status = document.getElementById('status');
+        const langSelect = document.getElementById('lang');
+        const supportMsg = document.getElementById('support-msg');
+
+        let recognition;
+        let isRecording = false;
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            recognition.onstart = () => {
+                isRecording = true;
+                micBtn.classList.add('bg-red-500', 'hover:bg-red-600', 'recording-pulse');
+                micBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                status.style.opacity = '1';
+            };
+
+            recognition.onend = () => {
+                isRecording = false;
+                micBtn.classList.remove('bg-red-500', 'hover:bg-red-600', 'recording-pulse');
+                micBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                status.style.opacity = '0';
+            };
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+
+                // Append final
+                if (finalTranscript) {
+                    result.value += finalTranscript + " ";
+                }
+                // Show interim? 
+                // Simple approach: only append finals to textarea to avoid cursor jumping mess.
+                // Or better: Use placeholder or separate div for interim.
+                // Let's just append finals for simple stability.
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech error", event.error);
+                status.innerText = "Error: " + event.error;
+            };
+
+        } else {
+            supportMsg.classList.remove('hidden');
+            micBtn.disabled = true;
+            micBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        function toggleRecord() {
+            if (!recognition) return;
+
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                recognition.lang = langSelect.value;
+                recognition.start();
+            }
+        }
+
+        function copyText() {
+            result.select();
+            document.execCommand('copy');
+            alert("已复制!");
+        }
+
+        function clearText() {
+            result.value = "";
+        }
+
+        function downloadText() {
+            const blob = new Blob([result.value], { type: "text/plain;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "speech_note.txt";
+            a.click();
+        }
+    </script>
+</body>
+
+</html>

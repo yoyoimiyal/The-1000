@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>珠玑妙算 (Mastermind)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .peg {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            background-color: #e2e8f0;
+            cursor: pointer;
+            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.4), inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .peg-sm {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #cbd5e1;
+            margin: 2px;
+        }
+
+        .color-selector {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.1s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .color-selector:hover {
+            transform: scale(1.1);
+        }
+
+        .color-selector.selected {
+            ring: 2px solid white;
+            outline: 2px solid #3b82f6;
+        }
+
+        .peg.red {
+            background-color: #ef4444;
+        }
+
+        .peg.green {
+            background-color: #22c55e;
+        }
+
+        .peg.blue {
+            background-color: #3b82f6;
+        }
+
+        .peg.yellow {
+            background-color: #eab308;
+        }
+
+        .peg.purple {
+            background-color: #a855f7;
+        }
+
+        .peg.orange {
+            background-color: #f97316;
+        }
+
+        .peg-sm.black {
+            background-color: #1f2937;
+        }
+
+        /* Correct pos & color */
+        .peg-sm.white {
+            background-color: #f1f5f9;
+            border: 1px solid #94a3b8;
+        }
+
+        /* Correct color */
+    </style>
+</head>
+
+<body class="bg-slate-900 min-h-screen flex flex-col items-center justify-center p-4 text-slate-200 select-none">
+
+    <div class="w-full max-w-md bg-slate-800 p-6 rounded-3xl shadow-2xl border border-slate-700">
+
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-xl font-bold text-white">Mastermind</h1>
+            <button onclick="initGame()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">New
+                Game</button>
+        </header>
+
+        <!-- Board -->
+        <div class="space-y-2 mb-6" id="board">
+            <!-- Rows injected -->
+        </div>
+
+        <!-- Controls -->
+        <div class="border-t border-slate-700 pt-4">
+            <div class="flex justify-center gap-3 mb-4">
+                <div class="color-selector bg-red-500" onclick="selectColor('red')"></div>
+                <div class="color-selector bg-green-500" onclick="selectColor('green')"></div>
+                <div class="color-selector bg-blue-500" onclick="selectColor('blue')"></div>
+                <div class="color-selector bg-yellow-500" onclick="selectColor('yellow')"></div>
+                <div class="color-selector bg-purple-500" onclick="selectColor('purple')"></div>
+                <div class="color-selector bg-orange-500" onclick="selectColor('orange')"></div>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <div class="text-xs text-slate-500 w-32">
+                    <span class="inline-block w-2 h-2 bg-slate-800 rounded-full mr-1"></span>位置颜色对<br>
+                    <span class="inline-block w-2 h-2 bg-white rounded-full mr-1"></span>颜色对位置错
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="clearRow()"
+                        class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm font-bold">撤销</button>
+                    <button onclick="submitRow()"
+                        class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-sm font-bold shadow-lg">提交</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="mt-8 text-center text-xs text-slate-500">
+        <a href="./navigation.html" class="hover:text-white underline">退出</a>
+    </div>
+
+    <script>
+        const colors = ['red', 'green', 'blue', 'yellow', 'purple', 'orange'];
+        const maxRows = 10;
+        const codeLength = 4;
+
+        let secretCode = [];
+        let currentRow = 0;
+        let currentGuess = [];
+        let gameOver = false;
+
+        const boardEl = document.getElementById('board');
+
+        function initGame() {
+            // Generate Secret
+            secretCode = [];
+            for (let i = 0; i < codeLength; i++) {
+                secretCode.push(colors[Math.floor(Math.random() * colors.length)]);
+            }
+            // console.log(secretCode); // Cheat for debug
+
+            currentRow = 0;
+            currentGuess = [];
+            gameOver = false;
+            renderBoard();
+        }
+
+        function renderBoard() {
+            boardEl.innerHTML = '';
+            for (let i = 0; i < maxRows; i++) {
+                const row = document.createElement('div');
+                row.className = `flex items-center gap-4 p-2 rounded ${i === currentRow ? 'bg-slate-700/50' : ''}`;
+
+                // Index
+                const idx = document.createElement('div');
+                idx.className = "text-xs text-slate-500 w-4 font-mono";
+                idx.innerText = i + 1;
+                row.appendChild(idx);
+
+                // Pegs
+                const pegsDiv = document.createElement('div');
+                pegsDiv.className = "flex gap-2 bg-slate-900/50 p-2 rounded-lg";
+
+                // Determine content based on row state
+                let rowData = [];
+                if (i === currentRow) {
+                    rowData = currentGuess;
+                } else if (i < currentRow) {
+                    // History data needed, but for simplicity we can store history in DOM or variable.
+                    // Let's use DOM preservation or store history. 
+                    // Storing history is cleaner.
+                }
+
+                // Actually, re-rendering wipes history if not stored.
+                // Let's rely on building DOM incrementally? 
+                // Or better: Use `history` array.
+            }
+
+            // Re-build approach is tedious for single file without framework.
+            // Let's just Build Empty Rows once, then update current row.
+
+            // Build Initial Empty Grid
+            if (boardEl.children.length === 0) {
+                for (let i = 0; i < maxRows; i++) {
+                    const row = document.createElement('div');
+                    row.className = "flex items-center gap-4 p-2 rounded border border-transparent";
+                    row.id = `row-${i}`;
+
+                    const idx = document.createElement('div');
+                    idx.className = "text-xs text-slate-500 w-4 font-mono";
+                    idx.innerText = i + 1;
+
+                    const pegsDiv = document.createElement('div');
+                    pegsDiv.className = "flex gap-2 bg-slate-900/50 p-2 rounded-lg";
+                    for (let j = 0; j < 4; j++) {
+                        const peg = document.createElement('div');
+                        peg.className = "peg";
+                        peg.id = `peg-${i}-${j}`;
+                        pegsDiv.appendChild(peg);
+                    }
+
+                    const feedbackDiv = document.createElement('div');
+                    feedbackDiv.className = "grid grid-cols-2 w-8 h-8";
+                    feedbackDiv.id = `feed-${i}`;
+                    // 4 small dots place holders
+                    for (let k = 0; k < 4; k++) {
+                        const sm = document.createElement('div');
+                        sm.className = "peg-sm";
+                        feedbackDiv.appendChild(sm);
+                    }
+
+                    row.appendChild(idx);
+                    row.appendChild(pegsDiv);
+                    row.appendChild(feedbackDiv);
+                    boardEl.appendChild(row);
+                }
+            }
+
+            // Highlight current row
+            for (let i = 0; i < maxRows; i++) {
+                const r = document.getElementById(`row-${i}`);
+                if (i === currentRow) r.classList.add('border-indigo-500', 'bg-slate-700/30');
+                else r.classList.remove('border-indigo-500', 'bg-slate-700/30');
+            }
+        }
+
+        function selectColor(color) {
+            if (gameOver || currentGuess.length >= 4) return;
+
+            const peg = document.getElementById(`peg-${currentRow}-${currentGuess.length}`);
+            peg.className = `peg ${color}`;
+            currentGuess.push(color);
+        }
+
+        function clearRow() {
+            if (gameOver) return;
+            if (currentGuess.length > 0) {
+                currentGuess.pop();
+                const peg = document.getElementById(`peg-${currentRow}-${currentGuess.length}`);
+                peg.className = "peg";
+            }
+        }
+
+        function submitRow() {
+            if (gameOver || currentGuess.length !== 4) return;
+
+            // Check
+            let black = 0;
+            let white = 0;
+
+            const secretCopy = [...secretCode];
+            const guessCopy = [...currentGuess];
+
+            // 1. Check exact matches (Black)
+            for (let i = 0; i < 4; i++) {
+                if (guessCopy[i] === secretCopy[i]) {
+                    black++;
+                    guessCopy[i] = null;
+                    secretCopy[i] = null;
+                }
+            }
+
+            // 2. Check partial matches (White)
+            for (let i = 0; i < 4; i++) {
+                if (guessCopy[i] !== null) {
+                    const idx = secretCopy.indexOf(guessCopy[i]);
+                    if (idx !== -1) {
+                        white++;
+                        secretCopy[idx] = null;
+                    }
+                }
+            }
+
+            // Render Feedback
+            const feedDiv = document.getElementById(`feed-${currentRow}`);
+            feedDiv.innerHTML = '';
+            for (let k = 0; k < black; k++) {
+                const sm = document.createElement('div'); sm.className = "peg-sm black"; feedDiv.appendChild(sm);
+            }
+            for (let k = 0; k < white; k++) {
+                const sm = document.createElement('div'); sm.className = "peg-sm white"; feedDiv.appendChild(sm);
+            }
+            // Fill rest empty
+            for (let k = 0; k < 4 - black - white; k++) {
+                const sm = document.createElement('div'); sm.className = "peg-sm"; feedDiv.appendChild(sm);
+            }
+
+            if (black === 4) {
+                alert("🎉 恭喜！你破解了密码！");
+                gameOver = true;
+            } else {
+                currentRow++;
+                currentGuess = [];
+                if (currentRow >= maxRows) {
+                    alert(`游戏结束！正确答案是: ${secretCode.join(', ')}`);
+                    gameOver = true;
+                    // Reveal?
+                } else {
+                    renderBoard(); // Update highlight
+                }
+            }
+        }
+
+        // Init
+        initGame();
+    </script>
+</body>
+
+</html>

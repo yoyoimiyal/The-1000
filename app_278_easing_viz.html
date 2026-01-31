@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS 缓动函数可视化</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .handle {
+            width: 14px;
+            height: 14px;
+            border: 2px solid white;
+            border-radius: 50%;
+            position: absolute;
+            transform: translate(-50%, -50%);
+            cursor: grab;
+        }
+
+        .handle:active {
+            cursor: grabbing;
+        }
+
+        .grid-bg {
+            background-size: 20px 20px;
+            background-image: linear-gradient(to right, #f1f5f9 1px, transparent 1px), linear-gradient(to bottom, #f1f5f9 1px, transparent 1px);
+        }
+    </style>
+</head>
+
+<body class="bg-white min-h-screen flex flex-col md:flex-row text-slate-800">
+
+    <!-- Sidebar -->
+    <div
+        class="w-full md:w-80 bg-slate-50 border-r border-slate-200 p-6 flex flex-col gap-6 h-auto md:h-screen z-10 shadow-lg">
+        <header class="flex justify-between items-center">
+            <h1 class="font-bold text-lg text-indigo-700">Cubic Bezier</h1>
+            <a href="./navigation.html" class="text-xs text-slate-400 hover:text-indigo-600">Exit</a>
+        </header>
+
+        <div class="space-y-4">
+            <label class="block text-xs font-bold text-slate-400 uppercase">预设 (Presets)</label>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="setPoints(0.25, 0.1, 0.25, 1)"
+                    class="bg-white border hover:border-indigo-400 px-3 py-2 rounded text-xs">Ease</button>
+                <button onclick="setPoints(0, 0, 1, 1)"
+                    class="bg-white border hover:border-indigo-400 px-3 py-2 rounded text-xs">Linear</button>
+                <button onclick="setPoints(0.42, 0, 1, 1)"
+                    class="bg-white border hover:border-indigo-400 px-3 py-2 rounded text-xs">Ease-In</button>
+                <button onclick="setPoints(0, 0, 0.58, 1)"
+                    class="bg-white border hover:border-indigo-400 px-3 py-2 rounded text-xs">Ease-Out</button>
+                <button onclick="setPoints(0.42, 0, 0.58, 1)"
+                    class="bg-white border hover:border-indigo-400 px-3 py-2 rounded text-xs">Ease-In-Out</button>
+                <button onclick="setPoints(0.68, -0.55, 0.265, 1.55)"
+                    class="bg-white border hover:border-indigo-400 px-3 py-2 rounded text-xs">Back-In-Out</button>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 p-4 rounded-xl relative group">
+            <code id="css-output" class="text-xs text-green-400 font-mono break-all block leading-relaxed">
+                cubic-bezier(.25, .1, .25, 1)
+            </code>
+            <button onclick="copyCSS()"
+                class="absolute top-2 right-2 text-[10px] bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded">Copy</button>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Duration</label>
+            <input type="range" id="duration" min="0.5" max="3" step="0.1" value="1" class="w-full"
+                oninput="updateAnim()">
+            <div class="text-right text-xs text-slate-400 mt-1"><span id="dur-val">1</span>s</div>
+        </div>
+
+        <button onclick="playAnim()"
+            class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow">
+            Replay Animation
+        </button>
+    </div>
+
+    <!-- Main -->
+    <div class="flex-1 p-8 flex flex-col items-center justify-center relative overflow-hidden">
+
+        <!-- Graph Editor -->
+        <div class="relative w-[300px] h-[300px] bg-white shadow-xl border border-slate-200 mb-12 grid-bg select-none"
+            id="graph">
+            <svg class="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+                <!-- Guide Line -->
+                <line x1="0" y1="300" x2="300" y2="0" stroke="#e2e8f0" stroke-width="2" />
+                <!-- Control Lines -->
+                <line id="line1" stroke="#94a3b8" stroke-width="2" />
+                <line id="line2" stroke="#94a3b8" stroke-width="2" />
+                <!-- Curve -->
+                <path id="curve" fill="none" stroke="#4f46e5" stroke-width="4" />
+            </svg>
+
+            <div id="p0"
+                class="absolute bottom-0 left-0 w-3 h-3 bg-slate-300 rounded-full translate-y-1/2 -translate-x-1/2">
+            </div>
+            <div id="p3"
+                class="absolute top-0 right-0 w-3 h-3 bg-slate-300 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+
+            <div id="p1" class="handle bg-pink-500 shadow-lg" onmousedown="startDrag(event, 1)"
+                ontouchstart="startDrag(event, 1)"></div>
+            <div id="p2" class="handle bg-blue-500 shadow-lg" onmousedown="startDrag(event, 2)"
+                ontouchstart="startDrag(event, 2)"></div>
+        </div>
+
+        <!-- Animation Preview -->
+        <div
+            class="w-full max-w-2xl bg-slate-100 h-16 rounded-full relative overflow-hidden shadow-inner border border-slate-200">
+            <div id="ball" class="absolute top-1 left-1 h-14 w-14 bg-indigo-600 rounded-full shadow-lg"></div>
+        </div>
+        <div class="w-full max-w-2xl mt-2 flex justify-between text-xs text-slate-400 font-bold uppercase">
+            <span>Start</span>
+            <span>End</span>
+        </div>
+
+    </div>
+
+    <script>
+        const graph = document.getElementById('graph');
+        const p1El = document.getElementById('p1');
+        const p2El = document.getElementById('p2');
+        const line1 = document.getElementById('line1');
+        const line2 = document.getElementById('line2');
+        const curve = document.getElementById('curve');
+        const output = document.getElementById('css-output');
+        const ball = document.getElementById('ball');
+
+        // Initial coords (0-1)
+        let c1 = { x: 0.25, y: 0.1 };
+        let c2 = { x: 0.25, y: 1.0 };
+        const size = 300;
+
+        let activeHandle = null;
+
+        function updateUI() {
+            // Convert to pixels
+            // Graph Y is inverted (0 is top), Math Y (0 is bottom).
+            // Visually: Bottom-Left (0, 300) is (0,0). Top-Right (300, 0) is (1,1).
+            // P1 visual: x = c1.x * 300, y = 300 - (c1.y * 300)
+
+            const x1 = c1.x * size;
+            const y1 = size - (c1.y * size);
+            const x2 = c2.x * size;
+            const y2 = size - (c2.y * size);
+
+            p1El.style.left = x1 + 'px';
+            p1El.style.top = y1 + 'px';
+            p2El.style.left = x2 + 'px';
+            p2El.style.top = y2 + 'px';
+
+            line1.setAttribute('x1', 0);
+            line1.setAttribute('y1', size);
+            line1.setAttribute('x2', x1);
+            line1.setAttribute('y2', y1);
+
+            line2.setAttribute('x1', size);
+            line2.setAttribute('y1', 0);
+            line2.setAttribute('x2', x2);
+            line2.setAttribute('y2', y2);
+
+            // Curve: M 0,300 C x1,y1 x2,y2 300,0
+            curve.setAttribute('d', `M 0,${size} C ${x1},${y1} ${x2},${y2} ${size},0`);
+
+            // CSS
+            // cubic-bezier(x1, y1, x2, y2)
+            const css = `cubic-bezier(${c1.x.toFixed(2)}, ${c1.y.toFixed(2)}, ${c2.x.toFixed(2)}, ${c2.y.toFixed(2)})`;
+            output.innerText = css;
+
+            updateAnim();
+        }
+
+        function setPoints(x1, y1, x2, y2) {
+            c1 = { x: x1, y: y1 };
+            c2 = { x: x2, y: y2 };
+            updateUI();
+            playAnim();
+        }
+
+        function updateAnim() {
+            const dur = document.getElementById('duration').value;
+            document.getElementById('dur-val').innerText = dur;
+            ball.style.transition = `left ${dur}s ${output.innerText}`;
+        }
+
+        function playAnim() {
+            // Reset
+            ball.style.transition = 'none';
+            ball.style.left = '4px';
+
+            // Force reflow
+            void ball.offsetWidth;
+
+            // Play
+            updateAnim();
+            ball.style.left = 'calc(100% - 60px)'; // 56px ball + 4px margin
+        }
+
+        // Dragging
+        function startDrag(e, id) {
+            e.preventDefault();
+            activeHandle = id;
+            window.addEventListener('mousemove', drag);
+            window.addEventListener('touchmove', drag, { passive: false });
+            window.addEventListener('mouseup', stopDrag);
+            window.addEventListener('touchend', stopDrag);
+        }
+
+        function drag(e) {
+            if (!activeHandle) return;
+            e.preventDefault();
+
+            const rect = graph.getBoundingClientRect();
+            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            let x = (clientX - rect.left) / size;
+            let y = 1 - (clientY - rect.top) / size; // Invert Y
+
+            // Clamp X to 0-1 (Time cannot go backwards), Y can exceed (Bounce)
+            x = Math.max(0, Math.min(1, x));
+
+            if (activeHandle === 1) c1 = { x, y };
+            else c2 = { x, y };
+
+            updateUI();
+        }
+
+        function stopDrag() {
+            activeHandle = null;
+            playAnim();
+            window.removeEventListener('mousemove', drag);
+            window.removeEventListener('touchmove', drag);
+            window.removeEventListener('mouseup', stopDrag);
+            window.removeEventListener('touchend', stopDrag);
+        }
+
+        function copyCSS() {
+            navigator.clipboard.writeText(output.innerText);
+            alert("Copied!");
+        }
+
+        updateUI();
+    </script>
+</body>
+
+</html>

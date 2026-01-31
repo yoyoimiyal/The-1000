@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPI 像素密度计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-700">
+                <span class="text-2xl">📱</span> PPI Calculator
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <div class="flex gap-4">
+                <div class="flex-1">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">水平分辨率 (Width)</label>
+                    <input type="number" id="width"
+                        class="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-lg"
+                        value="1920" oninput="calc()">
+                    <span class="text-xs text-slate-400 block mt-1 text-right">px</span>
+                </div>
+                <div class="flex-1">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">垂直分辨率 (Height)</label>
+                    <input type="number" id="height"
+                        class="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-lg"
+                        value="1080" oninput="calc()">
+                    <span class="text-xs text-slate-400 block mt-1 text-right">px</span>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">屏幕尺寸 (Diagonal)</label>
+                <input type="number" id="inch"
+                    class="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-lg"
+                    value="24" step="0.1" oninput="calc()">
+                <span class="text-xs text-slate-400 block mt-1 text-right">inch (英寸)</span>
+            </div>
+
+            <!-- Presets -->
+            <div class="flex flex-wrap gap-2 text-xs">
+                <button onclick="setPreset(1920, 1080, 24)"
+                    class="bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded">24" 1080p</button>
+                <button onclick="setPreset(2560, 1440, 27)"
+                    class="bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded">27" 2K</button>
+                <button onclick="setPreset(3840, 2160, 32)"
+                    class="bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded">32" 4K</button>
+                <button onclick="setPreset(1170, 2532, 6.1)"
+                    class="bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded">iPhone 13/14</button>
+                <button onclick="setPreset(2532, 1170, 13.3)"
+                    class="bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded">MacBook Air 13</button>
+            </div>
+
+            <!-- Result -->
+            <div class="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 text-center mt-4">
+                <p class="text-xs font-bold text-indigo-400 uppercase mb-1">像素密度 (Pixel Density)</p>
+                <div class="text-5xl font-black text-indigo-700 tracking-tight">
+                    <span id="result">91.79</span> <span class="text-lg">PPI</span>
+                </div>
+                <div class="mt-4 flex justify-center gap-4 text-xs font-bold text-indigo-400">
+                    <p>Pitch: <span id="pitch">0.2767</span> mm</p>
+                    <p>Status: <span id="status">Standard</span></p>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        function calc() {
+            const w = parseFloat(document.getElementById('width').value);
+            const h = parseFloat(document.getElementById('height').value);
+            const d = parseFloat(document.getElementById('inch').value);
+
+            if (!w || !h || !d) {
+                document.getElementById('result').innerText = "0";
+                return;
+            }
+
+            const diagonalPixels = Math.sqrt(w * w + h * h);
+            const ppi = diagonalPixels / d;
+
+            const pitch = 25.4 / ppi;
+
+            document.getElementById('result').innerText = ppi.toFixed(2);
+            document.getElementById('pitch').innerText = pitch.toFixed(4);
+
+            let status = "普通屏 (Standard)";
+            if (ppi > 300) status = "视网膜屏 (Retina)";
+            else if (ppi > 200) status = "高清屏 (High DPI)";
+            else if (ppi > 100 && d < 15) status = "普通手机屏";
+
+            document.getElementById('status').innerText = status;
+        }
+
+        function setPreset(w, h, i) {
+            document.getElementById('width').value = w;
+            document.getElementById('height').value = h;
+            document.getElementById('inch').value = i;
+            calc();
+        }
+
+        calc();
+    </script>
+</body>
+
+</html>

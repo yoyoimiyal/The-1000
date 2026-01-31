@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音乐矩阵</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(16, 1fr);
+            gap: 2px;
+            width: 100%;
+            max-width: 600px;
+            aspect-ratio: 1;
+        }
+
+        .cell {
+            background-color: #1e293b;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: background-color 0.1s;
+        }
+
+        .cell.active {
+            background-color: #3b82f6;
+            box-shadow: 0 0 5px #3b82f6;
+        }
+
+        .cell.playing {
+            filter: brightness(1.5);
+        }
+
+        .cell.active.playing {
+            background-color: #ffffff;
+            box-shadow: 0 0 10px #fff;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 min-h-screen flex flex-col items-center justify-center p-6 text-white">
+
+    <div class="mb-6 flex justify-between items-end w-full max-w-[600px]">
+        <div>
+            <h1 class="text-2xl font-bold text-blue-400 tracking-wider">TONE MATRIX</h1>
+            <p class="text-xs text-slate-500">Pentatonic Step Sequencer</p>
+        </div>
+        <div class="flex gap-4 items-center">
+            <button onclick="togglePlay()" id="play-btn"
+                class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-full font-bold shadow-lg transition">PLAY</button>
+            <button onclick="clearGrid()"
+                class="text-xs text-slate-500 hover:text-red-400 uppercase font-bold">Clear</button>
+            <a href="./navigation.html" class="text-xs text-slate-500 hover:text-white uppercase font-bold">Exit</a>
+        </div>
+    </div>
+
+    <div id="matrix" class="grid-container bg-slate-800 p-2 rounded-lg shadow-2xl border border-slate-700">
+        <!-- Cells injected -->
+    </div>
+
+    <div class="mt-6 text-center text-xs text-slate-500">
+        16 Steps x 16 Tones (Pentatonic Scale)
+    </div>
+
+    <script>
+        const gridEl = document.getElementById('matrix');
+        const playBtn = document.getElementById('play-btn');
+        const size = 16;
+        let grid = []; // 16 cols, 16 rows. grid[col][row]
+        let isPlaying = false;
+        let currentStep = 0;
+        let audioCtx;
+        let timerId;
+        const bpm = 120;
+
+        // Pentatonic Scale (Low to High)
+        // Base freq, then ratios
+        // e.g. C D E G A
+        const baseFreq = 220; // A3
+        // Ratios for pentatonic: 1, 9/8, 5/4, 3/2, 5/3, 2 ...
+        // We need 16 notes.
+        // Let's generate a scale array.
+        const ratios = [
+            1, 9 / 8, 5 / 4, 3 / 2, 5 / 3, // Octave 1
+            2, 2 * 9 / 8, 2 * 5 / 4, 2 * 3 / 2, 2 * 5 / 3, // Octave 2
+            4, 4 * 9 / 8, 4 * 5 / 4, 4 * 3 / 2, 4 * 5 / 3, // Octave 3
+            8 // Top C
+        ];
+        // Reverse so row 0 is high pitch (top)
+        const frequencies = ratios.map(r => baseFreq * r).reverse();
+
+        function init() {
+            gridEl.innerHTML = '';
+            grid = [];
+
+            // Create columns data structure
+            for (let c = 0; c < size; c++) {
+                grid[c] = new Array(size).fill(false);
+            }
+
+            // Render: HTML Grid is Row-Major (usually), but easier to render div by div
+            // Index i (0 to 255). 
+            // Col = i % 16. Row = floor(i / 16).
+            // We want (col, row) access.
+
+            for (let i = 0; i < size * size; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                const col = i % size;
+                const row = Math.floor(i / size);
+                cell.id = `c-${col}-${row}`;
+
+                cell.onmousedown = () => toggle(col, row);
+                // Simple drag draw support could be added
+
+                gridEl.appendChild(cell);
+            }
+        }
+
+        function toggle(col, row) {
+            grid[col][row] = !grid[col][row];
+            updateCell(col, row);
+        }
+
+        function updateCell(col, row) {
+            const el = document.getElementById(`c-${col}-${row}`);
+            if (grid[col][row]) el.classList.add('active');
+            else el.classList.remove('active');
+        }
+
+        function playTone(freq) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.1, now + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5); // Decay
+
+            osc.start(now);
+            osc.stop(now + 0.5);
+        }
+
+        function step() {
+            // Visual cleanup previous step
+            const prevStep = (currentStep - 1 + size) % size;
+            for (let r = 0; r < size; r++) {
+                document.getElementById(`c-${prevStep}-${r}`).classList.remove('playing');
+            }
+
+            // Play current
+            for (let r = 0; r < size; r++) {
+                const el = document.getElementById(`c-${currentStep}-${r}`);
+                el.classList.add('playing');
+
+                if (grid[currentStep][r]) {
+                    playTone(frequencies[r]);
+                }
+            }
+
+            currentStep = (currentStep + 1) % size;
+        }
+
+        function togglePlay() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                playBtn.innerText = "STOP";
+                playBtn.classList.replace('bg-blue-600', 'bg-red-600');
+                playBtn.classList.replace('hover:bg-blue-500', 'hover:bg-red-500');
+                const interval = (60 / bpm) * 1000 / 4; // 16th notes
+                timerId = setInterval(step, interval);
+            } else {
+                playBtn.innerText = "PLAY";
+                playBtn.classList.replace('bg-red-600', 'bg-blue-600');
+                playBtn.classList.replace('hover:bg-red-500', 'hover:bg-blue-500');
+                clearInterval(timerId);
+                // Clear highlights
+                document.querySelectorAll('.cell.playing').forEach(el => el.classList.remove('playing'));
+            }
+        }
+
+        function clearGrid() {
+            grid.forEach(col => col.fill(false));
+            document.querySelectorAll('.cell.active').forEach(el => el.classList.remove('active'));
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

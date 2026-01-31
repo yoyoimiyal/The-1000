@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本机字体预览</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .font-card {
+            transition: all 0.2s;
+        }
+
+        .font-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col p-6 text-slate-800">
+
+    <div class="w-full max-w-6xl mx-auto h-[90vh] flex flex-col">
+
+        <header class="flex justify-between items-center mb-6 shrink-0">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-slate-700">
+                <span class="bg-slate-800 text-white px-2 py-1 rounded text-xs font-serif">Aa</span> Font Preview
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-slate-600">退出</a>
+        </header>
+
+        <!-- Controls -->
+        <div
+            class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row gap-4 shrink-0">
+            <div class="flex-1">
+                <input type="text" id="preview-text"
+                    class="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-blue-500"
+                    value="The quick brown fox jumps over the lazy dog. 1234567890" oninput="render()">
+            </div>
+
+            <div class="flex gap-4 items-center">
+                <div class="flex flex-col w-24">
+                    <label class="text-[10px] uppercase font-bold text-slate-400">Size</label>
+                    <input type="range" id="size" min="12" max="72" value="24"
+                        class="h-1 bg-slate-200 rounded appearance-none cursor-pointer" oninput="render()">
+                </div>
+                <div class="flex flex-col w-24">
+                    <label class="text-[10px] uppercase font-bold text-slate-400">Weight</label>
+                    <input type="range" id="weight" min="100" max="900" step="100" value="400"
+                        class="h-1 bg-slate-200 rounded appearance-none cursor-pointer" oninput="render()">
+                </div>
+                <div class="flex flex-col w-24">
+                    <label class="text-[10px] uppercase font-bold text-slate-400">Line Height</label>
+                    <input type="range" id="line-height" min="1" max="2.5" step="0.1" value="1.5"
+                        class="h-1 bg-slate-200 rounded appearance-none cursor-pointer" oninput="render()">
+                </div>
+                <div class="flex flex-col w-24">
+                    <label class="text-[10px] uppercase font-bold text-slate-400">Italic</label>
+                    <input type="checkbox" id="italic" class="w-4 h-4 accent-blue-600" onchange="render()">
+                </div>
+            </div>
+        </div>
+
+        <!-- Font List -->
+        <div id="font-list" class="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-2">
+            <!-- Fonts injected here -->
+            <div class="text-center w-full col-span-full py-10 text-slate-400">正在加载字体列表...</div>
+        </div>
+
+    </div>
+
+    <script>
+        const previewText = document.getElementById('preview-text');
+        const sizeInput = document.getElementById('size');
+        const weightInput = document.getElementById('weight');
+        const lhInput = document.getElementById('line-height');
+        const italicInput = document.getElementById('italic');
+        const list = document.getElementById('font-list');
+
+        // Common web safe fonts + some likely system fonts
+        // Note: Browsers restrict access to full system font list for privacy (fingerprinting).
+        // We provide a curated list of common cross-platform fonts.
+        const fonts = [
+            "Arial", "Helvetica", "Verdana", "Tahoma", "Trebuchet MS", "Gill Sans", "Noto Sans", "Avant Garde", "Optima", "Arial Narrow",
+            "Times New Roman", "Didot", "Georgia", "Palatino", "Bookman", "New Century Schoolbook", "American Typewriter",
+            "Courier New", "Courier", "Monaco", "Menlo", "Consolas", "Lucida Console",
+            "Impact", "Comic Sans MS", "Chalkboard SE", "Segoe UI", "San Francisco", "Roboto", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
+            "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", "SimSun", "宋体"
+        ];
+
+        async function init() {
+            // Check Local Fonts API (Chrome 103+)
+            if ('queryLocalFonts' in window) {
+                try {
+                    const localFonts = await window.queryLocalFonts();
+                    // Filter duplicates
+                    const fontNames = [...new Set(localFonts.map(f => f.family))];
+                    renderList(fontNames);
+                } catch (e) {
+                    console.log("Local font access denied, using fallback list.");
+                    renderList(fonts);
+                }
+            } else {
+                renderList(fonts);
+            }
+        }
+
+        function renderList(fontArray) {
+            list.innerHTML = '';
+            fontArray.forEach(font => {
+                const card = document.createElement('div');
+                card.className = "font-card bg-white p-4 rounded-xl border border-slate-200 overflow-hidden";
+
+                // Header
+                const header = document.createElement('div');
+                header.className = "text-xs font-bold text-slate-400 mb-2 border-b border-slate-100 pb-1 flex justify-between";
+                header.innerHTML = `<span>${font}</span> <button class="text-blue-500 hover:underline" onclick="copyFont('${font}')">Copy</button>`;
+                card.appendChild(header);
+
+                // Preview
+                const p = document.createElement('div');
+                p.className = "preview-content break-words";
+                p.style.fontFamily = `"${font}", sans-serif`; // Fallback to sans-serif to see diff
+                // We set style inline
+                card.appendChild(p);
+
+                list.appendChild(card);
+            });
+            render();
+        }
+
+        function render() {
+            const text = previewText.value;
+            const size = sizeInput.value + 'px';
+            const weight = weightInput.value;
+            const lh = lhInput.value;
+            const style = italicInput.checked ? 'italic' : 'normal';
+
+            const previews = document.querySelectorAll('.preview-content');
+            previews.forEach(el => {
+                el.innerText = text;
+                el.style.fontSize = size;
+                el.style.fontWeight = weight;
+                el.style.lineHeight = lh;
+                el.style.fontStyle = style;
+            });
+        }
+
+        function copyFont(name) {
+            navigator.clipboard.writeText(name);
+            alert(`字体 "${name}" 已复制`);
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

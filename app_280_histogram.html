@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片直方图分析</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-5xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-800">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Histogram Analyzer
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-8">
+
+            <!-- Left: Image -->
+            <div class="w-full lg:w-1/3 flex flex-col gap-4">
+                <label
+                    class="block w-full h-48 border-2 border-dashed border-indigo-200 rounded-xl flex flex-col items-center justify-center cursor-pointer bg-white hover:bg-indigo-50 transition overflow-hidden relative">
+                    <span class="text-indigo-400 font-bold text-sm z-10">📂 点击上传图片</span>
+                    <input type="file" class="hidden" accept="image/*" onchange="loadImage(event)">
+                    <img id="preview" class="absolute inset-0 w-full h-full object-contain bg-slate-100 hidden">
+                </label>
+
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 text-xs text-slate-500">
+                    <p class="font-bold mb-2 uppercase text-slate-400">信息 (Info)</p>
+                    <p>尺寸: <span id="img-dims">-</span></p>
+                    <p>像素: <span id="img-pixels">-</span></p>
+                </div>
+            </div>
+
+            <!-- Right: Charts -->
+            <div class="flex-1 flex flex-col gap-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center">
+                    <h2 class="font-bold text-slate-700">色彩分布 (Distribution)</h2>
+                    <div class="flex gap-2">
+                        <button onclick="toggleChannel('r')"
+                            class="w-4 h-4 rounded-full bg-red-500 hover:scale-110 transition" title="Red"></button>
+                        <button onclick="toggleChannel('g')"
+                            class="w-4 h-4 rounded-full bg-green-500 hover:scale-110 transition" title="Green"></button>
+                        <button onclick="toggleChannel('b')"
+                            class="w-4 h-4 rounded-full bg-blue-500 hover:scale-110 transition" title="Blue"></button>
+                        <button onclick="toggleChannel('l')"
+                            class="w-4 h-4 rounded-full bg-gray-400 hover:scale-110 transition"
+                            title="Luminance"></button>
+                    </div>
+                </div>
+
+                <div class="relative h-64 w-full">
+                    <canvas id="chart"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Hidden canvas for processing -->
+    <canvas id="process-canvas" class="hidden"></canvas>
+
+    <script>
+        const imgEl = document.getElementById('preview');
+        const processCanvas = document.getElementById('process-canvas');
+        const ctx = processCanvas.getContext('2d');
+        const chartCtx = document.getElementById('chart').getContext('2d');
+
+        let myChart = null;
+
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                imgEl.src = url;
+                imgEl.classList.remove('hidden');
+
+                // Wait load
+                imgEl.onload = () => analyze();
+            }
+        }
+
+        function analyze() {
+            // Resize canvas to image
+            // Limit size for performance (e.g. max 500px width)
+            const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+            let w = imgEl.naturalWidth;
+            let h = imgEl.naturalHeight;
+
+            // Stats
+            document.getElementById('img-dims').innerText = `${w} x ${h}`;
+            document.getElementById('img-pixels').innerText = (w * h).toLocaleString();
+
+            if (w > 800) { w = 800; h = 800 / ratio; }
+
+            processCanvas.width = w;
+            processCanvas.height = h;
+
+            ctx.drawImage(imgEl, 0, 0, w, h);
+
+            const frame = ctx.getImageData(0, 0, w, h);
+            const data = frame.data;
+            const len = data.length;
+
+            // Buckets 0-255
+            const rHist = new Array(256).fill(0);
+            const gHist = new Array(256).fill(0);
+            const bHist = new Array(256).fill(0);
+            const lHist = new Array(256).fill(0);
+
+            for (let i = 0; i < len; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                const l = Math.round(0.299 * r + 0.587 * g + 0.114 * b); // Luminance
+
+                rHist[r]++;
+                gHist[g]++;
+                bHist[b]++;
+                lHist[l]++;
+            }
+
+            renderChart(rHist, gHist, bHist, lHist);
+        }
+
+        function renderChart(r, g, b, l) {
+            const labels = Array.from({ length: 256 }, (_, i) => i);
+
+            if (myChart) myChart.destroy();
+
+            myChart = new Chart(chartCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Red',
+                            data: r,
+                            borderColor: 'rgba(239, 68, 68, 0.8)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            fill: true
+                        },
+                        {
+                            label: 'Green',
+                            data: g,
+                            borderColor: 'rgba(34, 197, 94, 0.8)',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            fill: true
+                        },
+                        {
+                            label: 'Blue',
+                            data: b,
+                            borderColor: 'rgba(59, 130, 246, 0.8)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            fill: true
+                        },
+                        {
+                            label: 'Luminance',
+                            data: l,
+                            borderColor: 'rgba(100, 116, 139, 0.8)',
+                            backgroundColor: 'rgba(100, 116, 139, 0.1)',
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            fill: true,
+                            hidden: true // Hide by default
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { display: false },
+                        y: { display: false } // Hide counts, just show shape
+                    },
+                    plugins: {
+                        legend: { display: false }, // Custom toggles
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    },
+                    elements: {
+                        line: { tension: 0.1 } // Smoother lines? No, raw data is better for hist
+                    }
+                }
+            });
+        }
+
+        function toggleChannel(c) {
+            if (!myChart) return;
+            const map = { 'r': 0, 'g': 1, 'b': 2, 'l': 3 };
+            const idx = map[c];
+            const meta = myChart.getDatasetMeta(idx);
+            meta.hidden = meta.hidden === null ? !myChart.data.datasets[idx].hidden : null;
+            myChart.update();
+        }
+    </script>
+</body>
+
+</html>

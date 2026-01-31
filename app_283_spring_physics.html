@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>弹簧阻尼模拟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .handle {
+            width: 40px;
+            height: 40px;
+            background: #ef4444;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: grab;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .handle:active {
+            cursor: grabbing;
+            background: #dc2626;
+        }
+
+        .spring-line {
+            height: 4px;
+            background: #94a3b8;
+            position: absolute;
+            top: 50%;
+            left: 0;
+            transform-origin: 0 50%;
+        }
+
+        /* Spring coil visualization using repeating gradient */
+        .coil {
+            height: 20px;
+            position: absolute;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            background: repeating-linear-gradient(90deg, transparent, transparent 4px, #475569 4px, #475569 6px);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-3xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-slate-700">Spring Physics</h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <!-- Simulation Area -->
+        <div class="bg-white h-64 rounded-3xl shadow-xl border border-slate-200 relative mb-8 overflow-hidden"
+            id="scene">
+            <!-- Anchor -->
+            <div class="absolute left-0 top-0 bottom-0 w-4 bg-slate-300 border-r border-slate-400 z-10"></div>
+
+            <!-- Spring visual -->
+            <div id="spring" class="coil"></div>
+
+            <!-- Mass -->
+            <div id="mass-block" class="handle z-20"></div>
+
+            <!-- Center Line -->
+            <div class="absolute top-1/2 left-0 w-full h-px bg-slate-100 -z-10"></div>
+            <!-- Equilibrium Line -->
+            <div
+                class="absolute top-0 bottom-0 w-px bg-green-200 left-[300px] border-l border-dashed border-green-400 -z-10">
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            <div>
+                <label class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-2">
+                    <span>Stiffness (k)</span> <span id="val-k">100</span>
+                </label>
+                <input type="range" id="k" min="10" max="300" value="100" class="w-full accent-blue-600">
+            </div>
+
+            <div>
+                <label class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-2">
+                    <span>Damping (d)</span> <span id="val-d">5</span>
+                </label>
+                <input type="range" id="d" min="0" max="20" value="5" step="0.5" class="w-full accent-red-600">
+            </div>
+
+            <div>
+                <label class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-2">
+                    <span>Mass (m)</span> <span id="val-m">10</span>
+                </label>
+                <input type="range" id="m" min="1" max="50" value="10" class="w-full accent-green-600">
+            </div>
+
+        </div>
+
+        <p class="mt-4 text-center text-xs text-slate-400">
+            拖动红球释放以开始模拟 · F = -kx - dv
+        </p>
+
+    </div>
+
+    <script>
+        const scene = document.getElementById('scene');
+        const massEl = document.getElementById('mass-block');
+        const springEl = document.getElementById('spring');
+
+        // Physics State
+        let x = 300; // Position (Equilibrium at 300)
+        let v = 0;   // Velocity
+        const targetX = 300;
+
+        let isDragging = false;
+        let lastTime = 0;
+
+        function update(time) {
+            const dt = Math.min((time - lastTime) / 1000, 0.1); // Limit dt
+            lastTime = time;
+
+            if (!isDragging) {
+                // Read Inputs
+                const k = parseFloat(document.getElementById('k').value);
+                const d = parseFloat(document.getElementById('d').value);
+                const m = parseFloat(document.getElementById('m').value);
+
+                // Update UI Labels
+                document.getElementById('val-k').innerText = k;
+                document.getElementById('val-d').innerText = d;
+                document.getElementById('val-m').innerText = m;
+
+                // Physics: F = ma
+                // Forces: Spring (-k*displacement), Damping (-d*velocity)
+                const displacement = x - targetX;
+                const fSpring = -k * displacement;
+                const fDamping = -d * v;
+
+                const fTotal = fSpring + fDamping;
+                const a = fTotal / m;
+
+                v += a * dt;
+                x += v * dt;
+            }
+
+            // Render
+            massEl.style.left = (x - 20) + 'px'; // Center handle (40px wide)
+            springEl.style.width = x + 'px';
+
+            requestAnimationFrame(update);
+        }
+
+        // Drag Interaction
+        massEl.addEventListener('mousedown', startDrag);
+        massEl.addEventListener('touchstart', startDrag);
+
+        window.addEventListener('mousemove', drag);
+        window.addEventListener('touchmove', drag);
+
+        window.addEventListener('mouseup', endDrag);
+        window.addEventListener('touchend', endDrag);
+
+        function startDrag(e) {
+            isDragging = true;
+            v = 0; // Reset velocity
+            e.preventDefault();
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            const rect = scene.getBoundingClientRect();
+            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+
+            let newX = clientX - rect.left;
+            // Clamp
+            newX = Math.max(20, Math.min(rect.width - 20, newX));
+            x = newX;
+        }
+
+        function endDrag() {
+            isDragging = false;
+        }
+
+        // Start
+        requestAnimationFrame(update);
+    </script>
+</body>
+
+</html>

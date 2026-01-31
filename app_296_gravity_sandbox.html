@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>重力轨道沙盒</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            cursor: crosshair;
+        }
+
+        .ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .controls {
+            pointer-events: auto;
+            background: rgba(30, 30, 30, 0.8);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="ui-panel">
+        <h1 class="text-2xl font-bold mb-1">Gravity Sandbox</h1>
+        <p class="text-xs text-gray-400 mb-4">Drag to sling planets</p>
+
+        <div class="controls space-y-4">
+            <div>
+                <label class="text-xs font-bold uppercase text-gray-400">Mass (Size)</label>
+                <input type="range" id="mass" min="5" max="50" value="10"
+                    class="w-full h-1 bg-gray-600 rounded appearance-none cursor-pointer accent-blue-500">
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="clearSpace()"
+                    class="bg-red-900 hover:bg-red-800 text-white px-3 py-1 rounded text-xs font-bold transition">Clear</button>
+                <button onclick="resetSolar()"
+                    class="bg-blue-900 hover:bg-blue-800 text-white px-3 py-1 rounded text-xs font-bold transition">Solar
+                    System</button>
+            </div>
+
+            <div class="text-[10px] text-gray-500">
+                Planets: <span id="count">0</span>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <a href="./navigation.html" class="text-xs text-gray-600 hover:text-white pointer-events-auto">Exit</a>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const countEl = document.getElementById('count');
+        const massInput = document.getElementById('mass');
+
+        let width, height;
+        let bodies = [];
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let dragCurrent = { x: 0, y: 0 };
+
+        const G = 0.5; // Gravitational constant scaled
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Body {
+            constructor(x, y, vx, vy, mass, color, fixed = false) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.mass = mass;
+                this.radius = Math.sqrt(mass) * 2; // Visual size
+                this.color = color || `hsl(${Math.random() * 360}, 70%, 60%)`;
+                this.fixed = fixed;
+                this.trail = [];
+            }
+
+            update() {
+                if (this.fixed) return;
+
+                // Calculate forces from all other bodies
+                for (let other of bodies) {
+                    if (other === this) continue;
+
+                    const dx = other.x - this.x;
+                    const dy = other.y - this.y;
+                    const distSq = dx * dx + dy * dy;
+                    const dist = Math.sqrt(distSq);
+
+                    if (dist < this.radius + other.radius) {
+                        // Merge logic (simplified: bigger eats smaller)
+                        // Or collision bounce?
+                        // Let's do simple merge to keep stable
+                        if (this.mass < other.mass) {
+                            // Let other handle merge
+                            continue;
+                        } else {
+                            // Eat other
+                            // Conservation of momentum: (m1v1 + m2v2) / (m1+m2)
+                            this.vx = (this.mass * this.vx + other.mass * other.vx) / (this.mass + other.mass);
+                            this.vy = (this.mass * this.vy + other.mass * other.vy) / (this.mass + other.mass);
+                            this.mass += other.mass;
+                            this.radius = Math.sqrt(this.mass) * 2;
+                            other.dead = true;
+                        }
+                    }
+
+                    // F = G * m1 * m2 / r^2
+                    // a = F / m1 = G * m2 / r^2
+                    // Limiting distance to avoid infinity
+                    if (dist > 5) {
+                        const force = (G * other.mass) / distSq;
+                        const ax = force * (dx / dist);
+                        const ay = force * (dy / dist);
+
+                        this.vx += ax;
+                        this.vy += ay;
+                    }
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Trail
+                if (this.trail.length > 50) this.trail.shift();
+                this.trail.push({ x: this.x, y: this.y });
+            }
+
+            draw() {
+                // Trail
+                if (this.trail.length > 1) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = this.color;
+                    ctx.globalAlpha = 0.3;
+                    ctx.lineWidth = 1;
+                    ctx.moveTo(this.trail[0].x, this.trail[0].y);
+                    for (let p of this.trail) ctx.lineTo(p.x, p.y);
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+
+                // Glow
+                ctx.shadowBlur = this.radius * 2;
+                ctx.shadowColor = this.color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function loop() {
+            // Fade background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Update
+            bodies.forEach(b => b.update());
+
+            // Remove dead
+            bodies = bodies.filter(b => !b.dead);
+            countEl.innerText = bodies.length;
+
+            // Draw
+            bodies.forEach(b => b.draw());
+
+            // Drag Line
+            if (isDragging) {
+                ctx.beginPath();
+                ctx.moveTo(dragStart.x, dragStart.y);
+                ctx.lineTo(dragCurrent.x, dragCurrent.y);
+                ctx.strokeStyle = 'white';
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Preview body
+                const m = parseInt(massInput.value);
+                const r = Math.sqrt(m) * 2;
+                ctx.beginPath();
+                ctx.arc(dragStart.x, dragStart.y, r, 0, Math.PI * 2);
+                ctx.strokeStyle = 'white';
+                ctx.stroke();
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        function clearSpace() {
+            bodies = [];
+        }
+
+        function resetSolar() {
+            bodies = [];
+            // Sun
+            bodies.push(new Body(width / 2, height / 2, 0, 0, 1000, '#fbbf24', true)); // Fixed sun
+            // Earth-like
+            bodies.push(new Body(width / 2 + 200, height / 2, 0, 1.5, 10, '#3b82f6'));
+            // Mars-like
+            bodies.push(new Body(width / 2 + 300, height / 2, 0, 1.2, 8, '#ef4444'));
+            // Jupiter-like
+            bodies.push(new Body(width / 2 + 450, height / 2, 0, 0.9, 50, '#d97706'));
+        }
+
+        // Input
+        canvas.addEventListener('mousedown', e => {
+            isDragging = true;
+            dragStart = { x: e.clientX, y: e.clientY };
+            dragCurrent = { x: e.clientX, y: e.clientY };
+        });
+
+        window.addEventListener('mousemove', e => {
+            if (isDragging) {
+                dragCurrent = { x: e.clientX, y: e.clientY };
+            }
+        });
+
+        window.addEventListener('mouseup', e => {
+            if (isDragging) {
+                isDragging = false;
+                const m = parseInt(massInput.value);
+                // Velocity based on drag distance
+                const vx = (dragStart.x - e.clientX) * 0.05;
+                const vy = (dragStart.y - e.clientY) * 0.05;
+
+                bodies.push(new Body(dragStart.x, dragStart.y, vx, vy, m));
+            }
+        });
+
+        resetSolar();
+        loop();
+    </script>
+</body>
+
+</html>

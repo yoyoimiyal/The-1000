@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>堆塔挑战</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            touch-action: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden select-none">
+
+    <div class="fixed top-4 left-4 z-10 text-white pointer-events-none">
+        <h1 class="text-3xl font-black text-yellow-400 drop-shadow-md">STACK</h1>
+        <p class="text-lg">Score: <span id="score" class="font-bold">0</span></p>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="overlay" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-20 hidden">
+        <h2 class="text-4xl font-bold text-white mb-2">GAME OVER</h2>
+        <p class="text-gray-400 mb-8">Score: <span id="final-score" class="text-white font-bold">0</span></p>
+        <button onclick="initGame()"
+            class="px-8 py-3 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold rounded-full shadow-lg transition transform hover:scale-105">
+            Play Again
+        </button>
+    </div>
+
+    <div class="fixed bottom-4 text-center w-full pointer-events-none">
+        <span class="text-white/30 text-xs uppercase font-bold">Click / Space to Place Block</span>
+    </div>
+    <a href="./navigation.html"
+        class="fixed top-4 right-4 text-xs text-gray-500 hover:text-white border border-gray-700 px-3 py-1 rounded z-30">Exit</a>
+
+    <canvas id="gameCanvas" class="w-full h-full"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const finalScoreEl = document.getElementById('final-score');
+        const overlay = document.getElementById('overlay');
+
+        let width, height;
+        let blocks = [];
+        let currentBlock = null;
+        let speed = 2;
+        let direction = 1;
+        let score = 0;
+        let isGameOver = false;
+        let isPlaying = false;
+
+        // Config
+        const blockHeight = 30;
+        const startWidth = 200;
+        const startX = 0; // Centered logic used later
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            if (!isPlaying && !isGameOver) initGame();
+        }
+        window.addEventListener('resize', resize);
+
+        class Block {
+            constructor(x, y, w, color) {
+                this.x = x;
+                this.y = y;
+                this.w = w;
+                this.h = blockHeight;
+                this.color = color;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+                // Highlight top
+                ctx.fillStyle = "rgba(255,255,255,0.2)";
+                ctx.fillRect(this.x, this.y, this.w, 4);
+                // Shadow bottom
+                ctx.fillStyle = "rgba(0,0,0,0.2)";
+                ctx.fillRect(this.x, this.y + this.h - 4, this.w, 4);
+            }
+        }
+
+        function initGame() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+
+            blocks = [];
+            score = 0;
+            scoreEl.innerText = 0;
+            isGameOver = false;
+            isPlaying = true;
+            speed = 3;
+            overlay.classList.add('hidden');
+
+            // Base block
+            const baseW = startWidth;
+            const baseX = (width - baseW) / 2;
+            const baseY = height - 100;
+
+            blocks.push(new Block(baseX, baseY, baseW, `hsl(200, 70%, 50%)`));
+
+            spawnNext();
+            loop();
+        }
+
+        function spawnNext() {
+            const prev = blocks[blocks.length - 1];
+            // Move up view if getting high
+            // Instead of camera, let's shift blocks down? 
+            // Or simple camera Y offset logic.
+            // For simple stack, let's just shift blocks down if needed in draw loop.
+
+            // New block stats
+            const hue = (score * 10 + 200) % 360;
+            currentBlock = {
+                x: 0, // Start left
+                y: prev.y - blockHeight,
+                w: prev.w,
+                h: blockHeight,
+                color: `hsl(${hue}, 70%, 60%)`,
+                vx: speed
+            };
+            // Random start side
+            if (Math.random() > 0.5) {
+                currentBlock.x = -currentBlock.w;
+                currentBlock.vx = speed;
+            } else {
+                currentBlock.x = width;
+                currentBlock.vx = -speed;
+            }
+        }
+
+        function placeBlock() {
+            if (!isPlaying || isGameOver) return;
+
+            const prev = blocks[blocks.length - 1];
+            const curr = currentBlock;
+
+            // Calculate overlap
+            const dist = curr.x - prev.x;
+
+            if (Math.abs(dist) >= prev.w) {
+                // Missed completely
+                gameOver();
+                return;
+            }
+
+            // Trim
+            let newW = prev.w - Math.abs(dist);
+            let newX = curr.x;
+
+            if (dist > 0) {
+                // Too right
+                newX = curr.x; // Keep left edge? No.
+                // Left edge of new block is right of prev's left edge
+                // The overlapping part starts at curr.x and ends at prev.x + prev.w
+                // So Width = (prev.x + prev.w) - curr.x = prev.w - dist. Correct.
+            } else {
+                // Too left (dist negative)
+                newX = prev.x;
+                // Overlap starts at prev.x, ends at curr.x + curr.w
+                // Width = (curr.x + curr.w) - prev.x = curr.w + dist.
+                // newW same calc
+            }
+
+            // Create placed block
+            const placed = new Block(newX, curr.y, newW, curr.color);
+            blocks.push(placed);
+
+            score++;
+            scoreEl.innerText = score;
+            speed += 0.2;
+
+            spawnNext();
+        }
+
+        function gameOver() {
+            isGameOver = true;
+            isPlaying = false;
+            finalScoreEl.innerText = score;
+            overlay.classList.remove('hidden');
+        }
+
+        function loop() {
+            if (!isPlaying) return;
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Camera offset logic: Keep current block around middle of screen vertically
+            // Target Y is height/2. Current Y is currentBlock.y
+            // Offset = height/2 - currentBlock.y
+
+            // Base offset so stack builds up
+            const targetY = height / 1.5;
+            const stackTop = currentBlock ? currentBlock.y : (blocks.length > 0 ? blocks[blocks.length - 1].y : height);
+            const cameraY = Math.max(0, targetY - stackTop);
+
+            ctx.save();
+            ctx.translate(0, cameraY);
+
+            // Draw stack
+            blocks.forEach(b => b.draw());
+
+            // Update & Draw Current
+            if (currentBlock) {
+                currentBlock.x += currentBlock.vx;
+                // Bounce walls? No, loop or ping pong?
+                // Standard stacker: ping pong within slightly larger bounds
+                if (currentBlock.x + currentBlock.w > width + 50 && currentBlock.vx > 0) currentBlock.vx *= -1;
+                if (currentBlock.x < -50 && currentBlock.vx < 0) currentBlock.vx *= -1;
+
+                ctx.fillStyle = currentBlock.color;
+                ctx.fillRect(currentBlock.x, currentBlock.y, currentBlock.w, currentBlock.h);
+                ctx.fillStyle = "rgba(255,255,255,0.2)";
+                ctx.fillRect(currentBlock.x, currentBlock.y, currentBlock.w, 4);
+            }
+
+            ctx.restore();
+
+            requestAnimationFrame(loop);
+        }
+
+        // Input
+        window.addEventListener('mousedown', placeBlock);
+        window.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            placeBlock();
+        });
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') placeBlock();
+        });
+
+        initGame();
+    </script>
+</body>
+
+</html>

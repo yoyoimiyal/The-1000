@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星空穿梭</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="fixed top-4 left-4 text-white z-10 pointer-events-none opacity-50 mix-blend-difference">
+        <h1 class="text-2xl font-bold">Warp Speed</h1>
+    </div>
+
+    <!-- Controls -->
+    <div
+        class="fixed bottom-8 left-1/2 -translate-x-1/2 flex gap-4 bg-black/50 backdrop-blur p-4 rounded-full border border-white/10 z-10 items-center">
+        <span class="text-white text-xs font-bold uppercase pl-2">Speed</span>
+        <input type="range" id="speed" min="1" max="50" value="10"
+            class="w-32 h-1 bg-gray-700 rounded appearance-none cursor-pointer accent-white">
+        <a href="./navigation.html"
+            class="text-white text-xs font-bold uppercase hover:text-blue-400 border-l border-white/20 pl-4 ml-2">Exit</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const speedInput = document.getElementById('speed');
+
+        let width, height, cx, cy;
+        const stars = [];
+        const numStars = 800;
+        let speed = 10;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            cx = width / 2;
+            cy = height / 2;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Star {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = (Math.random() - 0.5) * width * 2; // Spread wider to fill corners
+                this.y = (Math.random() - 0.5) * height * 2;
+                this.z = Math.random() * width; // Depth
+                this.pz = this.z; // Previous z for trails
+            }
+
+            update() {
+                this.z -= speed;
+
+                if (this.z <= 1) {
+                    this.reset();
+                    this.z = width;
+                    this.pz = this.z;
+                }
+            }
+
+            draw() {
+                // Projection
+                // x' = x / z
+                const x = (this.x / this.z) * width + cx;
+                const y = (this.y / this.z) * height + cy;
+
+                // Previous pos (for trail)
+                const px = (this.x / this.pz) * width + cx;
+                const py = (this.y / this.pz) * height + cy;
+
+                this.pz = this.z;
+
+                // Only draw if on screen
+                if (x < 0 || x >= width || y < 0 || y >= height) return;
+
+                // Size scales with proximity
+                const r = (1 - this.z / width) * 3;
+
+                // Color scales with proximity
+                const opacity = (1 - this.z / width);
+
+                ctx.beginPath();
+                ctx.moveTo(px, py);
+                ctx.lineTo(x, y);
+                ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+                ctx.lineWidth = r;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            }
+        }
+
+        // Init Stars
+        for (let i = 0; i < numStars; i++) {
+            stars.push(new Star());
+        }
+
+        function loop() {
+            // Clear with fade for extra trail effect? No, line drawing handles trails well.
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+
+            speed = parseFloat(speedInput.value);
+
+            stars.forEach(star => {
+                star.update();
+                star.draw();
+            });
+
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    </script>
+</body>
+
+</html>

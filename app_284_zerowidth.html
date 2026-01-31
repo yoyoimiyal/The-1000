@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>零宽字符隐写</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-4xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-slate-700">
+                <span class="text-2xl">👻</span> Zero Width Stego
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-blue-600">退出</a>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+            <!-- Hide (Encrypt) -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h2 class="font-bold text-blue-600 mb-4 border-b pb-2">隐藏信息 (Hide)</h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">公开文本 (Public Text)</label>
+                        <input type="text" id="public-text" class="w-full p-2 border rounded"
+                            placeholder="这是一段普通的文字...">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">秘密信息 (Secret)</label>
+                        <input type="text" id="secret-text" class="w-full p-2 border rounded" placeholder="这是秘密">
+                    </div>
+                    <button onclick="hide()"
+                        class="w-full py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 transition">生成隐藏文本</button>
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-slate-100 relative group">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">结果 (Result)</label>
+                    <textarea id="output-encoded" class="w-full h-24 p-2 bg-slate-50 border rounded resize-none text-sm"
+                        readonly></textarea>
+                    <button onclick="copy('output-encoded')"
+                        class="absolute top-8 right-2 text-xs bg-white border px-2 py-1 rounded shadow-sm hover:text-blue-600">复制</button>
+                    <p class="text-[10px] text-slate-400 mt-1">看起来和公开文本一样，但包含秘密。</p>
+                </div>
+            </div>
+
+            <!-- Reveal (Decrypt) -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h2 class="font-bold text-green-600 mb-4 border-b pb-2">提取信息 (Reveal)</h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">含密文本 (Paste Here)</label>
+                        <textarea id="input-encoded" class="w-full h-32 p-2 border rounded resize-none text-sm"
+                            placeholder="粘贴刚才生成的文本..." oninput="reveal()"></textarea>
+                    </div>
+                    <button onclick="reveal()"
+                        class="w-full py-2 bg-green-600 text-white font-bold rounded hover:bg-green-700 transition">提取</button>
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-slate-100">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">解密结果 (Secret)</label>
+                    <div id="output-decoded"
+                        class="p-3 bg-green-50 border border-green-100 rounded text-green-800 font-medium min-h-[3rem]">
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Zero width chars
+        const zeroPad = '\u200C'; // Zero Width Non-Joiner
+        const zeroOne = '\u200D'; // Zero Width Joiner
+        // Start/End markers could be used, but simple binary encoding is enough for demo
+
+        function textToBinary(text) {
+            return text.split('').map(char => {
+                return char.charCodeAt(0).toString(2).padStart(16, '0'); // UTF-16
+            }).join('');
+        }
+
+        function binaryToText(binary) {
+            const chars = [];
+            for (let i = 0; i < binary.length; i += 16) {
+                const byte = binary.substr(i, 16);
+                chars.push(String.fromCharCode(parseInt(byte, 2)));
+            }
+            return chars.join('');
+        }
+
+        function hide() {
+            const pub = document.getElementById('public-text').value || "Default Text";
+            const sec = document.getElementById('secret-text').value;
+
+            if (!sec) return;
+
+            const binary = textToBinary(sec);
+            const hidden = binary.split('').map(b => b === '0' ? zeroPad : zeroOne).join('');
+
+            // Insert hidden string after first character of public text?
+            // Or typically at the end or split.
+            // Let's put it after the first char to survive some trimming.
+
+            const res = pub.length > 0
+                ? pub.slice(0, 1) + hidden + pub.slice(1)
+                : hidden; // If empty public, just hidden chars (suspicious but works)
+
+            document.getElementById('output-encoded').value = res;
+        }
+
+        function reveal() {
+            const text = document.getElementById('input-encoded').value;
+            if (!text) return;
+
+            // Extract zero width chars
+            let binary = "";
+            for (const char of text) {
+                if (char === zeroPad) binary += "0";
+                else if (char === zeroOne) binary += "1";
+            }
+
+            if (binary.length > 0) {
+                try {
+                    const secret = binaryToText(binary);
+                    document.getElementById('output-decoded').innerText = secret;
+                } catch (e) {
+                    document.getElementById('output-decoded').innerText = "解析错误";
+                }
+            } else {
+                document.getElementById('output-decoded').innerText = "未发现隐藏信息";
+            }
+        }
+
+        function copy(id) {
+            const el = document.getElementById(id);
+            el.select();
+            document.execCommand('copy');
+            alert("已复制 (隐形字符已包含)");
+        }
+    </script>
+</body>
+
+</html>

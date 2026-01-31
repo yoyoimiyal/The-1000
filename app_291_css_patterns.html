@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS 背景纹理生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .pattern-preview {
+            width: 100%;
+            height: 100%;
+            transition: background 0.3s;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col md:flex-row text-slate-800">
+
+    <!-- Preview -->
+    <div class="flex-1 relative border-b md:border-b-0 md:border-r border-slate-200 h-[40vh] md:h-screen">
+        <div id="preview" class="pattern-preview"></div>
+        <div
+            class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur px-4 py-2 rounded-full text-xs font-bold shadow-sm pointer-events-none text-slate-500">
+            Preview Area
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div
+        class="w-full md:w-80 bg-white p-6 flex flex-col gap-6 h-auto md:h-screen overflow-y-auto shadow-xl z-10 shrink-0">
+
+        <header class="flex justify-between items-center mb-2">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-600">
+                <span class="text-2xl">🏁</span> CSS Patterns
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <!-- Type Selector -->
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">类型 (Pattern Type)</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="setType('polka')"
+                        class="p-2 border rounded hover:bg-slate-50 text-xs font-bold transition type-btn bg-slate-800 text-white"
+                        data-type="polka">波点</button>
+                    <button onclick="setType('stripe')"
+                        class="p-2 border rounded hover:bg-slate-50 text-xs font-bold transition type-btn"
+                        data-type="stripe">条纹</button>
+                    <button onclick="setType('check')"
+                        class="p-2 border rounded hover:bg-slate-50 text-xs font-bold transition type-btn"
+                        data-type="check">方格</button>
+                    <button onclick="setType('grid')"
+                        class="p-2 border rounded hover:bg-slate-50 text-xs font-bold transition type-btn"
+                        data-type="grid">网格</button>
+                    <button onclick="setType('zigzag')"
+                        class="p-2 border rounded hover:bg-slate-50 text-xs font-bold transition type-btn"
+                        data-type="zigzag">锯齿</button>
+                </div>
+            </div>
+
+            <!-- Colors -->
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">颜色 (Colors)</label>
+                <div class="flex gap-2">
+                    <div class="flex-1">
+                        <label class="text-[10px] text-slate-400">Foreground</label>
+                        <input type="color" id="col-fg" value="#6366f1"
+                            class="w-full h-8 rounded cursor-pointer p-0 border border-slate-200" oninput="update()">
+                    </div>
+                    <div class="flex-1">
+                        <label class="text-[10px] text-slate-400">Background</label>
+                        <input type="color" id="col-bg" value="#e0e7ff"
+                            class="w-full h-8 rounded cursor-pointer p-0 border border-slate-200" oninput="update()">
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <label class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-1">
+                        Opacity (FG) <span id="val-opacity">1.0</span>
+                    </label>
+                    <input type="range" id="opacity" min="0.1" max="1" step="0.1" value="1"
+                        class="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-indigo-600"
+                        oninput="update()">
+                </div>
+            </div>
+
+            <!-- Size -->
+            <div>
+                <label class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-1">
+                    Size <span id="val-size">20px</span>
+                </label>
+                <input type="range" id="size" min="10" max="100" value="20"
+                    class="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-indigo-600"
+                    oninput="update()">
+            </div>
+
+            <!-- Code -->
+            <div class="bg-slate-800 p-4 rounded-xl relative group">
+                <code id="css-code"
+                    class="text-[10px] text-green-400 font-mono break-all block leading-relaxed whitespace-pre-wrap"></code>
+                <button onclick="copyCSS()"
+                    class="absolute top-2 right-2 text-[10px] bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded">Copy</button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const preview = document.getElementById('preview');
+        const codeEl = document.getElementById('css-code');
+        let currentType = 'polka';
+
+        function setType(type) {
+            currentType = type;
+            document.querySelectorAll('.type-btn').forEach(btn => {
+                btn.className = 'p-2 border rounded hover:bg-slate-50 text-xs font-bold transition type-btn text-slate-600';
+            });
+            document.querySelector(`[data-type="${type}"]`).className = 'p-2 border rounded hover:bg-slate-50 text-xs font-bold transition type-btn bg-slate-800 text-white';
+            update();
+        }
+
+        function hexToRgba(hex, alpha) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        function update() {
+            const fg = document.getElementById('col-fg').value;
+            const bg = document.getElementById('col-bg').value;
+            const size = document.getElementById('size').value;
+            const opacity = document.getElementById('opacity').value;
+
+            document.getElementById('val-size').innerText = size + 'px';
+            document.getElementById('val-opacity').innerText = opacity;
+
+            const fgRgba = hexToRgba(fg, opacity);
+            let css = `background-color: ${bg};\n`;
+
+            if (currentType === 'polka') {
+                css += `background-image: radial-gradient(${fgRgba} 2px, transparent 2px);\n`;
+                css += `background-size: ${size}px ${size}px;`;
+            } else if (currentType === 'stripe') {
+                css += `background-image: repeating-linear-gradient(45deg, ${fgRgba} 0, ${fgRgba} 2px, transparent 0, transparent 50%);\n`;
+                css += `background-size: ${size}px ${size}px;`;
+            } else if (currentType === 'check') {
+                css += `background-image: linear-gradient(45deg, ${fgRgba} 25%, transparent 25%, transparent 75%, ${fgRgba} 75%, ${fgRgba}), linear-gradient(45deg, ${fgRgba} 25%, transparent 25%, transparent 75%, ${fgRgba} 75%, ${fgRgba});\n`;
+                css += `background-position: 0 0, ${size / 2}px ${size / 2}px;\n`;
+                css += `background-size: ${size}px ${size}px;`;
+            } else if (currentType === 'grid') {
+                css += `background-image: linear-gradient(${fgRgba} 1px, transparent 1px), linear-gradient(90deg, ${fgRgba} 1px, transparent 1px);\n`;
+                css += `background-size: ${size}px ${size}px;`;
+            } else if (currentType === 'zigzag') {
+                css += `background-image: linear-gradient(135deg, ${fgRgba} 25%, transparent 25%), linear-gradient(225deg, ${fgRgba} 25%, transparent 25%), linear-gradient(45deg, ${fgRgba} 25%, transparent 25%), linear-gradient(315deg, ${fgRgba} 25%, transparent 25%);\n`;
+                css += `background-position: ${size / 2}px 0, ${size / 2}px 0, 0 0, 0 0;\n`;
+                css += `background-size: ${size}px ${size}px;`;
+            }
+
+            preview.style.cssText = css;
+            codeEl.innerText = css;
+        }
+
+        function copyCSS() {
+            navigator.clipboard.writeText(codeEl.innerText);
+            alert("CSS 已复制!");
+        }
+
+        update();
+    </script>
+</body>
+
+</html>

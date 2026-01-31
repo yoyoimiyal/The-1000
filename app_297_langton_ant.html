@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>兰顿蚂蚁</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            image-rendering: pixelated;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-3xl">
+        <header class="flex justify-between items-center mb-4 text-white">
+            <div>
+                <h1 class="text-xl font-bold">Langton's Ant</h1>
+                <p class="text-xs text-gray-400">Step: <span id="step-count" class="font-mono">0</span></p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="togglePlay()" id="play-btn"
+                    class="bg-green-600 hover:bg-green-500 px-4 py-1 rounded text-xs font-bold">Start</button>
+                <button onclick="speedUp()"
+                    class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-xs font-bold">Speed+</button>
+                <button onclick="reset()"
+                    class="bg-red-800 hover:bg-red-700 px-3 py-1 rounded text-xs font-bold">Reset</button>
+                <a href="./navigation.html"
+                    class="bg-gray-800 px-3 py-1 rounded text-xs font-bold text-gray-400 hover:text-white">Exit</a>
+            </div>
+        </header>
+
+        <canvas id="canvas"
+            class="bg-white border border-gray-700 shadow-xl w-full aspect-video rounded-lg cursor-crosshair"></canvas>
+
+        <p class="text-center text-xs text-gray-500 mt-2">
+            规则：在白格右转，在黑格左转，反转颜色。点击画布放置新蚂蚁。
+        </p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const stepEl = document.getElementById('step-count');
+
+        // Grid size
+        const w = 200;
+        const h = 112; // 16:9 approx
+        canvas.width = w;
+        canvas.height = h;
+
+        let grid = new Uint8Array(w * h); // 0=White, 1=Black
+        let ants = [];
+        let steps = 0;
+        let isPlaying = false;
+        let speed = 1; // steps per frame
+        let animationId;
+
+        // Colors
+        const COL_WHITE = 0xFFFFFFFF; // RGBA
+        const COL_BLACK = 0xFF000000;
+        const COL_ANT = 0xFF0000FF; // Red
+
+        // Image Data for fast rendering
+        let imgData = ctx.createImageData(w, h);
+        let buf32 = new Uint32Array(imgData.data.buffer);
+
+        function reset() {
+            grid.fill(0);
+            buf32.fill(COL_WHITE); // White bg
+            ants = [{ x: Math.floor(w / 2), y: Math.floor(h / 2), dir: 0 }]; // 0:U, 1:R, 2:D, 3:L
+            steps = 0;
+            stepEl.innerText = 0;
+            draw();
+        }
+
+        function draw() {
+            ctx.putImageData(imgData, 0, 0);
+
+            // Draw ants on top (simple rects)
+            ctx.fillStyle = 'red';
+            for (let ant of ants) {
+                ctx.fillRect(ant.x, ant.y, 1, 1);
+            }
+        }
+
+        function update() {
+            for (let s = 0; s < speed; s++) {
+                for (let ant of ants) {
+                    const idx = ant.y * w + ant.x;
+                    const state = grid[idx];
+
+                    // Rules:
+                    // At white square (0): Turn Right (dir+1), Flip Color (0->1)
+                    // At black square (1): Turn Left (dir-1), Flip Color (1->0)
+
+                    if (state === 0) {
+                        ant.dir = (ant.dir + 1) % 4;
+                        grid[idx] = 1;
+                        buf32[idx] = COL_BLACK; // Black (ABGR format little endian usually, Black is 000000FF -> Full Alpha Black)
+                        // Actually in Uint32, 0xFF000000 is Black (A=FF, B=0, G=0, R=0)
+                    } else {
+                        ant.dir = (ant.dir + 3) % 4; // -1 is +3 mod 4
+                        grid[idx] = 0;
+                        buf32[idx] = COL_WHITE;
+                    }
+
+                    // Move forward
+                    switch (ant.dir) {
+                        case 0: ant.y--; break; // Up
+                        case 1: ant.x++; break; // Right
+                        case 2: ant.y++; break; // Down
+                        case 3: ant.x--; break; // Left
+                    }
+
+                    // Wrap world
+                    if (ant.x < 0) ant.x = w - 1;
+                    if (ant.x >= w) ant.x = 0;
+                    if (ant.y < 0) ant.y = h - 1;
+                    if (ant.y >= h) ant.y = 0;
+                }
+                steps++;
+            }
+            stepEl.innerText = steps;
+        }
+
+        function loop() {
+            if (isPlaying) {
+                update();
+                draw();
+                requestAnimationFrame(loop);
+            }
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            document.getElementById('play-btn').innerText = isPlaying ? "Pause" : "Start";
+            if (isPlaying) loop();
+        }
+
+        function speedUp() {
+            if (speed < 1000) speed *= 2;
+            else speed = 1; // Cycle
+        }
+
+        // Add ant on click
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / rect.width * w);
+            const y = Math.floor((e.clientY - rect.top) / rect.height * h);
+
+            if (x >= 0 && x < w && y >= 0 && y < h) {
+                ants.push({ x, y, dir: Math.floor(Math.random() * 4) });
+                draw();
+            }
+        });
+
+        // Fill initial white
+        buf32.fill(COL_WHITE);
+        reset();
+    </script>
+</body>
+
+</html>

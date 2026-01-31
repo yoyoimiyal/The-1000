@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抛物线模拟器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-900 h-screen w-screen flex flex-col items-center justify-center overflow-hidden text-white">
+
+    <div class="absolute top-4 left-4 z-10 pointer-events-none opacity-80">
+        <h1 class="text-xl font-bold text-blue-400">Projectile Motion</h1>
+        <p class="text-xs text-slate-400">Physics Simulation</p>
+    </div>
+
+    <!-- Controls -->
+    <div
+        class="absolute bottom-8 bg-slate-800/90 backdrop-blur p-6 rounded-2xl border border-slate-700 flex flex-wrap gap-6 items-center justify-center max-w-4xl z-10">
+
+        <div class="flex flex-col w-24">
+            <label class="text-[10px] uppercase font-bold text-slate-400 mb-1">角度 (Angle)</label>
+            <input type="range" id="angle" min="0" max="90" value="45"
+                class="h-1 bg-slate-600 rounded appearance-none cursor-pointer accent-blue-500" oninput="updateUI()">
+            <span id="val-angle" class="text-xs text-right mt-1 font-mono">45°</span>
+        </div>
+
+        <div class="flex flex-col w-24">
+            <label class="text-[10px] uppercase font-bold text-slate-400 mb-1">速度 (Velocity)</label>
+            <input type="range" id="velocity" min="10" max="150" value="80"
+                class="h-1 bg-slate-600 rounded appearance-none cursor-pointer accent-green-500" oninput="updateUI()">
+            <span id="val-velocity" class="text-xs text-right mt-1 font-mono">80 m/s</span>
+        </div>
+
+        <div class="flex flex-col w-24">
+            <label class="text-[10px] uppercase font-bold text-slate-400 mb-1">重力 (Gravity)</label>
+            <input type="range" id="gravity" min="1" max="20" value="9.8" step="0.1"
+                class="h-1 bg-slate-600 rounded appearance-none cursor-pointer accent-red-500" oninput="updateUI()">
+            <span id="val-gravity" class="text-xs text-right mt-1 font-mono">9.8 m/s²</span>
+        </div>
+
+        <button onclick="fire()"
+            class="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold shadow-lg transition active:scale-95">发射
+            FIRE</button>
+        <button onclick="clearTrace()"
+            class="px-4 py-3 bg-slate-700 hover:bg-slate-600 rounded-lg font-bold text-xs">清除</button>
+
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border-l border-slate-600 pl-4">Exit</a>
+    </div>
+
+    <canvas id="canvas" class="bg-black shadow-2xl w-full h-full"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let balls = []; // {x, y, vx, vy, color, trace: []}
+        let groundY;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            groundY = height - 150; // Ground level
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function updateUI() {
+            document.getElementById('val-angle').innerText = document.getElementById('angle').value + "°";
+            document.getElementById('val-velocity').innerText = document.getElementById('velocity').value + " m/s";
+            document.getElementById('val-gravity').innerText = document.getElementById('gravity').value + " m/s²";
+        }
+
+        function fire() {
+            const angle = parseFloat(document.getElementById('angle').value) * Math.PI / 180;
+            const velocity = parseFloat(document.getElementById('velocity').value);
+            // Initial pos: Bottom Left
+            const x = 50;
+            const y = groundY - 10;
+
+            balls.push({
+                x: x,
+                y: y,
+                vx: velocity * Math.cos(angle) * 0.15, // Scale for screen
+                vy: -velocity * Math.sin(angle) * 0.15,
+                color: `hsl(${Math.random() * 360}, 70%, 60%)`,
+                trace: [],
+                active: true
+            });
+        }
+
+        function clearTrace() {
+            balls = [];
+            // Clear canvas is handled in loop
+        }
+
+        function loop() {
+            // Fade background for trail effect? No, let's keep traces permanent lines for clarity
+            ctx.fillStyle = '#0f172a'; // slate-900
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw Ground
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(0, groundY, width, height - groundY);
+
+            // Grid lines (every 50px)
+            ctx.strokeStyle = '#1e293b';
+            ctx.beginPath();
+            for (let gx = 0; gx < width; gx += 50) { ctx.moveTo(gx, 0); ctx.lineTo(gx, height); }
+            for (let gy = 0; gy < height; gy += 50) { ctx.moveTo(0, gy); ctx.lineTo(width, gy); }
+            ctx.stroke();
+
+            // Cannon
+            ctx.fillStyle = '#94a3b8';
+            ctx.beginPath();
+            ctx.arc(50, groundY, 20, 0, Math.PI, true);
+            ctx.fill();
+
+            const gravity = parseFloat(document.getElementById('gravity').value) * 0.05; // Scale gravity
+
+            balls.forEach(b => {
+                if (b.active) {
+                    b.trace.push({ x: b.x, y: b.y });
+
+                    b.x += b.vx;
+                    b.y += b.vy;
+                    b.vy += gravity;
+
+                    // Floor collision
+                    if (b.y > groundY - 5) {
+                        b.y = groundY - 5;
+                        b.vy *= -0.6; // Bounce with energy loss
+                        b.vx *= 0.8;  // Friction
+
+                        if (Math.abs(b.vy) < 0.5) {
+                            b.active = false;
+                        }
+                    }
+                    // Wall collision
+                    if (b.x > width || b.x < 0) {
+                        b.vx *= -0.8;
+                    }
+                }
+
+                // Draw Trace
+                if (b.trace.length > 1) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = b.color;
+                    ctx.lineWidth = 2;
+                    ctx.moveTo(b.trace[0].x, b.trace[0].y);
+                    for (let i = 1; i < b.trace.length; i++) {
+                        ctx.lineTo(b.trace[i].x, b.trace[i].y);
+                    }
+                    ctx.stroke();
+                }
+
+                // Draw Ball
+                ctx.fillStyle = "#fff";
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    </script>
+</body>
+
+</html>

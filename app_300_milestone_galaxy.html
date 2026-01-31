@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>300 星系庆典</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div
+        class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-white z-10 mix-blend-screen">
+        <h1 class="text-7xl md:text-9xl font-black tracking-tighter opacity-90">300</h1>
+        <p class="text-xl uppercase tracking-[0.5em] font-light">Milestone Galaxy</p>
+    </div>
+
+    <div class="absolute bottom-8 w-full text-center z-10">
+        <a href="./navigation.html"
+            class="pointer-events-auto bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-full border border-white/10 text-xs font-bold uppercase backdrop-blur transition">Back
+            to Home</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height, cx, cy;
+        const starCount = 300; // Represents 300 apps
+        const stars = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            cx = width / 2;
+            cy = height / 2;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Star {
+            constructor() {
+                // Spiral distribution
+                this.angle = Math.random() * Math.PI * 2;
+                this.dist = Math.random() * 400; // Radius
+                this.speed = (500 - this.dist) * 0.00005; // Inner stars faster
+                this.size = Math.random() * 2 + 0.5;
+                // Color gradient from center (Yellow/White) to edge (Blue/Purple)
+                const hue = 200 + (this.dist / 400) * 100;
+                this.color = `hsl(${hue}, 80%, 70%)`;
+                this.z = Math.random() * 200; // 3D depth fake
+            }
+
+            update() {
+                this.angle += this.speed;
+                // 3D Rotation tilt
+                // x = r * cos(theta)
+                // y = r * sin(theta) * tilt
+
+                // Mouse interaction? 
+                // Let's just auto spin
+            }
+
+            draw() {
+                const x = cx + Math.cos(this.angle) * this.dist;
+                const y = cy + Math.sin(this.angle) * this.dist * 0.6; // Tilt
+
+                // Perspective scale
+                // Simple version without true Z projection
+
+                const alpha = Math.min(1, (this.dist + 100) / 300);
+
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(x, y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        for (let i = 0; i < starCount; i++) {
+            stars.push(new Star());
+        }
+
+        function loop() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; // Trails
+            ctx.fillRect(0, 0, width, height);
+
+            // Sort by "depth" (Y for simple sorting in tilted view? No, Y is up/down. 
+            // In tilted spiral, back is top (y < cy), front is bottom (y > cy).
+            // Actually, sorting by sin(angle) gives correct occlusion logic for tilt.
+            // sin(angle) < 0 is back, > 0 is front.
+
+            stars.sort((a, b) => Math.sin(a.angle) - Math.sin(b.angle));
+
+            stars.forEach(s => {
+                s.update();
+                s.draw();
+            });
+
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    </script>
+</body>
+
+</html>

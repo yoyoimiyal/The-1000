@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>油耗计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .input-group:focus-within label {
+            color: #f59e0b;
+        }
+
+        .input-group:focus-within input {
+            border-color: #f59e0b;
+        }
+    </style>
+</head>
+
+<body class="bg-amber-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-3xl shadow-xl border border-amber-100">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-amber-800 flex items-center gap-2">
+                <span class="text-2xl">⛽</span> Trip Cost Calc
+            </h1>
+            <a href="./navigation.html" class="text-sm text-amber-600 hover:underline">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <div class="input-group">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1 transition-colors">行程距离
+                    (Distance)</label>
+                <div class="relative">
+                    <input type="number" id="distance"
+                        class="w-full p-3 pr-10 border border-slate-200 rounded-xl outline-none transition-colors font-bold text-lg"
+                        placeholder="100" oninput="calculate()">
+                    <span class="absolute right-3 top-3.5 text-slate-400 text-sm font-bold">km</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1 transition-colors">百公里油耗
+                    (Consumption)</label>
+                <div class="relative">
+                    <input type="number" id="efficiency"
+                        class="w-full p-3 pr-10 border border-slate-200 rounded-xl outline-none transition-colors font-bold text-lg"
+                        placeholder="8.5" value="8.0" oninput="calculate()">
+                    <span class="absolute right-3 top-3.5 text-slate-400 text-sm font-bold">L</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1 transition-colors">当前油价
+                    (Price)</label>
+                <div class="relative">
+                    <span class="absolute left-3 top-3.5 text-slate-400 text-sm font-bold">¥</span>
+                    <input type="number" id="price"
+                        class="w-full p-3 pl-8 border border-slate-200 rounded-xl outline-none transition-colors font-bold text-lg"
+                        placeholder="8.00" value="8.00" oninput="calculate()">
+                </div>
+            </div>
+
+            <div class="bg-amber-50 p-6 rounded-2xl border border-amber-100 mt-6">
+                <div class="flex justify-between items-end mb-2">
+                    <span class="text-sm font-bold text-slate-500 uppercase">预计花费</span>
+                    <span class="text-4xl font-black text-amber-600">¥<span id="total-cost">0.00</span></span>
+                </div>
+                <div class="flex justify-between text-xs text-slate-400 border-t border-amber-200 pt-2 mt-2">
+                    <span>消耗燃油: <span id="total-fuel" class="font-bold text-amber-700">0.0</span> L</span>
+                    <span>每公里: ¥<span id="cost-km" class="font-bold text-amber-700">0.00</span></span>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="setPreset(100, 8.0)"
+                    class="flex-1 py-2 bg-slate-100 rounded text-xs font-bold text-slate-500 hover:bg-slate-200">短途
+                    (100km)</button>
+                <button onclick="setPreset(500, 7.5)"
+                    class="flex-1 py-2 bg-slate-100 rounded text-xs font-bold text-slate-500 hover:bg-slate-200">长途
+                    (500km)</button>
+                <button onclick="reset()"
+                    class="flex-1 py-2 bg-slate-100 rounded text-xs font-bold text-red-400 hover:bg-red-50 hover:text-red-500">重置</button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        function calculate() {
+            const dist = parseFloat(document.getElementById('distance').value) || 0;
+            const eff = parseFloat(document.getElementById('efficiency').value) || 0;
+            const price = parseFloat(document.getElementById('price').value) || 0;
+
+            const fuelNeeded = (dist / 100) * eff;
+            const cost = fuelNeeded * price;
+            const perKm = dist > 0 ? cost / dist : 0;
+
+            document.getElementById('total-cost').innerText = cost.toFixed(2);
+            document.getElementById('total-fuel').innerText = fuelNeeded.toFixed(1);
+            document.getElementById('cost-km').innerText = perKm.toFixed(2);
+        }
+
+        function setPreset(d, e) {
+            document.getElementById('distance').value = d;
+            document.getElementById('efficiency').value = e;
+            calculate();
+        }
+
+        function reset() {
+            document.getElementById('distance').value = '';
+            calculate();
+        }
+
+        calculate();
+    </script>
+</body>
+
+</html>
