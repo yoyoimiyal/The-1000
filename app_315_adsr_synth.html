@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADSR 合成器演示</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-white">
+
+    <div class="w-full max-w-2xl bg-gray-800 p-8 rounded-3xl shadow-2xl border border-gray-700">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-purple-400">
+                <span class="text-2xl">🎹</span> ADSR Synth
+            </h1>
+            <a href="./navigation.html" class="text-sm text-gray-400 hover:text-white">Exit</a>
+        </header>
+
+        <!-- Chart -->
+        <div class="h-48 mb-8 bg-gray-900/50 rounded-xl border border-gray-700 p-4">
+            <canvas id="chart"></canvas>
+        </div>
+
+        <!-- Controls -->
+        <div class="grid grid-cols-4 gap-4 mb-8">
+
+            <div class="flex flex-col items-center">
+                <label class="text-xs font-bold text-blue-400 mb-2 uppercase">Attack</label>
+                <input type="range" id="attack" min="0" max="2" step="0.05" value="0.1"
+                    class="h-32 -rotate-90 origin-center bg-gray-700 rounded-lg cursor-pointer" oninput="update()">
+                <span id="val-a" class="text-xs mt-4 font-mono">0.1s</span>
+            </div>
+
+            <div class="flex flex-col items-center">
+                <label class="text-xs font-bold text-green-400 mb-2 uppercase">Decay</label>
+                <input type="range" id="decay" min="0" max="2" step="0.05" value="0.2"
+                    class="h-32 -rotate-90 origin-center bg-gray-700 rounded-lg cursor-pointer" oninput="update()">
+                <span id="val-d" class="text-xs mt-4 font-mono">0.2s</span>
+            </div>
+
+            <div class="flex flex-col items-center">
+                <label class="text-xs font-bold text-yellow-400 mb-2 uppercase">Sustain</label>
+                <input type="range" id="sustain" min="0" max="1" step="0.05" value="0.5"
+                    class="h-32 -rotate-90 origin-center bg-gray-700 rounded-lg cursor-pointer" oninput="update()">
+                <span id="val-s" class="text-xs mt-4 font-mono">50%</span>
+            </div>
+
+            <div class="flex flex-col items-center">
+                <label class="text-xs font-bold text-red-400 mb-2 uppercase">Release</label>
+                <input type="range" id="release" min="0" max="3" step="0.05" value="1.0"
+                    class="h-32 -rotate-90 origin-center bg-gray-700 rounded-lg cursor-pointer" oninput="update()">
+                <span id="val-r" class="text-xs mt-4 font-mono">1.0s</span>
+            </div>
+
+        </div>
+
+        <button onmousedown="play()" onmouseup="releaseNote()" onmouseleave="releaseNote()" ontouchstart="play()"
+            ontouchend="releaseNote()"
+            class="w-full py-4 bg-purple-600 hover:bg-purple-500 rounded-2xl font-bold shadow-lg transition active:scale-95 text-lg select-none">
+            按住播放 (Hold to Play)
+        </button>
+
+    </div>
+
+    <script>
+        const ctx = document.getElementById('chart').getContext('2d');
+
+        let audioCtx;
+        let osc, gain;
+        let isNoteOn = false;
+
+        let A = 0.1, D = 0.2, S = 0.5, R = 1.0;
+
+        // Chart
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [0, 1, 2, 3, 4], // Placeholders
+                datasets: [{
+                    label: 'Envelope',
+                    data: [0, 1, 0.5, 0.5, 0],
+                    borderColor: '#a855f7',
+                    backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                scales: {
+                    x: { type: 'linear', min: 0, max: 5, grid: { color: '#374151' } },
+                    y: { min: 0, max: 1.1, grid: { color: '#374151' } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        function update() {
+            A = parseFloat(document.getElementById('attack').value);
+            D = parseFloat(document.getElementById('decay').value);
+            S = parseFloat(document.getElementById('sustain').value);
+            R = parseFloat(document.getElementById('release').value);
+
+            document.getElementById('val-a').innerText = A + 's';
+            document.getElementById('val-d').innerText = D + 's';
+            document.getElementById('val-s').innerText = Math.round(S * 100) + '%';
+            document.getElementById('val-r').innerText = R + 's';
+
+            // Update Chart
+            // Points: (0,0) -> (A, 1) -> (A+D, S) -> (A+D+1, S) -> (A+D+1+R, 0)
+            // Note: Sustain is indefinite duration, we visualize 1 sec of sustain
+
+            const data = [
+                { x: 0, y: 0 },
+                { x: A, y: 1 },
+                { x: A + D, y: S },
+                { x: A + D + 1, y: S }, // Visual sustain hold
+                { x: A + D + 1 + R, y: 0 }
+            ];
+
+            chart.data.datasets[0].data = data;
+            chart.options.scales.x.max = A + D + 1 + R + 0.5;
+            chart.update();
+        }
+
+        function play() {
+            if (isNoteOn) return;
+            isNoteOn = true;
+
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            osc = audioCtx.createOscillator();
+            gain = audioCtx.createGain();
+
+            osc.type = 'sawtooth'; // Richer sound
+            osc.frequency.value = 220; // A3
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            // Attack (0 -> 1)
+            gain.gain.cancelScheduledValues(now);
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(1, now + A);
+
+            // Decay (1 -> S)
+            gain.gain.linearRampToValueAtTime(S, now + A + D);
+
+            osc.start(now);
+        }
+
+        function releaseNote() {
+            if (!isNoteOn) return;
+            isNoteOn = false;
+
+            if (gain) {
+                const now = audioCtx.currentTime;
+                // Release (Current -> 0)
+                gain.gain.cancelScheduledValues(now);
+                gain.gain.setValueAtTime(gain.gain.value, now); // Lock value
+                gain.gain.linearRampToValueAtTime(0, now + R);
+
+                if (osc) osc.stop(now + R + 0.1);
+            }
+        }
+
+        update();
+    </script>
+</body>
+
+</html>

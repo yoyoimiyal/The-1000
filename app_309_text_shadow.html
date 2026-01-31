@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文字阴影生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type=range] {
+            height: 4px;
+            border-radius: 2px;
+            background: #cbd5e1;
+            cursor: pointer;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #4f46e5;
+            margin-top: -6px;
+        }
+
+        .layer-item:hover .remove-btn {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex flex-col md:flex-row text-slate-800">
+
+    <!-- Preview -->
+    <div
+        class="flex-1 bg-white flex flex-col items-center justify-center relative border-b md:border-b-0 md:border-r border-slate-200 p-8">
+        <h1 id="preview"
+            class="text-6xl md:text-9xl font-black text-slate-800 transition-all duration-200 outline-none cursor-text text-center break-words w-full"
+            contenteditable="true">
+            SHADOW
+        </h1>
+        <p class="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-slate-300 pointer-events-none">Click text to
+            edit</p>
+
+        <input type="color" id="text-color" value="#1e293b"
+            class="absolute top-4 left-4 w-8 h-8 rounded border cursor-pointer" title="Text Color"
+            oninput="document.getElementById('preview').style.color=this.value">
+        <input type="color" id="bg-color" value="#ffffff"
+            class="absolute top-4 left-16 w-8 h-8 rounded border cursor-pointer" title="Background Color"
+            oninput="document.querySelector('.flex-1').style.backgroundColor=this.value">
+    </div>
+
+    <!-- Controls -->
+    <div class="w-full md:w-96 bg-slate-50 p-6 flex flex-col h-[50vh] md:h-screen overflow-hidden shadow-xl z-10">
+
+        <header class="flex justify-between items-center mb-4 shrink-0">
+            <h2 class="font-bold text-lg text-slate-700">Layers</h2>
+            <div class="flex gap-2">
+                <button onclick="addLayer()"
+                    class="text-xs bg-indigo-600 text-white px-3 py-1 rounded font-bold hover:bg-indigo-700">+
+                    Add</button>
+                <a href="./navigation.html" class="text-xs text-slate-400 hover:text-indigo-600 px-2 py-1">Exit</a>
+            </div>
+        </header>
+
+        <!-- Layers List -->
+        <div id="layers-list" class="flex-1 overflow-y-auto space-y-3 pr-2 mb-4">
+            <!-- Layers injected -->
+        </div>
+
+        <!-- Output -->
+        <div class="bg-slate-800 p-4 rounded-xl relative group shrink-0">
+            <code id="css-output"
+                class="text-[10px] text-green-400 font-mono break-all block leading-relaxed whitespace-pre-wrap">text-shadow: ...</code>
+            <button onclick="copyCSS()"
+                class="absolute top-2 right-2 text-[10px] bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded">Copy</button>
+        </div>
+
+        <div class="flex gap-2 mt-4 text-xs shrink-0">
+            <button onclick="preset('3d')" class="flex-1 bg-white border px-2 py-1 rounded hover:bg-gray-50">3D</button>
+            <button onclick="preset('neon')"
+                class="flex-1 bg-white border px-2 py-1 rounded hover:bg-gray-50">Neon</button>
+            <button onclick="preset('retro')"
+                class="flex-1 bg-white border px-2 py-1 rounded hover:bg-gray-50">Retro</button>
+        </div>
+
+    </div>
+
+    <script>
+        let layers = [
+            { x: 4, y: 4, blur: 0, color: '#d1d5db' } // Default simple shadow
+        ];
+
+        const list = document.getElementById('layers-list');
+        const preview = document.getElementById('preview');
+        const output = document.getElementById('css-output');
+
+        function renderLayers() {
+            list.innerHTML = '';
+            layers.forEach((layer, index) => {
+                const div = document.createElement('div');
+                div.className = "layer-item bg-white p-3 rounded-lg border border-slate-200 shadow-sm";
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-slate-400">Layer ${index + 1}</span>
+                        <button onclick="removeLayer(${index})" class="remove-btn text-red-400 hover:text-red-600 text-xs opacity-50 transition">✕</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] w-4">X</span>
+                            <input type="range" min="-50" max="50" value="${layer.x}" class="flex-1 h-1" oninput="updateLayer(${index}, 'x', this.value)">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] w-4">Y</span>
+                            <input type="range" min="-50" max="50" value="${layer.y}" class="flex-1 h-1" oninput="updateLayer(${index}, 'y', this.value)">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] w-4">Blur</span>
+                            <input type="range" min="0" max="50" value="${layer.blur}" class="flex-1 h-1" oninput="updateLayer(${index}, 'blur', this.value)">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] w-4">Col</span>
+                            <input type="color" value="${layer.color}" class="w-full h-6 rounded cursor-pointer" oninput="updateLayer(${index}, 'color', this.value)">
+                        </div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+            updatePreview();
+        }
+
+        function updateLayer(index, prop, value) {
+            layers[index][prop] = prop === 'color' ? value : parseInt(value);
+            updatePreview();
+        }
+
+        function addLayer() {
+            layers.push({ x: 5, y: 5, blur: 10, color: '#000000' });
+            renderLayers();
+        }
+
+        function removeLayer(index) {
+            layers.splice(index, 1);
+            renderLayers();
+        }
+
+        function updatePreview() {
+            const shadowStr = layers.map(l => `${l.x}px ${l.y}px ${l.blur}px ${l.color}`).join(', ');
+            const css = `text-shadow: ${shadowStr};`;
+            preview.style.textShadow = shadowStr;
+            output.innerText = css;
+        }
+
+        function copyCSS() {
+            navigator.clipboard.writeText(output.innerText);
+            alert("CSS Copied!");
+        }
+
+        function preset(type) {
+            if (type === '3d') {
+                layers = [
+                    { x: 1, y: 1, blur: 0, color: '#c8c8c8' },
+                    { x: 2, y: 2, blur: 0, color: '#b6b6b6' },
+                    { x: 3, y: 3, blur: 0, color: '#a4a4a4' },
+                    { x: 4, y: 4, blur: 0, color: '#929292' },
+                    { x: 5, y: 5, blur: 10, color: 'rgba(0,0,0,0.2)' }
+                ];
+                document.getElementById('text-color').value = "#ffffff";
+                preview.style.color = "#ffffff";
+            } else if (type === 'neon') {
+                layers = [
+                    { x: 0, y: 0, blur: 5, color: '#fff' },
+                    { x: 0, y: 0, blur: 10, color: '#fff' },
+                    { x: 0, y: 0, blur: 20, color: '#ff00de' },
+                    { x: 0, y: 0, blur: 40, color: '#ff00de' },
+                    { x: 0, y: 0, blur: 80, color: '#ff00de' }
+                ];
+                document.getElementById('text-color').value = "#ffffff";
+                preview.style.color = "#ffffff";
+                document.querySelector('.flex-1').style.backgroundColor = "#111"; // Dark bg
+            } else if (type === 'retro') {
+                layers = [
+                    { x: 4, y: 4, blur: 0, color: '#ff00ff' },
+                    { x: -4, y: -4, blur: 0, color: '#00ffff' }
+                ];
+                document.getElementById('text-color').value = "#ffff00";
+                preview.style.color = "#ffff00";
+            }
+            renderLayers();
+        }
+
+        // Init
+        renderLayers();
+    </script>
+</body>
+
+</html>

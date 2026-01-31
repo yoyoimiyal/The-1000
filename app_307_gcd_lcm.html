@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCD & LCM 计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-indigo-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-xl bg-white p-8 rounded-3xl shadow-xl border border-indigo-100">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-indigo-800 flex items-center gap-2">
+                <span class="text-2xl">➗</span> Math Tools
+            </h1>
+            <a href="./navigation.html" class="text-sm text-indigo-500 hover:underline">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">输入数字 (用空格或逗号分隔)</label>
+                <input type="text" id="input-nums"
+                    class="w-full p-4 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-lg font-mono placeholder-slate-300"
+                    placeholder="12 18 24" oninput="calculate()">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <div class="bg-indigo-50 p-6 rounded-2xl border border-indigo-200 text-center">
+                    <p class="text-xs font-bold text-indigo-500 uppercase mb-2">最大公约数 (GCD)</p>
+                    <p class="text-4xl font-black text-indigo-800" id="res-gcd">-</p>
+                </div>
+
+                <div class="bg-purple-50 p-6 rounded-2xl border border-purple-200 text-center">
+                    <p class="text-xs font-bold text-purple-500 uppercase mb-2">最小公倍数 (LCM)</p>
+                    <p class="text-4xl font-black text-purple-800" id="res-lcm">-</p>
+                </div>
+
+            </div>
+
+            <div class="text-xs text-slate-400 text-center">
+                <p>Greatest Common Divisor & Least Common Multiple</p>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Euclidean Algorithm for GCD
+        function gcd(a, b) {
+            if (!b) return a;
+            return gcd(b, a % b);
+        }
+
+        // LCM(a, b) = |a * b| / GCD(a, b)
+        function lcm(a, b) {
+            if (a === 0 || b === 0) return 0;
+            return Math.abs(a * b) / gcd(a, b);
+        }
+
+        // Multi-number GCD
+        function gcdArray(arr) {
+            let result = arr[0];
+            for (let i = 1; i < arr.length; i++) {
+                result = gcd(result, arr[i]);
+            }
+            return result;
+        }
+
+        // Multi-number LCM
+        function lcmArray(arr) {
+            let result = arr[0];
+            for (let i = 1; i < arr.length; i++) {
+                result = lcm(result, arr[i]);
+            }
+            return result;
+        }
+
+        function calculate() {
+            const raw = document.getElementById('input-nums').value;
+            // Parse numbers: split by space or comma, filter NaN
+            const nums = raw.split(/[,\s]+/)
+                .map(n => parseInt(n))
+                .filter(n => !isNaN(n) && n > 0); // Ignore 0 and negatives for simplicity
+
+            const resGcd = document.getElementById('res-gcd');
+            const resLcm = document.getElementById('res-lcm');
+
+            if (nums.length < 2) {
+                resGcd.innerText = "-";
+                resLcm.innerText = "-";
+                return;
+            }
+
+            const valGcd = gcdArray(nums);
+            const valLcm = lcmArray(nums);
+
+            resGcd.innerText = valGcd;
+            resLcm.innerText = valLcm;
+        }
+    </script>
+</body>
+
+</html>

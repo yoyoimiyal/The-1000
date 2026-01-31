@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>反应时间测试 V2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            user-select: none;
+            transition: background-color 0.1s;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body class="bg-blue-600 h-screen w-screen flex flex-col items-center justify-center text-white" id="body"
+    onmousedown="handleClick()" ontouchstart="handleClick()">
+
+    <div class="pointer-events-none text-center max-w-md px-4">
+
+        <div class="text-6xl mb-4" id="icon">⚡</div>
+        <h1 class="text-4xl font-bold mb-2" id="title">Reaction Test</h1>
+        <p class="text-lg opacity-90 mb-8" id="desc">平均值模式：共 5 轮测试。<br>看到绿色立即点击！</p>
+
+        <div id="stats" class="hidden">
+            <div class="flex justify-center gap-2 mb-4 text-2xl font-mono font-bold">
+                <span id="current-score">0</span> <span class="text-sm self-end mb-1 opacity-70">ms</span>
+            </div>
+            <div class="flex justify-center gap-1 mb-8" id="dots">
+                <!-- Dots injected -->
+            </div>
+        </div>
+
+    </div>
+
+    <div id="result-screen"
+        class="hidden absolute inset-0 bg-gray-900 flex flex-col items-center justify-center z-20 pointer-events-auto">
+        <div class="text-6xl mb-4">📊</div>
+        <h2 class="text-3xl font-bold mb-2">测试完成</h2>
+        <p class="text-gray-400 mb-6">5 次平均反应时间</p>
+        <div class="text-6xl font-black text-green-400 mb-8"><span id="avg-score">0</span> ms</div>
+
+        <div class="w-64 space-y-2 text-sm text-gray-500 font-mono mb-8" id="history-list">
+            <!-- List -->
+        </div>
+
+        <button onclick="resetGame(event)"
+            class="px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded-full font-bold shadow-lg transition">再测一次</button>
+        <a href="./navigation.html" class="mt-4 text-xs text-gray-500 hover:text-white">退出</a>
+    </div>
+
+    <div class="absolute bottom-6 w-full text-center pointer-events-none text-white/30 text-xs">
+        Click anywhere to interact
+    </div>
+
+    <script>
+        const body = document.getElementById('body');
+        const title = document.getElementById('title');
+        const desc = document.getElementById('desc');
+        const icon = document.getElementById('icon');
+        const stats = document.getElementById('stats');
+        const currentScoreEl = document.getElementById('current-score');
+        const dotsContainer = document.getElementById('dots');
+        const resultScreen = document.getElementById('result-screen');
+        const avgScoreEl = document.getElementById('avg-score');
+        const historyList = document.getElementById('history-list');
+
+        let state = 'start'; // start, waiting, ready, result
+        let startTime = 0;
+        let timeoutId = null;
+        let scores = [];
+        const maxRounds = 5;
+
+        function handleClick() {
+            if (state === 'start') {
+                startRound();
+            } else if (state === 'waiting') {
+                tooSoon();
+            } else if (state === 'ready') {
+                measure();
+            } else if (state === 'tooSoon') {
+                startRound();
+            }
+        }
+
+        function startRound() {
+            state = 'waiting';
+            body.className = "bg-red-500 h-screen w-screen flex flex-col items-center justify-center text-white transition-colors duration-200 cursor-pointer";
+            title.innerText = "等待...";
+            desc.innerText = "看到绿色再点击";
+            icon.innerText = "🛑";
+            stats.classList.remove('hidden');
+            renderDots();
+
+            const delay = Math.random() * 2000 + 1500; // 1.5 - 3.5s
+
+            timeoutId = setTimeout(() => {
+                state = 'ready';
+                body.className = "bg-green-500 h-screen w-screen flex flex-col items-center justify-center text-white transition-colors duration-0 cursor-pointer"; // Instant
+                title.innerText = "点击!";
+                desc.innerText = "";
+                icon.innerText = "🟢";
+                startTime = Date.now();
+            }, delay);
+        }
+
+        function tooSoon() {
+            state = 'tooSoon';
+            clearTimeout(timeoutId);
+            body.className = "bg-blue-500 h-screen w-screen flex flex-col items-center justify-center text-white transition-colors duration-200 cursor-pointer";
+            title.innerText = "太快了!";
+            desc.innerText = "请等待绿色出现。点击重试本轮。";
+            icon.innerText = "⚠️";
+        }
+
+        function measure() {
+            const time = Date.now() - startTime;
+            scores.push(time);
+            currentScoreEl.innerText = time;
+
+            if (scores.length >= maxRounds) {
+                showResults();
+            } else {
+                state = 'start';
+                body.className = "bg-blue-600 h-screen w-screen flex flex-col items-center justify-center text-white transition-colors duration-200 cursor-pointer";
+                title.innerText = `${time} ms`;
+                desc.innerText = "点击继续下一轮";
+                icon.innerText = "⏱️";
+                renderDots();
+            }
+        }
+
+        function renderDots() {
+            dotsContainer.innerHTML = '';
+            for (let i = 0; i < maxRounds; i++) {
+                const dot = document.createElement('div');
+                dot.className = `w-3 h-3 rounded-full ${i < scores.length ? 'bg-white' : 'bg-white/30'}`;
+                dotsContainer.appendChild(dot);
+            }
+        }
+
+        function showResults() {
+            const sum = scores.reduce((a, b) => a + b, 0);
+            const avg = Math.round(sum / scores.length);
+
+            avgScoreEl.innerText = avg;
+
+            historyList.innerHTML = '';
+            scores.forEach((s, i) => {
+                const row = document.createElement('div');
+                row.className = "flex justify-between border-b border-gray-700 pb-1";
+                row.innerHTML = `<span>Round ${i + 1}</span> <span>${s} ms</span>`;
+                historyList.appendChild(row);
+            });
+
+            resultScreen.classList.remove('hidden');
+        }
+
+        function resetGame(e) {
+            e.stopPropagation();
+            scores = [];
+            resultScreen.classList.add('hidden');
+            state = 'start';
+            startRound();
+        }
+    </script>
+</body>
+
+</html>

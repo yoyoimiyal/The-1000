@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>洛伦兹吸引子</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            pointer-events: none;
+            mix-blend-mode: difference;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="overlay">
+        <h1 class="text-2xl font-bold">Lorenz Attractor</h1>
+        <p class="text-xs text-gray-400">Chaos Theory (Butterfly Effect)</p>
+        <p class="text-xs font-mono mt-2 text-gray-500">
+            dx/dt = σ(y - x)<br>
+            dy/dt = x(ρ - z) - y<br>
+            dz/dt = xy - βz
+        </p>
+    </div>
+
+    <div class="absolute bottom-8 w-full text-center z-20 pointer-events-none">
+        <button onclick="reset()"
+            class="pointer-events-auto bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full backdrop-blur border border-white/20 text-xs font-bold transition">Restart</button>
+        <a href="./navigation.html"
+            class="pointer-events-auto bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full backdrop-blur border border-white/20 text-xs font-bold transition ml-2">Exit</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let x = 0.1, y = 0, z = 0;
+
+        // Lorenz Constants
+        const sigma = 10;
+        const rho = 28;
+        const beta = 8 / 3;
+
+        let points = [];
+        const dt = 0.01;
+
+        let hue = 0;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            reset();
+        }
+        window.addEventListener('resize', resize);
+
+        function reset() {
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, width, height);
+            x = 0.1; y = 0; z = 0;
+            points = [];
+            hue = 0;
+        }
+
+        function draw() {
+            // Calculate next point
+            const dx = (sigma * (y - x)) * dt;
+            const dy = (x * (rho - z) - y) * dt;
+            const dz = (x * y - beta * z) * dt;
+
+            x += dx;
+            y += dy;
+            z += dz;
+
+            points.push({ x, y, z });
+            if (points.length > 2000) points.shift(); // Keep trail limited? Or draw infinite?
+            // Canvas allows infinite drawing if we don't clear.
+
+            // To make it look cool, we just draw the new segment on top.
+            // Projection: Simple 3D to 2D
+            // Scale and center
+            const scale = 12;
+            const screenX = width / 2 + x * scale;
+            const screenY = height / 2 + z * scale - (height * 0.4); // Z is usually up in Lorenz plots visually? No, usually X-Z or Y-Z. 
+            // Standard visual: x horizontal, z vertical (up). 
+            // Wait, Lorenz usually orbits two points.
+
+            // Let's use simple projection
+            // We draw a line from previous point to current.
+
+            // But we need the previous SCREEN coordinates.
+            // We can calculate prev from x-dx etc.
+
+            // Just store prev
+            // To make it colorful, change hue
+
+            const prevX = x - dx;
+            const prevY = y - dy;
+            const prevZ = z - dz;
+
+            const prevScreenX = width / 2 + prevX * scale;
+            const prevScreenY = height - (height / 2 + prevZ * scale - (height * 0.2)); // Flip Y axis for screen
+
+            const curScreenX = width / 2 + x * scale;
+            const curScreenY = height - (height / 2 + z * scale - (height * 0.2));
+
+            ctx.beginPath();
+            ctx.moveTo(prevScreenX, prevScreenY);
+            ctx.lineTo(curScreenX, curScreenY);
+            ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+            ctx.lineWidth = 1; //0.5;
+            ctx.stroke();
+
+            hue += 0.1;
+            if (hue > 360) hue = 0;
+
+            // Fade effect?
+            // ctx.fillStyle = 'rgba(0, 0, 0, 0.01)';
+            // ctx.fillRect(0, 0, width, height);
+
+            // Speed up: multiple steps per frame
+            requestAnimationFrame(draw);
+        }
+
+        // Override draw to loop multiple steps
+        const realDraw = draw;
+        draw = function () {
+            for (let i = 0; i < 5; i++) { // 5 steps per frame
+                // Calculate next point
+                const dx = (sigma * (y - x)) * dt;
+                const dy = (x * (rho - z) - y) * dt;
+                const dz = (x * y - beta * z) * dt;
+
+                const prevX = x;
+                const prevY = y;
+                const prevZ = z;
+
+                x += dx;
+                y += dy;
+                z += dz;
+
+                const scale = Math.min(width, height) / 60;
+
+                // Project (Isometric-ish)
+                // x2d = x - z*0.5??
+                // Simple 2D projection: x vs z
+                // Center vertically
+
+                const cx = width / 2;
+                const cy = height / 2 + (rho * scale) / 2; // Shift down
+
+                const px = cx + x * scale;
+                const py = height - (100 + z * scale);
+
+                const ppx = cx + prevX * scale;
+                const ppy = height - (100 + prevZ * scale);
+
+                ctx.beginPath();
+                ctx.moveTo(ppx, ppy);
+                ctx.lineTo(px, py);
+                ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                hue += 0.2;
+                if (hue >= 360) hue = 0;
+            }
+            requestAnimationFrame(draw);
+        }
+
+        resize();
+        draw();
+    </script>
+</body>
+
+</html>

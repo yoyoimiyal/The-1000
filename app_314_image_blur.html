@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片隐私打码</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .crop-overlay {
+            position: absolute;
+            border: 2px dashed #ef4444;
+            background: rgba(255, 0, 0, 0.1);
+            cursor: crosshair;
+            pointer-events: none;
+        }
+
+        #container {
+            cursor: crosshair;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-800 min-h-screen flex flex-col items-center p-6 text-slate-200 select-none">
+
+    <header class="w-full max-w-4xl flex justify-between items-center mb-6">
+        <h1 class="text-xl font-bold flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+            </svg>
+            Privacy Blur
+        </h1>
+        <div class="flex gap-4">
+            <label class="cursor-pointer text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">
+                📂 打开图片
+                <input type="file" class="hidden" accept="image/*" onchange="loadImage(event)">
+            </label>
+            <button onclick="download()"
+                class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded">下载保存</button>
+            <a href="./navigation.html" class="text-xs text-slate-400 hover:text-white px-2 py-1">退出</a>
+        </div>
+    </header>
+
+    <div class="flex-1 flex items-center justify-center bg-black/50 rounded-xl overflow-hidden border border-slate-700 w-full max-w-5xl relative"
+        id="wrapper">
+        <div class="relative inline-block" id="container">
+            <canvas id="canvas"></canvas>
+            <div id="selection" class="crop-overlay hidden"></div>
+            <div id="placeholder"
+                class="absolute inset-0 flex items-center justify-center text-slate-500 pointer-events-none">
+                请先上传图片，然后框选区域打码
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-6 flex gap-4">
+        <button onclick="setMode('blur')" id="btn-blur"
+            class="px-6 py-2 bg-slate-200 text-slate-900 rounded-full font-bold shadow hover:bg-white transition">模糊
+            Blur</button>
+        <button onclick="setMode('pixel')" id="btn-pixel"
+            class="px-6 py-2 bg-slate-700 text-slate-300 rounded-full font-bold hover:bg-slate-600 transition">马赛克
+            Pixel</button>
+        <button onclick="undo()"
+            class="px-6 py-2 bg-red-900/50 text-red-300 rounded-full font-bold hover:bg-red-900 transition">撤销
+            Undo</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const selection = document.getElementById('selection');
+        const container = document.getElementById('container');
+        const placeholder = document.getElementById('placeholder');
+
+        let img = new Image();
+        let history = [];
+        let isDrawing = false;
+        let startX, startY;
+        let mode = 'blur'; // blur or pixel
+
+        function loadImage(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+
+                    // Fit to screen logic handled by CSS max-width/height usually, 
+                    // but here we render full res and scale container via CSS
+                    canvas.style.maxWidth = "100%";
+                    canvas.style.maxHeight = "70vh";
+
+                    ctx.drawImage(img, 0, 0);
+                    saveState();
+                    placeholder.style.display = 'none';
+                };
+                img.src = url;
+            }
+        }
+
+        function setMode(m) {
+            mode = m;
+            const btnBlur = document.getElementById('btn-blur');
+            const btnPixel = document.getElementById('btn-pixel');
+            if (m === 'blur') {
+                btnBlur.className = "px-6 py-2 bg-slate-200 text-slate-900 rounded-full font-bold shadow hover:bg-white transition";
+                btnPixel.className = "px-6 py-2 bg-slate-700 text-slate-300 rounded-full font-bold hover:bg-slate-600 transition";
+            } else {
+                btnPixel.className = "px-6 py-2 bg-slate-200 text-slate-900 rounded-full font-bold shadow hover:bg-white transition";
+                btnBlur.className = "px-6 py-2 bg-slate-700 text-slate-300 rounded-full font-bold hover:bg-slate-600 transition";
+            }
+        }
+
+        function saveState() {
+            if (history.length > 10) history.shift();
+            history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+        }
+
+        function undo() {
+            if (history.length > 1) {
+                history.pop(); // Remove current
+                ctx.putImageData(history[history.length - 1], 0, 0);
+            } else if (history.length === 1) {
+                ctx.putImageData(history[0], 0, 0);
+            }
+        }
+
+        // Interaction
+        container.addEventListener('mousedown', e => {
+            if (!img.src) return;
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            startX = (e.clientX - rect.left) * scaleX;
+            startY = (e.clientY - rect.top) * scaleY;
+
+            selection.style.left = (e.clientX - rect.left) + 'px';
+            selection.style.top = (e.clientY - rect.top) + 'px';
+            selection.style.width = '0px';
+            selection.style.height = '0px';
+            selection.classList.remove('hidden');
+        });
+
+        window.addEventListener('mousemove', e => {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            // Visual selection update (CSS pixels)
+            const currX = e.clientX - rect.left;
+            const currY = e.clientY - rect.top;
+
+            // Visual start
+            const vStartX = startX * (rect.width / canvas.width);
+            const vStartY = startY * (rect.height / canvas.height);
+
+            const w = currX - vStartX;
+            const h = currY - vStartY;
+
+            selection.style.width = Math.abs(w) + 'px';
+            selection.style.height = Math.abs(h) + 'px';
+            selection.style.left = (w < 0 ? currX : vStartX) + 'px';
+            selection.style.top = (h < 0 ? currY : vStartY) + 'px';
+        });
+
+        window.addEventListener('mouseup', e => {
+            if (!isDrawing) return;
+            isDrawing = false;
+            selection.classList.add('hidden');
+
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const endX = (e.clientX - rect.left) * scaleX;
+            const endY = (e.clientY - rect.top) * scaleY;
+
+            const x = Math.min(startX, endX);
+            const y = Math.min(startY, endY);
+            const w = Math.abs(endX - startX);
+            const h = Math.abs(endY - startY);
+
+            if (w > 5 && h > 5) {
+                applyEffect(x, y, w, h);
+                saveState();
+            }
+        });
+
+        function applyEffect(x, y, w, h) {
+            // Get data
+            const imageData = ctx.getImageData(x, y, w, h);
+
+            if (mode === 'pixel') {
+                // Pixelate
+                const blockSize = 15;
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = w;
+                tempCanvas.height = h;
+                const tCtx = tempCanvas.getContext('2d');
+
+                // Draw small
+                tCtx.drawImage(canvas, x, y, w, h, 0, 0, w / blockSize, h / blockSize);
+                // Draw back big
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(tempCanvas, 0, 0, w / blockSize, h / blockSize, x, y, w, h);
+                ctx.imageSmoothingEnabled = true;
+            } else {
+                // Blur (Simulated via simple box blur or stack blur)
+                // Canvas filter is easiest if supported
+                ctx.filter = 'blur(10px)';
+                // Draw image onto itself? No, draw image section onto itself
+                // Need to clip to avoid blurring edges outside
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(x, y, w, h);
+                ctx.clip();
+                ctx.drawImage(canvas, 0, 0);
+                ctx.restore();
+                ctx.filter = 'none';
+            }
+        }
+
+        function download() {
+            if (!img.src) return;
+            const link = document.createElement('a');
+            link.download = 'privacy_image.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+
+</html>

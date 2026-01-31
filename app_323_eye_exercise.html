@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>护眼运动指引</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .ball {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #22c55e;
+            /* green-500 */
+            box-shadow: 0 0 15px #22c55e;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        @keyframes horizontal {
+            0% {
+                left: 10%;
+            }
+
+            50% {
+                left: 90%;
+            }
+
+            100% {
+                left: 10%;
+            }
+        }
+
+        @keyframes vertical {
+            0% {
+                top: 10%;
+            }
+
+            50% {
+                top: 90%;
+            }
+
+            100% {
+                top: 10%;
+            }
+        }
+
+        @keyframes circle {
+            0% {
+                transform: translate(-50%, -50%) rotate(0deg) translateX(150px) rotate(0deg);
+            }
+
+            100% {
+                transform: translate(-50%, -50%) rotate(360deg) translateX(150px) rotate(-360deg);
+            }
+        }
+
+        /* Figure 8 using offset sine waves via JS is smoother, but CSS keyframes approx: */
+        @keyframes figure8 {
+            0% {
+                left: 50%;
+                top: 50%;
+            }
+
+            25% {
+                left: 20%;
+                top: 30%;
+            }
+
+            50% {
+                left: 50%;
+                top: 70%;
+            }
+
+            75% {
+                left: 80%;
+                top: 30%;
+            }
+
+            100% {
+                left: 50%;
+                top: 50%;
+            }
+        }
+
+        /* Focus (Scale) */
+        @keyframes focus {
+            0% {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: translate(-50%, -50%) scale(2);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0.5;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden text-white">
+
+    <div class="fixed top-4 left-4 z-10">
+        <h1 class="font-bold text-xl text-green-400">Eye Gym</h1>
+        <p class="text-xs text-slate-500">跟随绿点移动视线</p>
+    </div>
+
+    <!-- Animation Container -->
+    <div class="relative w-full max-w-3xl aspect-video bg-slate-800/50 rounded-3xl border-4 border-slate-700 shadow-2xl overflow-hidden"
+        id="container">
+        <!-- Guides (Optional) -->
+        <div class="absolute inset-0 flex items-center justify-center opacity-10">
+            <div class="w-full h-px bg-white absolute"></div>
+            <div class="h-full w-px bg-white absolute"></div>
+        </div>
+
+        <div id="ball" class="ball"></div>
+
+        <div class="absolute bottom-4 w-full text-center text-xl font-bold text-slate-500 transition-opacity duration-500"
+            id="label">准备</div>
+    </div>
+
+    <!-- Controls -->
+    <div class="mt-8 flex flex-wrap gap-4 justify-center z-10">
+        <button onclick="setMode('horizontal')"
+            class="px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition">↔️ 左右</button>
+        <button onclick="setMode('vertical')"
+            class="px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition">↕️ 上下</button>
+        <button onclick="setMode('circle')"
+            class="px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition">⭕ 画圆</button>
+        <button onclick="setMode('focus')"
+            class="px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition">👀 远近</button>
+        <a href="./navigation.html"
+            class="px-6 py-3 border border-slate-600 text-slate-400 hover:text-white rounded-xl font-bold transition">退出</a>
+    </div>
+
+    <script>
+        const ball = document.getElementById('ball');
+        const label = document.getElementById('label');
+        let currentMode = '';
+
+        function setMode(mode) {
+            // Reset
+            ball.style.animation = 'none';
+            // Force Reflow
+            void ball.offsetWidth;
+
+            switch (mode) {
+                case 'horizontal':
+                    ball.style.top = '50%';
+                    ball.style.left = '50%'; // Initial
+                    ball.style.transform = 'translate(-50%, -50%)';
+                    ball.style.animation = 'horizontal 3s ease-in-out infinite alternate';
+                    label.innerText = "左右移动 (Horizontal)";
+                    break;
+                case 'vertical':
+                    ball.style.top = '50%';
+                    ball.style.left = '50%';
+                    ball.style.transform = 'translate(-50%, -50%)';
+                    ball.style.animation = 'vertical 3s ease-in-out infinite alternate';
+                    label.innerText = "上下移动 (Vertical)";
+                    break;
+                case 'circle':
+                    ball.style.top = '50%';
+                    ball.style.left = '50%';
+                    // Circle anim logic via transform origin
+                    // Or keyframe translate
+                    // Keyframe 'circle' defined in CSS
+                    ball.style.animation = 'circle 4s linear infinite';
+                    label.innerText = "顺时针画圆 (Circle)";
+                    break;
+                case 'focus':
+                    ball.style.top = '50%';
+                    ball.style.left = '50%';
+                    ball.style.animation = 'focus 4s ease-in-out infinite';
+                    label.innerText = "远近聚焦 (Focus)";
+                    break;
+            }
+            currentMode = mode;
+        }
+
+        // Start default
+        setMode('horizontal');
+    </script>
+</body>
+
+</html>

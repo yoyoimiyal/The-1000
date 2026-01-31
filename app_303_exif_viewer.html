@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EXIF 信息查看器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+</head>
+
+<body class="bg-gray-50 min-h-screen p-6 flex flex-col items-center text-slate-800">
+
+    <div class="w-full max-w-3xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                EXIF Viewer
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="flex flex-col md:flex-row gap-8">
+
+            <div class="w-full md:w-1/3">
+                <label
+                    class="block w-full aspect-square border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition relative overflow-hidden bg-white">
+                    <span class="text-slate-400 font-bold text-sm z-10">📂 点击上传照片</span>
+                    <input type="file" class="hidden" accept="image/jpeg,image/jpg" onchange="handleFile(event)">
+                    <img id="preview" class="absolute inset-0 w-full h-full object-cover hidden opacity-50">
+                </label>
+                <p class="text-xs text-slate-400 mt-2 text-center">仅支持含有 EXIF 数据的 JPG 文件</p>
+            </div>
+
+            <div class="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-500 uppercase">
+                    Metadata Report
+                </div>
+                <div class="flex-1 overflow-auto p-4" style="max-height: 400px;">
+                    <table class="w-full text-sm text-left hidden" id="exif-table">
+                        <tbody class="divide-y divide-slate-100" id="exif-body">
+                            <!-- Data -->
+                        </tbody>
+                    </table>
+                    <div id="empty-msg" class="text-center text-slate-400 py-10 text-sm">
+                        暂无数据，请上传照片
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const table = document.getElementById('exif-table');
+        const tbody = document.getElementById('exif-body');
+        const emptyMsg = document.getElementById('empty-msg');
+        const preview = document.getElementById('preview');
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const url = URL.createObjectURL(file);
+            preview.src = url;
+            preview.classList.remove('hidden');
+
+            EXIF.getData(file, function () {
+                const allTags = EXIF.getAllTags(this);
+                renderData(allTags);
+            });
+        }
+
+        function renderData(tags) {
+            tbody.innerHTML = '';
+
+            if (Object.keys(tags).length === 0) {
+                emptyMsg.innerText = "未找到 EXIF 数据";
+                emptyMsg.classList.remove('hidden');
+                table.classList.add('hidden');
+                return;
+            }
+
+            emptyMsg.classList.add('hidden');
+            table.classList.remove('hidden');
+
+            // Common tags to prioritize
+            const priority = ['Make', 'Model', 'DateTimeOriginal', 'ExposureTime', 'FNumber', 'ISOSpeedRatings', 'FocalLength', 'Software'];
+
+            // Render Priority
+            priority.forEach(key => {
+                if (tags[key]) {
+                    addRow(key, tags[key], true);
+                    delete tags[key]; // Remove to avoid dupe
+                }
+            });
+
+            // Render Rest
+            for (const [key, value] of Object.entries(tags)) {
+                if (key === 'thumbnail') continue; // Skip thumbnail blob
+                // Skip massive data arrays
+                if (typeof value === 'object' && value.length > 20) continue;
+                addRow(key, value);
+            }
+        }
+
+        function addRow(key, value, bold = false) {
+            const tr = document.createElement('tr');
+            let displayVal = value;
+
+            // Format exposure time
+            if (key === 'ExposureTime' && value < 1) {
+                displayVal = `1/${Math.round(1 / value)}`;
+            }
+
+            tr.innerHTML = `
+                <td class="py-2 text-slate-500 font-mono text-xs w-1/3">${key}</td>
+                <td class="py-2 text-slate-800 ${bold ? 'font-bold' : ''}">${displayVal}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+    </script>
+</body>
+
+</html>

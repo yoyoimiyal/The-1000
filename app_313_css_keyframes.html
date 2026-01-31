@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS 动画生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col md:flex-row text-slate-800">
+
+    <!-- Preview -->
+    <div
+        class="flex-1 bg-white flex flex-col items-center justify-center p-8 border-b md:border-b-0 md:border-r border-slate-200 relative overflow-hidden">
+        <div id="preview-box"
+            class="w-32 h-32 bg-indigo-600 rounded-xl shadow-xl flex items-center justify-center text-white font-bold">
+            Anim
+        </div>
+        <div class="absolute bottom-4 left-4 text-xs text-slate-400">Preview Area</div>
+    </div>
+
+    <!-- Controls -->
+    <div class="w-full md:w-96 bg-gray-50 p-6 flex flex-col gap-6 h-auto md:h-screen overflow-y-auto shadow-xl z-10">
+
+        <header class="flex justify-between items-center mb-2">
+            <h1 class="font-bold text-lg text-slate-700">Keyframe Gen</h1>
+            <a href="./navigation.html" class="text-xs text-indigo-500 hover:underline">退出</a>
+        </header>
+
+        <div class="space-y-6">
+
+            <div class="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200">
+                <span class="text-xs font-bold text-slate-500">Duration</span>
+                <input type="number" id="duration" value="2" class="w-16 p-1 border rounded text-center text-xs"
+                    onchange="update()">
+                <span class="text-xs text-slate-500">s</span>
+            </div>
+
+            <!-- Keyframes Config -->
+            <div class="space-y-4">
+                <div class="flex justify-between items-center text-xs font-bold text-slate-400 uppercase">
+                    <span>Keyframes</span>
+                    <span class="text-indigo-500">From (0%) &rarr; To (100%)</span>
+                </div>
+
+                <!-- 0% -->
+                <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                    <p class="text-xs font-bold text-slate-300">0% (Start)</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" class="text-xs p-1 border rounded" placeholder="Prop" value="transform"
+                            readonly>
+                        <input type="text" id="k0-val" class="text-xs p-1 border rounded" value="scale(1) rotate(0deg)"
+                            oninput="update()">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" class="text-xs p-1 border rounded" placeholder="Prop" value="opacity"
+                            readonly>
+                        <input type="text" id="k0-op" class="text-xs p-1 border rounded" value="1" oninput="update()">
+                    </div>
+                </div>
+
+                <!-- 50% -->
+                <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                    <p class="text-xs font-bold text-slate-300">50% (Mid)</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" class="text-xs p-1 border rounded" placeholder="Prop" value="transform"
+                            readonly>
+                        <input type="text" id="k50-val" class="text-xs p-1 border rounded"
+                            value="scale(1.2) rotate(180deg)" oninput="update()">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" class="text-xs p-1 border rounded" placeholder="Prop" value="opacity"
+                            readonly>
+                        <input type="text" id="k50-op" class="text-xs p-1 border rounded" value="0.5"
+                            oninput="update()">
+                    </div>
+                </div>
+
+                <!-- 100% -->
+                <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                    <p class="text-xs font-bold text-slate-300">100% (End)</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" class="text-xs p-1 border rounded" placeholder="Prop" value="transform"
+                            readonly>
+                        <input type="text" id="k100-val" class="text-xs p-1 border rounded"
+                            value="scale(1) rotate(360deg)" oninput="update()">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" class="text-xs p-1 border rounded" placeholder="Prop" value="opacity"
+                            readonly>
+                        <input type="text" id="k100-op" class="text-xs p-1 border rounded" value="1" oninput="update()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code -->
+            <div class="bg-slate-800 p-4 rounded-xl relative group">
+                <code id="css-output"
+                    class="text-[10px] text-green-400 font-mono break-all block leading-relaxed whitespace-pre"></code>
+                <button onclick="copyCSS()"
+                    class="absolute top-2 right-2 text-[10px] bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded">Copy</button>
+            </div>
+
+            <button onclick="replay()"
+                class="w-full py-2 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-700 transition">Replay
+                Animation</button>
+
+        </div>
+    </div>
+
+    <style id="dynamic-style"></style>
+
+    <script>
+        const box = document.getElementById('preview-box');
+        const output = document.getElementById('css-output');
+        const styleTag = document.getElementById('dynamic-style');
+
+        function update() {
+            const dur = document.getElementById('duration').value;
+
+            const k0 = document.getElementById('k0-val').value;
+            const k0o = document.getElementById('k0-op').value;
+
+            const k50 = document.getElementById('k50-val').value;
+            const k50o = document.getElementById('k50-op').value;
+
+            const k100 = document.getElementById('k100-val').value;
+            const k100o = document.getElementById('k100-op').value;
+
+            const css = `
+.animate-custom {
+  animation: customAnim ${dur}s infinite;
+}
+
+@keyframes customAnim {
+  0% { transform: ${k0}; opacity: ${k0o}; }
+  50% { transform: ${k50}; opacity: ${k50o}; }
+  100% { transform: ${k100}; opacity: ${k100o}; }
+}`;
+
+            output.innerText = css;
+            styleTag.innerHTML = css;
+
+            // Apply
+            box.style.animation = `customAnim ${dur}s infinite`;
+        }
+
+        function replay() {
+            box.style.animation = 'none';
+            void box.offsetWidth;
+            update();
+        }
+
+        function copyCSS() {
+            navigator.clipboard.writeText(output.innerText);
+            alert("CSS Copied!");
+        }
+
+        update();
+    </script>
+</body>
+
+</html>

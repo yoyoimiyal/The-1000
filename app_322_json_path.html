@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON 路径提取器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .json-key {
+            color: #8b5cf6;
+            cursor: pointer;
+        }
+
+        .json-key:hover {
+            text-decoration: underline;
+            background-color: #f3f4f6;
+        }
+
+        .json-string {
+            color: #16a34a;
+        }
+
+        .json-number {
+            color: #ea580c;
+        }
+
+        .json-bool {
+            color: #2563eb;
+        }
+
+        .json-null {
+            color: #94a3b8;
+        }
+
+        pre {
+            font-family: 'Menlo', 'Monaco', monospace;
+            font-size: 0.85rem;
+        }
+
+        .toast {
+            animation: fadeUp 2s forwards;
+        }
+
+        @keyframes fadeUp {
+            0% {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            10% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            80% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col p-6 text-slate-800">
+
+    <header class="flex justify-between items-center mb-6">
+        <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-700">
+            <span class="bg-indigo-100 px-2 py-1 rounded text-xs font-mono">path</span> JSON Path Finder
+        </h1>
+        <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+    </header>
+
+    <div class="flex-1 flex flex-col md:flex-row gap-6 h-[85vh]">
+
+        <!-- Input -->
+        <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200">
+            <div
+                class="p-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase flex justify-between items-center">
+                <span>Input JSON</span>
+                <button onclick="loadSample()" class="text-indigo-500 hover:underline">加载示例</button>
+            </div>
+            <textarea id="input" class="flex-1 p-4 resize-none outline-none font-mono text-sm leading-relaxed"
+                placeholder='{"key": "value"}' oninput="parse()"></textarea>
+        </div>
+
+        <!-- Output -->
+        <div
+            class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 relative overflow-hidden">
+            <div
+                class="p-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase flex justify-between items-center">
+                <span>Interactive Viewer</span>
+                <span class="text-slate-400 font-normal normal-case">点击 Key 复制路径</span>
+            </div>
+            <div class="flex-1 overflow-auto p-4 bg-white" id="viewer">
+                <!-- Tree -->
+            </div>
+            <div id="path-display" class="bg-slate-800 text-white p-3 font-mono text-xs break-all hidden">
+                Path: <span id="path-val" class="text-green-400 font-bold"></span>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="toast-container" class="fixed bottom-8 right-8 z-50 pointer-events-none"></div>
+
+    <script>
+        const input = document.getElementById('input');
+        const viewer = document.getElementById('viewer');
+        const pathDisplay = document.getElementById('path-display');
+        const pathVal = document.getElementById('path-val');
+
+        function loadSample() {
+            const data = {
+                "users": [
+                    { "id": 1, "name": "Alice", "roles": ["admin", "editor"], "meta": { "login": "2023-01-01" } },
+                    { "id": 2, "name": "Bob", "active": false }
+                ],
+                "status": "ok",
+                "code": 200
+            };
+            input.value = JSON.stringify(data, null, 4);
+            parse();
+        }
+
+        function parse() {
+            try {
+                const json = JSON.parse(input.value);
+                viewer.innerHTML = '';
+                const tree = buildTree(json, 'data');
+                viewer.appendChild(tree);
+                // Reset errors or visuals if any
+            } catch (e) {
+                // Ignore parse errors while typing
+            }
+        }
+
+        function buildTree(obj, path) {
+            const container = document.createElement('div');
+            container.className = 'pl-4 border-l border-slate-100'; // Indent
+
+            if (typeof obj === 'object' && obj !== null) {
+                const isArray = Array.isArray(obj);
+
+                // Start brace
+                const start = document.createElement('div');
+                start.innerHTML = isArray ? '[' : '{';
+                container.appendChild(start);
+
+                Object.keys(obj).forEach((key, index, arr) => {
+                    const row = document.createElement('div');
+                    row.className = 'flex';
+
+                    // Key
+                    const keySpan = document.createElement('span');
+                    // For array, key is index. For obj, key is string.
+                    const currentPath = isArray ? `${path}[${key}]` : `${path}.${key}`;
+
+                    if (!isArray) {
+                        keySpan.innerHTML = `"<span class="json-key" onclick="copyPath('${currentPath}')">${key}</span>": `;
+                    }
+
+                    // Value
+                    const value = obj[key];
+                    const valContainer = document.createElement('div');
+
+                    if (typeof value === 'object' && value !== null) {
+                        valContainer.appendChild(buildTree(value, currentPath));
+                    } else {
+                        valContainer.innerHTML = formatValue(value, currentPath);
+                    }
+
+                    // Comma
+                    if (index < arr.length - 1 && (typeof value !== 'object' || value === null)) {
+                        valContainer.innerHTML += ',';
+                    }
+
+                    row.appendChild(keySpan);
+                    row.appendChild(valContainer);
+                    container.appendChild(row);
+                });
+
+                // End brace
+                const end = document.createElement('div');
+                end.innerHTML = isArray ? ']' : '}';
+                // Add comma if needed for parent context? (Handled by parent loop usually)
+                container.appendChild(end);
+
+            } else {
+                // Primitive at root?
+                container.innerHTML = formatValue(obj, path);
+            }
+
+            return container;
+        }
+
+        function formatValue(val, path) {
+            if (typeof val === 'string') return `<span class="json-string">"${val}"</span>`;
+            if (typeof val === 'number') return `<span class="json-number">${val}</span>`;
+            if (typeof val === 'boolean') return `<span class="json-bool">${val}</span>`;
+            if (val === null) return `<span class="json-null">null</span>`;
+            return val;
+        }
+
+        function copyPath(p) {
+            // Remove initial 'data.' if preferred, or keep as root var name
+            // Let's keep data or replace with something generic
+            // Or better: strip 'data' if it's the root we added.
+            // Actually users usually paste this into `response.users...`
+
+            // Let's strip 'data' root if dot notation, or keep it if bracket?
+            // `data.users` -> `users`?
+            // Let's just copy exactly what we calculated for clarity.
+
+            navigator.clipboard.writeText(p);
+
+            pathVal.innerText = p;
+            pathDisplay.classList.remove('hidden');
+
+            showToast(p);
+        }
+
+        function showToast(text) {
+            const t = document.createElement('div');
+            t.className = "bg-slate-800 text-white px-4 py-2 rounded-lg shadow-lg mb-2 text-xs font-mono toast";
+            t.innerText = "Copied: " + text;
+            document.getElementById('toast-container').appendChild(t);
+            setTimeout(() => t.remove(), 2000);
+        }
+
+        // Init
+        loadSample();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全能色彩转换器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinycolor/1.4.2/tinycolor.min.js"></script>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-3xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <span class="w-6 h-6 rounded bg-gradient-to-br from-red-500 to-blue-500"></span>
+                Color Converter
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-black">退出</a>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+            <!-- Input & Preview -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+
+                <div id="preview"
+                    class="w-full h-32 rounded-xl mb-6 shadow-inner border border-slate-100 transition-colors duration-200 flex items-center justify-center">
+                    <span id="preview-text"
+                        class="bg-white/80 backdrop-blur px-3 py-1 rounded text-xs font-mono font-bold">#FFFFFF</span>
+                </div>
+
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">输入颜色 (Any Format)</label>
+                <div class="flex gap-2">
+                    <input type="text" id="input"
+                        class="flex-1 p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                        placeholder="#000, rgb(0,0,0), red..." oninput="parseColor()">
+                    <input type="color" id="picker"
+                        class="w-12 h-full rounded cursor-pointer p-1 border border-slate-300 bg-white"
+                        oninput="pickColor()">
+                </div>
+                <p class="text-xs text-red-500 mt-2 h-4" id="error-msg"></p>
+
+            </div>
+
+            <!-- Outputs -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <label class="text-xs font-bold text-slate-400 uppercase">HEX</label>
+                        <button onclick="copy('out-hex')" class="text-xs text-blue-500 hover:underline">Copy</button>
+                    </div>
+                    <input type="text" id="out-hex"
+                        class="w-full p-2 bg-slate-50 rounded border border-slate-200 font-mono text-sm" readonly>
+                </div>
+
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <label class="text-xs font-bold text-slate-400 uppercase">RGB</label>
+                        <button onclick="copy('out-rgb')" class="text-xs text-blue-500 hover:underline">Copy</button>
+                    </div>
+                    <input type="text" id="out-rgb"
+                        class="w-full p-2 bg-slate-50 rounded border border-slate-200 font-mono text-sm" readonly>
+                </div>
+
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <label class="text-xs font-bold text-slate-400 uppercase">HSL</label>
+                        <button onclick="copy('out-hsl')" class="text-xs text-blue-500 hover:underline">Copy</button>
+                    </div>
+                    <input type="text" id="out-hsl"
+                        class="w-full p-2 bg-slate-50 rounded border border-slate-200 font-mono text-sm" readonly>
+                </div>
+
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <label class="text-xs font-bold text-slate-400 uppercase">CMYK</label>
+                        <button onclick="copy('out-cmyk')" class="text-xs text-blue-500 hover:underline">Copy</button>
+                    </div>
+                    <input type="text" id="out-cmyk"
+                        class="w-full p-2 bg-slate-50 rounded border border-slate-200 font-mono text-sm" readonly>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const input = document.getElementById('input');
+        const picker = document.getElementById('picker');
+        const preview = document.getElementById('preview');
+        const previewText = document.getElementById('preview-text');
+        const errEl = document.getElementById('error-msg');
+
+        function pickColor() {
+            input.value = picker.value;
+            parseColor();
+        }
+
+        function parseColor() {
+            const val = input.value;
+            const color = tinycolor(val);
+
+            if (color.isValid()) {
+                errEl.innerText = "";
+
+                // Update UI
+                const hex = color.toHexString();
+                const rgb = color.toRgbString();
+                const hsl = color.toHslString();
+
+                // CMYK manually
+                const rgbObj = color.toRgb();
+                const cmyk = rgbToCmyk(rgbObj.r, rgbObj.g, rgbObj.b);
+
+                preview.style.backgroundColor = hex;
+                previewText.innerText = hex.toUpperCase();
+                picker.value = hex; // Sync picker if valid hex
+
+                document.getElementById('out-hex').value = hex.toUpperCase();
+                document.getElementById('out-rgb').value = rgb;
+                document.getElementById('out-hsl').value = hsl;
+                document.getElementById('out-cmyk').value = cmyk;
+            } else {
+                if (val.trim() !== "") errEl.innerText = "无效的颜色格式";
+            }
+        }
+
+        function rgbToCmyk(r, g, b) {
+            let c = 0, m = 0, y = 0, k = 0;
+
+            r = r / 255;
+            g = g / 255;
+            b = b / 255;
+
+            k = Math.min(1 - r, 1 - g, 1 - b);
+
+            if (k != 1) {
+                c = (1 - r - k) / (1 - k);
+                m = (1 - g - k) / (1 - k);
+                y = (1 - b - k) / (1 - k);
+            }
+
+            // Format percentages
+            c = Math.round(c * 100);
+            m = Math.round(m * 100);
+            y = Math.round(y * 100);
+            k = Math.round(k * 100);
+
+            return `cmyk(${c}%, ${m}%, ${y}%, ${k}%)`;
+        }
+
+        function copy(id) {
+            const el = document.getElementById(id);
+            el.select();
+            document.execCommand('copy');
+            // Flash bg?
+            el.classList.add('bg-green-100');
+            setTimeout(() => el.classList.remove('bg-green-100'), 200);
+        }
+
+        // Init
+        input.value = "#6366F1";
+        parseColor();
+    </script>
+</body>
+
+</html>

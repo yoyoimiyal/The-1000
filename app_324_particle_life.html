@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>粒子生命模拟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #000;
+        }
+
+        .slider-thumb::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 12px;
+            width: 12px;
+            background: white;
+            border-radius: 50%;
+            margin-top: -4px;
+        }
+
+        .slider-track::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: #333;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="fixed top-4 left-4 z-10 text-white/50 pointer-events-none">
+        <h1 class="text-xl font-bold text-white">Particle Life</h1>
+        <p class="text-xs">Primordial Soup Simulation</p>
+    </div>
+
+    <!-- Controls -->
+    <div class="fixed top-4 right-4 z-10 flex flex-col items-end gap-2">
+        <button onclick="randomizeRules()"
+            class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg backdrop-blur border border-white/10 text-xs font-bold transition">Random
+            Rules</button>
+        <button onclick="reset()"
+            class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg backdrop-blur border border-white/10 text-xs font-bold transition">Restart</button>
+        <a href="./navigation.html"
+            class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg backdrop-blur border border-white/10 text-xs font-bold transition">Exit</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        const atoms = [];
+        const nAtoms = 1000; // Total particles
+
+        // Types/Colors
+        const types = ['red', 'green', 'blue', 'yellow'];
+        const colors = { 'red': '#ef4444', 'green': '#22c55e', 'blue': '#3b82f6', 'yellow': '#eab308' };
+
+        // Rules Matrix (Interaction forces)
+        // rules[a][b] = force of b acting on a
+        // Positive = Attract, Negative = Repel
+        let rules = {};
+
+        function randomRules() {
+            rules = {};
+            types.forEach(a => {
+                rules[a] = {};
+                types.forEach(b => {
+                    // Force between -1 and 1
+                    rules[a][b] = (Math.random() * 2 - 1);
+                });
+            });
+            // console.table(rules);
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+
+        function init() {
+            atoms.length = 0;
+            for (let i = 0; i < nAtoms; i++) {
+                const type = types[Math.floor(Math.random() * types.length)];
+                atoms.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    vx: 0,
+                    vy: 0,
+                    type: type,
+                    color: colors[type]
+                });
+            }
+        }
+
+        function update() {
+            for (let i = 0; i < atoms.length; i++) {
+                let fx = 0;
+                let fy = 0;
+                const a = atoms[i];
+
+                for (let j = 0; j < atoms.length; j++) {
+                    if (i === j) continue;
+                    const b = atoms[j];
+
+                    // Interaction rule
+                    const g = rules[a.type][b.type];
+
+                    let dx = a.x - b.x;
+                    let dy = a.y - b.y;
+
+                    // Wrap around distance (Torus topology)
+                    if (dx > width * 0.5) dx -= width;
+                    if (dx < -width * 0.5) dx += width;
+                    if (dy > height * 0.5) dy -= height;
+                    if (dy < -height * 0.5) dy += height;
+
+                    const d2 = dx * dx + dy * dy;
+
+                    if (d2 > 0 && d2 < 80 * 80) { // Interaction radius 80
+                        const d = Math.sqrt(d2);
+                        const F = g * 1 / d; // Simple inverse distance force modulated by rule
+                        fx += (dx / d) * F;
+                        fy += (dy / d) * F;
+                    }
+                }
+
+                a.vx = (a.vx + fx) * 0.5; // Damping
+                a.vy = (a.vy + fy) * 0.5;
+
+                a.x += a.vx;
+                a.y += a.vy;
+
+                // Wrap screen
+                if (a.x <= 0) a.x += width;
+                if (a.x >= width) a.x -= width;
+                if (a.y <= 0) a.y += height;
+                if (a.y >= height) a.y -= height;
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, width, height);
+
+            for (let i = 0; i < atoms.length; i++) {
+                const a = atoms[i];
+                ctx.fillStyle = a.color;
+                ctx.fillRect(a.x, a.y, 2, 2);
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function randomizeRules() {
+            randomRules();
+            init(); // Reset positions for fresh chaos
+        }
+
+        function reset() {
+            init();
+        }
+
+        // Start
+        resize();
+        randomRules();
+        init();
+        loop();
+
+    </script>
+</body>
+
+</html>

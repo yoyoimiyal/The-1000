@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP 状态码速查</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .code-card {
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .code-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen p-6 text-slate-800">
+
+    <div class="max-w-5xl mx-auto">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-slate-700 flex items-center gap-2">
+                <span class="bg-blue-600 text-white px-2 py-1 rounded text-xs font-mono">404</span> HTTP Codes
+            </h1>
+            <div class="flex gap-4 items-center">
+                <input type="text" id="search" placeholder="搜索 (如 404)"
+                    class="px-3 py-1 border rounded text-sm outline-none focus:border-blue-500" onkeyup="filterCodes()">
+                <a href="./navigation.html" class="text-sm text-slate-400 hover:text-blue-600">退出</a>
+            </div>
+        </header>
+
+        <!-- Categories -->
+        <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
+            <button onclick="filterCat('all')"
+                class="cat-btn px-4 py-1 bg-slate-800 text-white rounded-full text-xs font-bold transition">ALL</button>
+            <button onclick="filterCat('1xx')"
+                class="cat-btn px-4 py-1 bg-white border text-slate-500 rounded-full text-xs font-bold hover:bg-gray-100 transition">1xx
+                Info</button>
+            <button onclick="filterCat('2xx')"
+                class="cat-btn px-4 py-1 bg-white border text-slate-500 rounded-full text-xs font-bold hover:bg-gray-100 transition">2xx
+                Success</button>
+            <button onclick="filterCat('3xx')"
+                class="cat-btn px-4 py-1 bg-white border text-slate-500 rounded-full text-xs font-bold hover:bg-gray-100 transition">3xx
+                Redir</button>
+            <button onclick="filterCat('4xx')"
+                class="cat-btn px-4 py-1 bg-white border text-slate-500 rounded-full text-xs font-bold hover:bg-gray-100 transition">4xx
+                Client</button>
+            <button onclick="filterCat('5xx')"
+                class="cat-btn px-4 py-1 bg-white border text-slate-500 rounded-full text-xs font-bold hover:bg-gray-100 transition">5xx
+                Server</button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="grid">
+            <!-- Cards injected -->
+        </div>
+
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50 backdrop-blur-sm"
+        onclick="closeModal()">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl transform scale-100 transition"
+            onclick="event.stopPropagation()">
+            <div class="flex justify-between items-start mb-4">
+                <span class="px-3 py-1 rounded text-sm font-bold text-white bg-blue-500" id="m-code">200</span>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-800 mb-2" id="m-title">OK</h2>
+            <p class="text-slate-600 leading-relaxed text-sm" id="m-desc">The request has succeeded.</p>
+            <div class="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-400">
+                Category: <span id="m-cat" class="font-bold">Success</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const codes = [
+            { code: 100, title: "Continue", desc: "客户端应继续其请求。" },
+            { code: 101, title: "Switching Protocols", desc: "服务器根据客户端的请求切换协议。" },
+            { code: 200, title: "OK", desc: "请求成功。" },
+            { code: 201, title: "Created", desc: "请求成功并创建了新的资源。" },
+            { code: 202, title: "Accepted", desc: "已接受请求，但尚未处理。" },
+            { code: 204, title: "No Content", desc: "请求成功，但没有返回内容。" },
+            { code: 301, title: "Moved Permanently", desc: "资源已被永久移动到新 URI。" },
+            { code: 302, title: "Found", desc: "资源临时移动。" },
+            { code: 304, title: "Not Modified", desc: "资源未修改，可使用缓存。" },
+            { code: 400, title: "Bad Request", desc: "请求语法错误，服务器无法理解。" },
+            { code: 401, title: "Unauthorized", desc: "请求要求身份验证。" },
+            { code: 403, title: "Forbidden", desc: "服务器拒绝请求（权限不足）。" },
+            { code: 404, title: "Not Found", desc: "服务器找不到请求的资源。" },
+            { code: 405, title: "Method Not Allowed", desc: "请求方法被禁止。" },
+            { code: 429, title: "Too Many Requests", desc: "发送了太多请求。" },
+            { code: 500, title: "Internal Server Error", desc: "服务器内部错误。" },
+            { code: 502, title: "Bad Gateway", desc: "网关错误。" },
+            { code: 503, title: "Service Unavailable", desc: "服务器超载或维护，暂时无法处理请求。" },
+            { code: 504, title: "Gateway Timeout", desc: "网关超时。" }
+        ];
+
+        const grid = document.getElementById('grid');
+        let activeCat = 'all';
+
+        function init() {
+            render(codes);
+        }
+
+        function getColor(code) {
+            if (code < 200) return 'bg-gray-500';
+            if (code < 300) return 'bg-green-500';
+            if (code < 400) return 'bg-blue-500';
+            if (code < 500) return 'bg-yellow-500';
+            return 'bg-red-500';
+        }
+
+        function render(list) {
+            grid.innerHTML = '';
+            list.forEach(item => {
+                const div = document.createElement('div');
+                const color = getColor(item.code);
+                div.className = "code-card bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4";
+                div.onclick = () => showDetail(item);
+
+                div.innerHTML = `
+                    <div class="w-12 h-12 rounded-lg ${color} text-white flex items-center justify-center font-bold text-lg shadow-sm shrink-0">
+                        ${item.code}
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-700">${item.title}</h3>
+                        <p class="text-xs text-slate-400 truncate w-40">${item.desc}</p>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        function filterCat(cat) {
+            activeCat = cat;
+            document.querySelectorAll('.cat-btn').forEach(b => {
+                b.className = "cat-btn px-4 py-1 bg-white border text-slate-500 rounded-full text-xs font-bold hover:bg-gray-100 transition";
+            });
+            event.target.className = "cat-btn px-4 py-1 bg-slate-800 text-white rounded-full text-xs font-bold transition";
+
+            if (cat === 'all') {
+                render(codes);
+            } else {
+                const prefix = cat[0];
+                const filtered = codes.filter(c => c.code.toString().startsWith(prefix));
+                render(filtered);
+            }
+        }
+
+        function filterApps() {
+            const q = document.getElementById('search').value.toLowerCase();
+            const filtered = codes.filter(c =>
+                c.code.toString().includes(q) ||
+                c.title.toLowerCase().includes(q) ||
+                c.desc.toLowerCase().includes(q)
+            );
+            render(filtered);
+        }
+
+        function showDetail(item) {
+            document.getElementById('m-code').innerText = item.code;
+            document.getElementById('m-code').className = `px-3 py-1 rounded text-sm font-bold text-white ${getColor(item.code)}`;
+            document.getElementById('m-title').innerText = item.title;
+            document.getElementById('m-desc').innerText = item.desc;
+
+            let cat = "Unknown";
+            if (item.code < 200) cat = "Informational";
+            else if (item.code < 300) cat = "Success";
+            else if (item.code < 400) cat = "Redirection";
+            else if (item.code < 500) cat = "Client Error";
+            else cat = "Server Error";
+            document.getElementById('m-cat').innerText = cat;
+
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('modal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('modal').classList.remove('flex');
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

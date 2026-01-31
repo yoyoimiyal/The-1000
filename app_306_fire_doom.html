@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doom 火焰模拟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            image-rendering: pixelated;
+            width: 100%;
+            max-width: 600px;
+            aspect-ratio: 4/3;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-4 text-white">
+
+    <div class="mb-6 text-center">
+        <h1 class="text-3xl font-bold text-orange-500 tracking-widest uppercase">Doom Fire</h1>
+        <p class="text-xs text-gray-500">Classic Algorithm</p>
+    </div>
+
+    <canvas id="fireCanvas" width="320" height="240"
+        class="border-4 border-gray-800 rounded bg-black shadow-2xl"></canvas>
+
+    <div class="mt-8 flex gap-4">
+        <button onclick="toggleFire()" id="btn-toggle"
+            class="bg-orange-700 hover:bg-orange-600 px-6 py-2 rounded font-bold transition">Extinguish</button>
+        <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-gray-500 uppercase">Wind</span>
+            <input type="range" id="wind" min="0" max="3" value="1"
+                class="w-20 h-1 bg-gray-700 rounded appearance-none cursor-pointer accent-orange-500">
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="./navigation.html" class="text-xs text-gray-600 hover:text-white">Exit</a>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('fireCanvas');
+        const ctx = canvas.getContext('2d');
+        const btn = document.getElementById('btn-toggle');
+        const windInput = document.getElementById('wind');
+
+        const width = 320;
+        const height = 240;
+        // Palette from black to white (37 colors)
+        const palette = [
+            { r: 7, g: 7, b: 7 }, { r: 31, g: 7, b: 7 }, { r: 47, g: 15, b: 7 }, { r: 71, g: 15, b: 7 }, { r: 87, g: 23, b: 7 }, { r: 103, g: 31, b: 7 }, { r: 119, g: 31, b: 7 }, { r: 143, g: 39, b: 7 },
+            { r: 159, g: 47, b: 7 }, { r: 175, g: 63, b: 7 }, { r: 191, g: 71, b: 7 }, { r: 199, g: 71, b: 7 }, { r: 223, g: 79, b: 7 }, { r: 223, g: 87, b: 7 }, { r: 223, g: 87, b: 7 }, { r: 215, g: 95, b: 7 },
+            { r: 215, g: 95, b: 7 }, { r: 215, g: 103, b: 15 }, { r: 207, g: 111, b: 15 }, { r: 207, g: 119, b: 15 }, { r: 207, g: 127, b: 15 }, { r: 207, g: 135, b: 23 }, { r: 199, g: 135, b: 23 }, { r: 199, g: 143, b: 23 },
+            { r: 199, g: 151, b: 31 }, { r: 191, g: 159, b: 31 }, { r: 191, g: 159, b: 31 }, { r: 191, g: 167, b: 39 }, { r: 191, g: 167, b: 39 }, { r: 191, g: 175, b: 47 }, { r: 183, g: 175, b: 47 }, { r: 183, g: 183, b: 47 },
+            { r: 183, g: 183, b: 55 }, { r: 207, g: 207, b: 111 }, { r: 223, g: 223, b: 159 }, { r: 239, g: 239, b: 199 }, { r: 255, g: 255, b: 255 }
+        ];
+
+        // Fire pixel array (0-36 index)
+        const firePixels = new Array(width * height).fill(0);
+        let isBurning = true;
+
+        function start() {
+            // Set bottom line to max intensity (36)
+            for (let x = 0; x < width; x++) {
+                firePixels[(height - 1) * width + x] = 36;
+            }
+        }
+
+        function stop() {
+            // Set bottom line to 0
+            for (let x = 0; x < width; x++) {
+                firePixels[(height - 1) * width + x] = 0;
+            }
+        }
+
+        function toggleFire() {
+            isBurning = !isBurning;
+            if (isBurning) {
+                start();
+                btn.innerText = "Extinguish";
+                btn.className = "bg-orange-700 hover:bg-orange-600 px-6 py-2 rounded font-bold transition";
+            } else {
+                stop();
+                btn.innerText = "Ignite";
+                btn.className = "bg-green-700 hover:bg-green-600 px-6 py-2 rounded font-bold transition";
+            }
+        }
+
+        function calculatePropagation() {
+            const wind = parseInt(windInput.value);
+
+            for (let x = 0; x < width; x++) {
+                for (let y = 1; y < height; y++) {
+                    const srcIndex = y * width + x; // Current pixel
+                    const pixelValue = firePixels[srcIndex];
+
+                    if (pixelValue === 0) {
+                        firePixels[srcIndex - width] = 0;
+                    } else {
+                        // Spread logic: src - rand(0..3)
+                        const decay = Math.floor(Math.random() * 3);
+                        const dstValue = pixelValue - (decay & 1); // Decay slightly
+
+                        // Propagate UP and slightly SIDEWAYS based on wind
+                        // Default dest: srcIndex - width (pixel directly above)
+                        const dstIndex = srcIndex - width - (Math.random() < 0.5 ? 0 : wind);
+
+                        if (dstIndex >= 0 && dstIndex < firePixels.length) {
+                            firePixels[dstIndex] = Math.max(0, dstValue);
+                        }
+                    }
+                }
+            }
+        }
+
+        function render() {
+            const imgData = ctx.createImageData(width, height);
+            const data = imgData.data;
+
+            for (let i = 0; i < firePixels.length; i++) {
+                const intensity = firePixels[i];
+                const color = palette[intensity]; // {r,g,b}
+                const idx = i * 4;
+                data[idx] = color.r;
+                data[idx + 1] = color.g;
+                data[idx + 2] = color.b;
+                data[idx + 3] = 255; // Alpha
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        function loop() {
+            calculatePropagation();
+            render();
+            requestAnimationFrame(loop);
+        }
+
+        start();
+        loop();
+    </script>
+</body>
+
+</html>

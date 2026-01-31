@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>傅里叶画圆 (Epicycles)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0f172a;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* Custom Scrollbar for the control panel */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="fixed top-4 left-4 text-white z-10 pointer-events-none opacity-80">
+        <h1 class="text-xl font-bold">Fourier Series</h1>
+        <p class="text-xs text-slate-400">Square Wave Approximation</p>
+    </div>
+
+    <div
+        class="fixed top-4 right-4 w-64 max-h-[90vh] bg-slate-800/90 backdrop-blur rounded-xl border border-slate-700 flex flex-col z-20">
+        <div class="p-3 border-b border-slate-700">
+            <h2 class="text-xs font-bold text-white uppercase tracking-wider">Radius Controls</h2>
+        </div>
+        <div id="radius-controls" class="overflow-y-auto p-3 flex flex-col gap-3">
+        </div>
+    </div>
+
+    <div
+        class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800/90 backdrop-blur p-4 rounded-xl border border-slate-700 flex gap-4 items-center z-10">
+        <div class="flex flex-col w-32">
+            <label class="text-[10px] uppercase font-bold text-slate-400 mb-1">Iterations (N)</label>
+            <input type="range" id="n-slider" min="1" max="50" value="5"
+                class="w-full h-1 bg-slate-600 rounded appearance-none cursor-pointer accent-cyan-400"
+                oninput="updateN(this.value)">
+        </div>
+        <span id="n-val" class="text-white font-mono font-bold w-6">5</span>
+        <div class="w-px h-8 bg-slate-600"></div>
+        <a href="./navigation.html" class="text-xs text-slate-400 hover:text-white font-bold uppercase">Exit</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const nVal = document.getElementById('n-val');
+        const controlsContainer = document.getElementById('radius-controls');
+
+        let width, height, cx, cy;
+        let time = 0;
+        let wave = [];
+        let N = 5;
+        let radii = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            cx = width / 3;
+            cy = height / 2;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function initRadii() {
+            for (let i = 0; i < 50; i++) {
+                if (radii[i] === undefined) {
+                    let n = i * 2 + 1;
+                    radii[i] = (100 * (4 / (n * Math.PI)));
+                }
+            }
+        }
+
+        function updateControls() {
+            controlsContainer.innerHTML = '';
+            for (let i = 0; i < N; i++) {
+                let n = i * 2 + 1;
+
+                const div = document.createElement('div');
+                div.className = "flex flex-col";
+
+                const header = document.createElement('div');
+                header.className = "flex justify-between text-[10px] text-slate-400 mb-1";
+                header.innerHTML = `<span>Circle ${i + 1} (n=${n})</span><span id="lbl-${i}">${radii[i].toFixed(1)}</span>`;
+
+                const input = document.createElement('input');
+                input.type = "range";
+                input.min = "0";
+                input.max = "200";
+                input.step = "1";
+                input.value = radii[i];
+                input.className = "w-full h-1 bg-slate-600 rounded appearance-none cursor-pointer accent-cyan-400";
+
+                input.oninput = (e) => {
+                    const val = parseFloat(e.target.value);
+                    radii[i] = val;
+                    document.getElementById(`lbl-${i}`).innerText = val.toFixed(1);
+                };
+
+                div.appendChild(header);
+                div.appendChild(input);
+                controlsContainer.appendChild(div);
+            }
+        }
+
+        function updateN(val) {
+            N = parseInt(val);
+            nVal.innerText = N;
+            wave = [];
+            initRadii();
+            updateControls();
+        }
+
+        function draw() {
+            ctx.fillStyle = "#0f172a";
+            ctx.fillRect(0, 0, width, height);
+
+            let x = cx;
+            let y = cy;
+
+            for (let i = 0; i < N; i++) {
+                let prevX = x;
+                let prevY = y;
+
+                let n = i * 2 + 1;
+                let radius = radii[i];
+
+                x += radius * Math.cos(n * time);
+                y += radius * Math.sin(n * time);
+
+                ctx.beginPath();
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+                ctx.lineWidth = 1;
+                ctx.arc(prevX, prevY, radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+                ctx.moveTo(prevX, prevY);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+
+                ctx.fillStyle = "#fff";
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            wave.unshift(y);
+            if (wave.length > 500) wave.pop();
+
+            const waveStartX = cx + 200;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(waveStartX, wave[0]);
+            ctx.strokeStyle = "rgba(56, 189, 248, 0.5)";
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.beginPath();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "#38bdf8";
+
+            for (let i = 0; i < wave.length; i++) {
+                ctx.lineTo(waveStartX + i, wave[i]);
+            }
+            ctx.stroke();
+
+            time += 0.03;
+            requestAnimationFrame(draw);
+        }
+
+        initRadii();
+        updateControls();
+        draw();
+    </script>
+</body>
+
+</html>

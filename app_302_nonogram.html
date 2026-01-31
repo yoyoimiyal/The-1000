@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数织 (Nonogram)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .game-container {
+            display: inline-grid;
+            gap: 2px;
+            background-color: #94a3b8;
+            padding: 2px;
+        }
+
+        .cell {
+            width: 30px;
+            height: 30px;
+            background-color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            user-select: none;
+        }
+
+        .cell.filled {
+            background-color: #1e293b;
+        }
+
+        .cell.crossed {
+            color: #ef4444;
+        }
+
+        .hint {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            font-family: monospace;
+            font-size: 10px;
+            color: #475569;
+            padding: 2px;
+            background-color: #f1f5f9;
+        }
+
+        .hint.col {
+            flex-direction: column;
+            justify-content: flex-end;
+            width: 30px;
+        }
+
+        .hint.row {
+            flex-direction: row;
+            height: 30px;
+            padding-right: 6px;
+            gap: 4px;
+        }
+    </style>
+</head>
+
+<body class="bg-stone-100 min-h-screen flex flex-col items-center justify-center p-6 text-stone-800">
+
+    <div class="mb-8 text-center">
+        <h1 class="text-2xl font-bold tracking-widest text-stone-700">NONOGRAM</h1>
+        <p class="text-xs text-stone-400">Left Click: Fill / Right Click: X</p>
+    </div>
+
+    <div id="game-wrapper" class="bg-white p-6 rounded-xl shadow-xl border border-stone-200">
+        <!-- Grid injected here -->
+    </div>
+
+    <div class="mt-8 flex gap-4">
+        <button onclick="check()"
+            class="px-6 py-2 bg-stone-800 text-white font-bold rounded shadow hover:bg-stone-700">Check</button>
+        <button onclick="initGame()"
+            class="px-6 py-2 border border-stone-300 text-stone-600 font-bold rounded hover:bg-stone-50">New</button>
+    </div>
+
+    <a href="./navigation.html" class="mt-8 text-xs text-stone-400 hover:text-stone-600">Exit</a>
+
+    <script>
+        const wrapper = document.getElementById('game-wrapper');
+        const size = 10;
+        let solution = [];
+        let state = []; // 0:empty, 1:filled, 2:crossed
+
+        // Generate Random Puzzle
+        function initGame() {
+            solution = [];
+            state = [];
+
+            // Randomly fill solution
+            for (let i = 0; i < size; i++) {
+                let row = [];
+                let stateRow = [];
+                for (let j = 0; j < size; j++) {
+                    row.push(Math.random() > 0.4 ? 1 : 0);
+                    stateRow.push(0);
+                }
+                solution.push(row);
+                state.push(stateRow);
+            }
+            render();
+        }
+
+        function getHints(arr) {
+            let hints = [];
+            let count = 0;
+            for (let x of arr) {
+                if (x === 1) count++;
+                else if (count > 0) {
+                    hints.push(count);
+                    count = 0;
+                }
+            }
+            if (count > 0) hints.push(count);
+            if (hints.length === 0) hints.push(0);
+            return hints;
+        }
+
+        function render() {
+            wrapper.innerHTML = '';
+
+            // Calculate hints
+            const rowHints = solution.map(row => getHints(row));
+            const colHints = [];
+            for (let c = 0; c < size; c++) {
+                let col = [];
+                for (let r = 0; r < size; r++) col.push(solution[r][c]);
+                colHints.push(getHints(col));
+            }
+
+            // Grid Layout: (size+1) x (size+1) grid
+            // Top-Left: Empty
+            // Top Row: Col hints
+            // Left Col: Row hints
+
+            const table = document.createElement('div');
+            table.style.display = 'grid';
+            // First col width auto for row hints, rest 30px
+            table.style.gridTemplateColumns = `auto repeat(${size}, 30px)`;
+
+            // Corner
+            table.appendChild(document.createElement('div'));
+
+            // Top Hints
+            colHints.forEach(h => {
+                const div = document.createElement('div');
+                div.className = 'hint col';
+                div.innerHTML = h.join('<br>');
+                table.appendChild(div);
+            });
+
+            // Rows
+            for (let r = 0; r < size; r++) {
+                // Row Hint
+                const rhDiv = document.createElement('div');
+                rhDiv.className = 'hint row';
+                rhDiv.innerHTML = rowHints[r].join(' ');
+                table.appendChild(rhDiv);
+
+                // Cells
+                for (let c = 0; c < size; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.r = r;
+                    cell.dataset.c = c;
+                    cell.onmousedown = (e) => handleClick(e, r, c, cell);
+                    cell.oncontextmenu = (e) => e.preventDefault();
+                    table.appendChild(cell);
+                }
+            }
+
+            wrapper.appendChild(table);
+        }
+
+        function handleClick(e, r, c, el) {
+            e.preventDefault();
+            if (e.button === 0) { // Left: Fill
+                if (state[r][c] === 1) {
+                    state[r][c] = 0;
+                    el.classList.remove('filled');
+                } else {
+                    state[r][c] = 1;
+                    el.classList.add('filled');
+                    el.classList.remove('crossed');
+                    el.innerText = '';
+                }
+            } else if (e.button === 2) { // Right: Cross
+                if (state[r][c] === 2) {
+                    state[r][c] = 0;
+                    el.classList.remove('crossed');
+                    el.innerText = '';
+                } else {
+                    state[r][c] = 2;
+                    el.classList.add('crossed');
+                    el.classList.remove('filled');
+                    el.innerText = '×';
+                }
+            }
+        }
+
+        function check() {
+            let correct = true;
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    // Correct if: filled matches solution. (Crosses don't matter, just not filled)
+                    const isFilled = state[r][c] === 1;
+                    const shouldBe = solution[r][c] === 1;
+                    if (isFilled !== shouldBe) correct = false;
+                }
+            }
+            if (correct) alert("🎉 Success! You solved the puzzle.");
+            else alert("❌ Not quite right yet.");
+        }
+
+        initGame();
+    </script>
+</body>
+
+</html>

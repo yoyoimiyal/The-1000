@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>汉字转拼音</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- pinyin-pro library -->
+    <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.13.2/dist/index.js"></script>
+    <style>
+        .pinyin-ruby {
+            display: inline-block;
+            text-align: center;
+            margin: 0 2px;
+        }
+
+        .pinyin-top {
+            font-size: 0.75rem;
+            color: #64748b;
+            display: block;
+            line-height: 1;
+            margin-bottom: 2px;
+        }
+
+        .hanzi-bottom {
+            font-size: 1.25rem;
+            color: #1e293b;
+            display: block;
+            line-height: 1;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-3xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-slate-700 flex items-center gap-2">
+                <span class="bg-red-100 text-red-600 px-2 py-1 rounded text-xs">拼</span> Pinyin Converter
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-red-600">退出</a>
+        </header>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+            <textarea id="input"
+                class="w-full h-32 p-4 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-red-400 text-lg resize-none mb-4"
+                placeholder="在此输入中文..." oninput="convert()">你好世界，这里是汉字转拼音工具。</textarea>
+
+            <div class="flex flex-wrap gap-4 items-center text-sm text-slate-600">
+                <label class="flex items-center gap-1 cursor-pointer">
+                    <input type="radio" name="mode" value="normal" checked onchange="convert()">
+                    <span>普通 (ni hao)</span>
+                </label>
+                <label class="flex items-center gap-1 cursor-pointer">
+                    <input type="radio" name="mode" value="tone" onchange="convert()">
+                    <span>声调 (nǐ hǎo)</span>
+                </label>
+                <label class="flex items-center gap-1 cursor-pointer">
+                    <input type="radio" name="mode" value="ruby" onchange="convert()">
+                    <span>注音模式 (Ruby)</span>
+                </label>
+
+                <div class="ml-auto">
+                    <button onclick="copyResult()" class="text-xs font-bold text-blue-500 hover:underline">复制结果</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative min-h-[10rem]">
+            <div id="output" class="text-lg leading-loose text-slate-700 font-medium whitespace-pre-wrap"></div>
+        </div>
+
+    </div>
+
+    <script>
+        const { pinyin } = pinyinPro;
+        const input = document.getElementById('input');
+        const output = document.getElementById('output');
+
+        function convert() {
+            const text = input.value;
+            if (!text) {
+                output.innerHTML = '';
+                return;
+            }
+
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+
+            if (mode === 'ruby') {
+                // Custom Ruby implementation
+                let html = '';
+                // Split by non-chinese regex is complex, let's iterate chars
+                // Simple approach: convert whole string to array of pinyin, assume 1-1 mapping for simple chars
+                // Better: Use pinyin-pro 'array' type and reconstruct
+
+                const tokens = pinyin(text, { type: 'all', toneType: 'symbol', nonZh: 'consecutive' });
+
+                tokens.forEach(token => {
+                    if (token.isZh) {
+                        html += `<div class="pinyin-ruby"><span class="pinyin-top">${token.pinyin}</span><span class="hanzi-bottom">${token.origin}</span></div>`;
+                    } else {
+                        // Non-Chinese text/punctuation, just append
+                        // Convert newlines to <br>
+                        const safeText = token.origin.replace(/\n/g, '<br>');
+                        html += `<span>${safeText}</span>`;
+                    }
+                });
+
+                output.innerHTML = html;
+            } else {
+                const toneType = mode === 'tone' ? 'symbol' : 'none';
+                const res = pinyin(text, { toneType: toneType, type: 'string' });
+                output.innerText = res;
+            }
+        }
+
+        function copyResult() {
+            // For ruby mode, we copy text content (just pinyin usually or mixed?)
+            // Copying HTML ruby is tricky. Let's just copy the plain pinyin string for simplicity
+            // or if ruby, maybe copy text? 
+            // Let's copy innerText which browsers usually handle ok.
+
+            const range = document.createRange();
+            range.selectNode(output);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            document.execCommand('copy');
+            alert("已复制!");
+        }
+
+        // Init
+        convert();
+    </script>
+</body>
+
+</html>

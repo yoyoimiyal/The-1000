@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>软体果冻模拟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #fce7f3;
+            overflow: hidden;
+            cursor: grab;
+        }
+
+        body:active {
+            cursor: grabbing;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="fixed top-4 left-4 text-pink-900 pointer-events-none">
+        <h1 class="font-bold text-xl">Jelly Blob</h1>
+        <p class="text-xs opacity-60">Physics Simulation</p>
+    </div>
+
+    <div class="fixed bottom-4 text-center w-full pointer-events-none">
+        <a href="./navigation.html"
+            class="pointer-events-auto bg-white/50 hover:bg-white text-pink-900 px-4 py-2 rounded-full text-xs font-bold transition">Exit</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+
+        // Physics Params
+        const radius = 100;
+        const numPoints = 12;
+        const stiffness = 0.1;
+        const damping = 0.9; // Bounciness retention
+        const mass = 1;
+
+        let centerX, centerY;
+        let points = [];
+
+        // Mouse interaction
+        let mouse = { x: 0, y: 0, isDown: false };
+        let draggedPoint = null;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            centerX = width / 2;
+            centerY = height / 2;
+            initBlob();
+        }
+        window.addEventListener('resize', resize);
+
+        class Point {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.ox = x; // Original/Target relative pos
+                this.oy = y;
+                this.vx = 0;
+                this.vy = 0;
+            }
+        }
+
+        function initBlob() {
+            points = [];
+            for (let i = 0; i < numPoints; i++) {
+                const angle = (i / numPoints) * Math.PI * 2;
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                points.push(new Point(x, y));
+            }
+        }
+
+        function update() {
+            // Apply forces
+            // Goal: Return to original circle shape relative to center
+            // Also center moves towards mouse if dragged
+
+            let targetCX = centerX;
+            let targetCY = centerY;
+
+            if (mouse.isDown) {
+                // Pull center towards mouse with spring
+                const dx = mouse.x - centerX;
+                const dy = mouse.y - centerY;
+                centerX += dx * 0.1;
+                centerY += dy * 0.1;
+            } else {
+                // Return to middle
+                // centerX += (width/2 - centerX) * 0.05;
+                // centerY += (height/2 - centerY) * 0.05;
+                // Gravity?
+                if (centerY < height - radius - 20) {
+                    centerY += 5; // Fall
+                } else {
+                    // Bounce floor
+                    if (centerY > height - radius) centerY = height - radius;
+                }
+            }
+
+            for (let i = 0; i < numPoints; i++) {
+                const p = points[i];
+
+                // Target position in world space
+                const tx = centerX + p.ox;
+                const ty = centerY + p.oy;
+
+                // Spring force to target
+                const ax = (tx - p.x) * stiffness;
+                const ay = (ty - p.y) * stiffness;
+
+                p.vx += ax;
+                p.vy += ay;
+
+                // Friction
+                p.vx *= damping;
+                p.vy *= damping;
+
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Floor collision for points
+                if (p.y > height) {
+                    p.y = height;
+                    p.vy *= -0.5;
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw Blob
+            ctx.fillStyle = '#f472b6'; // pink-400
+            ctx.beginPath();
+
+            // Smooth curve through points
+            // Start mid way between last and first
+            const first = points[0];
+            const last = points[numPoints - 1];
+            const midX = (first.x + last.x) / 2;
+            const midY = (first.y + last.y) / 2;
+
+            ctx.moveTo(midX, midY);
+
+            for (let i = 0; i < numPoints; i++) {
+                const p1 = points[i];
+                const p2 = points[(i + 1) % numPoints];
+                const midNextX = (p1.x + p2.x) / 2;
+                const midNextY = (p1.y + p2.y) / 2;
+
+                ctx.quadraticCurveTo(p1.x, p1.y, midNextX, midNextY);
+            }
+
+            ctx.closePath();
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(centerX - 30, centerY - 20, 15, 0, Math.PI * 2);
+            ctx.arc(centerX + 30, centerY - 20, 15, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            // Look at mouse
+            const lookX = (mouse.x - centerX) * 0.05;
+            const lookY = (mouse.y - centerY) * 0.05;
+
+            ctx.arc(centerX - 30 + lookX, centerY - 20 + lookY, 6, 0, Math.PI * 2);
+            ctx.arc(centerX + 30 + lookX, centerY - 20 + lookY, 6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // Input
+        window.addEventListener('mousedown', e => { mouse.isDown = true; mouse.x = e.clientX; mouse.y = e.clientY; });
+        window.addEventListener('mouseup', () => mouse.isDown = false);
+        window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+
+        window.addEventListener('touchstart', e => { mouse.isDown = true; mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; e.preventDefault(); });
+        window.addEventListener('touchend', () => mouse.isDown = false);
+        window.addEventListener('touchmove', e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; });
+
+        resize();
+        loop();
+    </script>
+</body>
+
+</html>

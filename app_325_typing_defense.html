@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星际打字战</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .enemy {
+            transition: top 0.1s linear;
+            text-shadow: 0 0 5px red;
+        }
+
+        .laser {
+            height: 100%;
+            width: 2px;
+            background: #00ff00;
+            position: absolute;
+            bottom: 50px;
+            opacity: 0;
+            transition: opacity 0.1s;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        .ship {
+            transition: left 0.1s;
+        }
+    </style>
+</head>
+
+<body class="bg-black min-h-screen overflow-hidden font-mono text-white select-none">
+
+    <!-- Header -->
+    <div class="absolute top-4 left-4 z-20">
+        <h1 class="text-xl font-bold text-green-400 uppercase tracking-widest">Type Defense</h1>
+        <p class="text-xs text-gray-500">Score: <span id="score" class="text-white font-bold">0</span></p>
+    </div>
+
+    <!-- Start Overlay -->
+    <div id="start-screen" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-30">
+        <h2 class="text-4xl font-bold mb-4 text-green-500">READY?</h2>
+        <p class="text-gray-400 mb-8 text-sm">输入下落的单词来射击</p>
+        <button onclick="startGame()"
+            class="px-8 py-3 border border-green-500 text-green-500 font-bold rounded hover:bg-green-500 hover:text-black transition">START
+            MISSION</button>
+    </div>
+
+    <!-- Game Area -->
+    <div id="game-area" class="relative w-full h-screen">
+        <!-- Ship -->
+        <div id="ship" class="ship absolute bottom-4 left-1/2 -translate-x-1/2 text-4xl transform -rotate-90">🚀</div>
+
+        <!-- Laser Beam -->
+        <div id="laser" class="laser left-1/2 -translate-x-1/2"></div>
+    </div>
+
+    <!-- Input (Hidden focus) -->
+    <input type="text" id="input" class="opacity-0 absolute bottom-0" autocomplete="off" autofocus>
+
+    <!-- Typing Display -->
+    <div class="absolute bottom-20 w-full text-center z-20 pointer-events-none">
+        <span id="typing-display"
+            class="text-4xl font-bold text-green-400 bg-black/50 px-4 py-2 rounded border border-green-900 shadow-lg min-h-[3rem] inline-block"></span>
+    </div>
+
+    <div class="absolute bottom-4 right-4 z-20">
+        <a href="./navigation.html"
+            class="text-xs text-gray-600 hover:text-white border border-gray-800 px-2 py-1 rounded">EXIT</a>
+    </div>
+
+    <script>
+        const words = ["star", "moon", "sun", "mars", "earth", "pluto", "orbit", "space", "alien", "laser", "ship", "warp", "void", "black", "hole", "comet", "dust", "gas", "nebula", "nova", "pulsar", "quasar", "ring", "solar", "titan", "ufo", "venus", "zero", "gravity", "rocket", "pilot", "base", "core", "data", "echo", "flux", "grid", "hull", "ion", "jump", "kill", "life", "mode", "nano", "omega", "path", "zone"];
+
+        const gameArea = document.getElementById('game-area');
+        const ship = document.getElementById('ship');
+        const laser = document.getElementById('laser');
+        const input = document.getElementById('input');
+        const display = document.getElementById('typing-display');
+        const scoreEl = document.getElementById('score');
+        const startScreen = document.getElementById('start-screen');
+
+        let enemies = []; // { el, word, x, y, speed }
+        let score = 0;
+        let isPlaying = false;
+        let spawnRate = 2000;
+        let speedMult = 1;
+        let gameLoopId;
+        let spawnId;
+
+        function startGame() {
+            score = 0;
+            scoreEl.innerText = 0;
+            speedMult = 1;
+            spawnRate = 2000;
+            enemies.forEach(e => e.el.remove());
+            enemies = [];
+
+            startScreen.classList.add('hidden');
+            isPlaying = true;
+            input.value = '';
+            display.innerText = '';
+            input.focus();
+
+            spawnEnemy();
+            gameLoop();
+        }
+
+        function spawnEnemy() {
+            if (!isPlaying) return;
+
+            const word = words[Math.floor(Math.random() * words.length)];
+            const el = document.createElement('div');
+            el.className = 'enemy absolute text-red-500 font-bold font-mono text-lg uppercase top-0';
+            el.innerText = word;
+
+            const x = Math.random() * (window.innerWidth - 100) + 50;
+            el.style.left = x + 'px';
+
+            gameArea.appendChild(el);
+
+            enemies.push({
+                el: el,
+                word: word,
+                x: x,
+                y: -30,
+                speed: (Math.random() * 1 + 0.5) * speedMult
+            });
+
+            // Difficulty up
+            if (spawnRate > 500) spawnRate -= 50;
+            speedMult += 0.05;
+
+            spawnId = setTimeout(spawnEnemy, spawnRate);
+        }
+
+        function gameLoop() {
+            if (!isPlaying) return;
+
+            const height = window.innerHeight;
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let e = enemies[i];
+                e.y += e.speed;
+                e.el.style.top = e.y + 'px';
+
+                if (e.y > height - 100) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function fireLaser(targetX) {
+            ship.style.left = targetX + 'px';
+            laser.style.left = (targetX + 15) + 'px'; // Center of ship approx
+
+            laser.style.opacity = '1';
+            setTimeout(() => laser.style.opacity = '0', 100);
+        }
+
+        input.addEventListener('input', () => {
+            const val = input.value.toLowerCase().trim();
+            display.innerText = val.toUpperCase();
+
+            // Check matches
+            const matchIndex = enemies.findIndex(e => e.word === val);
+
+            if (matchIndex !== -1) {
+                const enemy = enemies[matchIndex];
+
+                // Fire visual
+                fireLaser(enemy.x);
+
+                // Remove
+                enemy.el.remove();
+                enemies.splice(matchIndex, 1);
+
+                score += 10;
+                scoreEl.innerText = score;
+                input.value = '';
+                display.innerText = '';
+
+                // Sound effect? (Optional)
+            }
+        });
+
+        // Keep focus
+        document.body.addEventListener('click', () => {
+            if (isPlaying) input.focus();
+        });
+
+        function gameOver() {
+            isPlaying = false;
+            clearTimeout(spawnId);
+            startScreen.innerHTML = `
+                <h2 class="text-4xl font-bold mb-4 text-red-500">GAME OVER</h2>
+                <p class="text-gray-400 mb-8">Final Score: ${score}</p>
+                <button onclick="startGame()" class="px-8 py-3 border border-white text-white font-bold rounded hover:bg-white hover:text-black transition">RETRY</button>
+            `;
+            startScreen.classList.remove('hidden');
+        }
+    </script>
+</body>
+
+</html>
