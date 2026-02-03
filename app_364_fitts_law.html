@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitts 定律测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .target {
+            position: absolute;
+            border-radius: 50%;
+            cursor: crosshair;
+            transition: background 0.1s;
+        }
+
+        .target:active {
+            transform: scale(0.95);
+        }
+
+        .target.blue {
+            background-color: #3b82f6;
+        }
+
+        .target.red {
+            background-color: #ef4444;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 h-screen w-screen overflow-hidden flex flex-col select-none">
+
+    <div class="absolute top-4 left-4 z-20 pointer-events-none">
+        <h1 class="text-xl font-bold text-slate-800">Fitts's Law</h1>
+        <p class="text-xs text-slate-500">ID = log2(2D/W)</p>
+        <p class="text-xs font-mono mt-2" id="stats">Targets: 0 | Avg Time: 0ms</p>
+    </div>
+
+    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-4 pointer-events-auto">
+        <button onclick="startGame()" id="start-btn"
+            class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-full shadow font-bold text-sm">Start
+            Test</button>
+        <a href="./navigation.html"
+            class="bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 px-6 py-2 rounded-full font-bold text-sm">Exit</a>
+    </div>
+
+    <!-- Play Area -->
+    <div id="play-area" class="w-full h-full relative cursor-crosshair">
+        <!-- Target injected -->
+    </div>
+
+    <script>
+        const area = document.getElementById('play-area');
+        const stats = document.getElementById('stats');
+        const startBtn = document.getElementById('start-btn');
+
+        let count = 0;
+        let times = [];
+        let lastTime = 0;
+        let isPlaying = false;
+
+        // Fitts Params
+        // We vary Distance (D) and Width (W)
+        let currentTarget = null;
+
+        function startGame() {
+            count = 0;
+            times = [];
+            isPlaying = true;
+            startBtn.classList.add('hidden');
+            nextTarget();
+        }
+
+        function nextTarget() {
+            if (currentTarget) currentTarget.remove();
+
+            // Random W (Size): 20px to 100px
+            const W = Math.random() * 80 + 20;
+
+            // Random Position
+            // Padding 50px
+            const maxX = window.innerWidth - W - 50;
+            const maxY = window.innerHeight - W - 50;
+
+            const x = Math.random() * maxX + 25;
+            const y = Math.random() * maxY + 25;
+
+            const el = document.createElement('div');
+            el.className = 'target ' + (count % 2 === 0 ? 'blue' : 'red');
+            el.style.width = W + 'px';
+            el.style.height = W + 'px';
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+
+            el.onmousedown = hit;
+
+            area.appendChild(el);
+            currentTarget = el;
+
+            lastTime = Date.now();
+        }
+
+        function hit() {
+            if (!isPlaying) return;
+
+            const now = Date.now();
+            const time = now - lastTime;
+            times.push(time);
+            count++;
+
+            const avg = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
+            stats.innerText = `Targets: ${count} | Avg Time: ${avg}ms`;
+
+            if (count >= 20) {
+                gameOver(avg);
+            } else {
+                nextTarget();
+            }
+        }
+
+        function gameOver(avg) {
+            isPlaying = false;
+            currentTarget.remove();
+            currentTarget = null;
+
+            startBtn.classList.remove('hidden');
+            startBtn.innerText = "Restart";
+
+            alert(`Test Complete!\nAverage Time: ${avg}ms\nTargets: ${count}`);
+        }
+    </script>
+</body>
+
+</html>

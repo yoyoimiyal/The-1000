@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>虚拟电子鱼缸</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0f172a;
+            cursor: crosshair;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            pointer-events: none;
+            mix-blend-mode: difference;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="ui">
+        <h1 class="text-2xl font-bold">Virtual Aquarium</h1>
+        <p class="text-xs opacity-70">Click to feed/scare</p>
+    </div>
+
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex gap-4 pointer-events-none">
+        <button onclick="reset()"
+            class="pointer-events-auto bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full backdrop-blur border border-white/20 text-xs font-bold transition">Reset</button>
+        <a href="./navigation.html"
+            class="pointer-events-auto bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full backdrop-blur border border-white/20 text-xs font-bold transition">Exit</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let fish = [];
+        const numFish = 50;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Fish {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = Math.random() * 2 - 1;
+                this.vy = Math.random() * 2 - 1;
+                this.color = `hsl(${Math.random() * 60 + 180}, 70%, 60%)`; // Blue/Cyan/Green range
+                this.size = Math.random() * 3 + 2;
+                this.speed = Math.random() * 2 + 1;
+            }
+
+            update() {
+                // Boids-like behavior (simplified)
+
+                // Keep within bounds (soft turn)
+                const margin = 100;
+                if (this.x < margin) this.vx += 0.05;
+                if (this.x > width - margin) this.vx -= 0.05;
+                if (this.y < margin) this.vy += 0.05;
+                if (this.y > height - margin) this.vy -= 0.05;
+
+                // Mouse interaction
+                if (mouse.down) {
+                    const dx = this.x - mouse.x;
+                    const dy = this.y - mouse.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 150) {
+                        this.vx += (dx / dist) * 0.5; // Flee
+                        this.vy += (dy / dist) * 0.5;
+                    }
+                }
+
+                // Speed limit
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (speed > this.speed) {
+                    this.vx = (this.vx / speed) * this.speed;
+                    this.vy = (this.vy / speed) * this.speed;
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+
+            draw() {
+                const angle = Math.atan2(this.vy, this.vx);
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(angle);
+
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                // Draw Fish shape
+                ctx.moveTo(10 * this.size, 0);
+                ctx.lineTo(-5 * this.size, 5 * this.size);
+                ctx.lineTo(-5 * this.size, -5 * this.size);
+                ctx.fill();
+
+                // Tail
+                ctx.beginPath();
+                ctx.moveTo(-5 * this.size, 0);
+                ctx.lineTo(-10 * this.size, 5 * this.size);
+                ctx.lineTo(-10 * this.size, -5 * this.size);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        const mouse = { x: 0, y: 0, down: false };
+
+        window.addEventListener('mousemove', e => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+        window.addEventListener('mousedown', () => mouse.down = true);
+        window.addEventListener('mouseup', () => mouse.down = false);
+        window.addEventListener('touchstart', e => {
+            mouse.x = e.touches[0].clientX;
+            mouse.y = e.touches[0].clientY;
+            mouse.down = true;
+        });
+        window.addEventListener('touchend', () => mouse.down = false);
+
+        function init() {
+            fish = [];
+            for (let i = 0; i < numFish; i++) fish.push(new Fish());
+        }
+
+        function loop() {
+            // Deep blue gradient background
+            const grad = ctx.createLinearGradient(0, 0, 0, height);
+            grad.addColorStop(0, '#0f172a');
+            grad.addColorStop(1, '#1e3a8a');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, width, height);
+
+            // Bubbles? Maybe later.
+
+            fish.forEach(f => {
+                f.update();
+                f.draw();
+            });
+
+            requestAnimationFrame(loop);
+        }
+
+        function reset() {
+            init();
+        }
+
+        init();
+        loop();
+    </script>
+</body>
+
+</html>

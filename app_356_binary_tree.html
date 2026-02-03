@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二叉搜索树可视化</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .node {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid #3b82f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            position: absolute;
+            transition: all 0.5s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .link {
+            position: absolute;
+            transform-origin: 0 0;
+            height: 2px;
+            background: #94a3b8;
+            z-index: -1;
+            transition: all 0.5s ease;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6 text-slate-800">
+
+    <div class="w-full max-w-5xl h-[90vh] flex flex-col">
+
+        <header class="flex justify-between items-center mb-6 shrink-0">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-700">
+                <span class="text-2xl">🌳</span> Binary Search Tree
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex gap-4 items-center shrink-0">
+            <input type="number" id="input-val"
+                class="w-24 p-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Num" onkeypress="if(event.key==='Enter') insertNode()">
+            <button onclick="insertNode()"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold shadow transition">插入
+                Insert</button>
+            <button onclick="randomTree()"
+                class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-lg font-bold transition">随机生成</button>
+            <button onclick="clearTree()"
+                class="bg-red-50 hover:bg-red-100 text-red-500 px-4 py-2 rounded-lg font-bold transition ml-auto">清空</button>
+        </div>
+
+        <div class="flex-1 bg-white rounded-xl shadow-inner border border-slate-200 relative overflow-hidden"
+            id="tree-container">
+            <!-- Tree Rendered Here -->
+        </div>
+
+    </div>
+
+    <script>
+        const container = document.getElementById('tree-container');
+        const input = document.getElementById('input-val');
+
+        class Node {
+            constructor(value) {
+                this.value = value;
+                this.left = null;
+                this.right = null;
+                this.x = 0;
+                this.y = 0;
+            }
+        }
+
+        let root = null;
+
+        function insert(node, value) {
+            if (!node) return new Node(value);
+            if (value < node.value) node.left = insert(node.left, value);
+            else if (value > node.value) node.right = insert(node.right, value);
+            return node;
+        }
+
+        function insertNode() {
+            const val = parseInt(input.value);
+            if (!isNaN(val)) {
+                root = insert(root, val);
+                input.value = '';
+                render();
+            }
+        }
+
+        function randomTree() {
+            root = null;
+            for (let i = 0; i < 10; i++) {
+                root = insert(root, Math.floor(Math.random() * 99) + 1);
+            }
+            render();
+        }
+
+        function clearTree() {
+            root = null;
+            render();
+        }
+
+        // Layout calculation (Reingold-Tilford inspired but simplified for BST visualization)
+        function updatePositions(node, depth, x, availableWidth) {
+            if (!node) return;
+
+            node.y = depth * 80 + 40; // Vertical spacing
+            node.x = x;
+
+            // Recurse with half width for children
+            updatePositions(node.left, depth + 1, x - availableWidth / 2, availableWidth / 2);
+            updatePositions(node.right, depth + 1, x + availableWidth / 2, availableWidth / 2);
+        }
+
+        function render() {
+            container.innerHTML = '';
+            if (!root) return;
+
+            const w = container.clientWidth;
+            updatePositions(root, 0, w / 2, w / 4);
+
+            drawNode(root);
+        }
+
+        function drawNode(node) {
+            if (!node) return;
+
+            // Draw Links first (z-index -1 logic via HTML order or CSS)
+            // Actually in DOM, earlier elements are behind. So we should draw links first?
+            // Or use z-index.
+
+            if (node.left) drawLink(node, node.left);
+            if (node.right) drawLink(node, node.right);
+
+            // Draw Node Circle
+            const el = document.createElement('div');
+            el.className = 'node';
+            el.style.left = (node.x - 20) + 'px'; // Center anchor
+            el.style.top = (node.y - 20) + 'px';
+            el.innerText = node.value;
+            container.appendChild(el);
+
+            // Recurse
+            drawNode(node.left);
+            drawNode(node.right);
+        }
+
+        function drawLink(parent, child) {
+            const link = document.createElement('div');
+            link.className = 'link';
+
+            const dx = child.x - parent.x;
+            const dy = child.y - parent.y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+            link.style.width = length + 'px';
+            link.style.left = parent.x + 'px';
+            link.style.top = parent.y + 'px';
+            link.style.transform = `rotate(${angle}deg)`;
+
+            container.insertBefore(link, container.firstChild); // Put behind nodes
+        }
+
+        // Handle resize
+        window.addEventListener('resize', render);
+
+        // Init
+        randomTree();
+    </script>
+</body>
+
+</html>

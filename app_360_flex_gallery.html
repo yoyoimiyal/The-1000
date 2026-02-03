@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flexbox 画廊布局</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gallery-item {
+            min-width: 100px;
+            height: 100px;
+            background-color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-weight: bold;
+            color: #64748b;
+            transition: all 0.3s;
+        }
+
+        .gallery-item:nth-child(even) {
+            background-color: #cbd5e1;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col md:flex-row text-slate-800">
+
+    <!-- Controls -->
+    <div
+        class="w-full md:w-80 bg-white border-r border-slate-200 p-6 flex flex-col gap-6 h-auto md:h-screen overflow-y-auto shrink-0 z-10 shadow-xl">
+        <header class="flex justify-between items-center mb-4">
+            <h1 class="font-bold text-lg text-indigo-700">Flex Gallery</h1>
+            <a href="./navigation.html" class="text-xs text-slate-400 hover:text-indigo-600">退出</a>
+        </header>
+
+        <div class="space-y-4">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Flex Wrap</label>
+                <select id="flex-wrap" class="w-full p-2 border rounded text-sm bg-slate-50" onchange="update()">
+                    <option value="wrap">wrap (换行)</option>
+                    <option value="nowrap">nowrap (不换行)</option>
+                    <option value="wrap-reverse">wrap-reverse</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Justify Content</label>
+                <select id="justify" class="w-full p-2 border rounded text-sm bg-slate-50" onchange="update()">
+                    <option value="flex-start">flex-start</option>
+                    <option value="center">center</option>
+                    <option value="flex-end">flex-end</option>
+                    <option value="space-between">space-between</option>
+                    <option value="space-around">space-around</option>
+                    <option value="space-evenly">space-evenly</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Align Items</label>
+                <select id="align" class="w-full p-2 border rounded text-sm bg-slate-50" onchange="update()">
+                    <option value="stretch">stretch</option>
+                    <option value="flex-start">flex-start</option>
+                    <option value="center">center</option>
+                    <option value="flex-end">flex-end</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Gap (间距)</label>
+                <input type="range" id="gap" min="0" max="40" value="10" class="w-full" oninput="update()">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Item Count</label>
+                <input type="range" id="count" min="1" max="20" value="8" class="w-full" oninput="renderItems()">
+            </div>
+
+            <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 text-xs text-indigo-800">
+                <p>调整左侧参数，观察右侧画廊布局的变化。拖动窗口大小测试响应式效果。</p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="flex-1 p-8 bg-slate-200 overflow-auto">
+
+        <div id="gallery" class="w-full min-h-[500px] bg-white rounded-xl shadow-sm border border-slate-300 p-4 flex">
+            <!-- Items injected -->
+        </div>
+
+    </div>
+
+    <script>
+        const gallery = document.getElementById('gallery');
+
+        function renderItems() {
+            const count = document.getElementById('count').value;
+            gallery.innerHTML = '';
+            for (let i = 1; i <= count; i++) {
+                const div = document.createElement('div');
+                div.className = 'gallery-item shadow-sm';
+                // Random width for "Masonry-ish" feel if flex-grow? No, fixed min-width.
+                // Let's vary width slightly to show wrap better?
+                // div.style.width = (100 + Math.random() * 50) + 'px'; 
+                div.innerText = i;
+                // Add flex-grow to fill?
+                div.style.flexGrow = '1';
+                gallery.appendChild(div);
+            }
+            update();
+        }
+
+        function update() {
+            const wrap = document.getElementById('flex-wrap').value;
+            const justify = document.getElementById('justify').value;
+            const align = document.getElementById('align').value;
+            const gap = document.getElementById('gap').value + 'px';
+
+            gallery.style.flexWrap = wrap;
+            gallery.style.justifyContent = justify;
+            gallery.style.alignItems = align;
+            gallery.style.gap = gap;
+        }
+
+        // Init
+        renderItems();
+    </script>
+</body>
+
+</html>

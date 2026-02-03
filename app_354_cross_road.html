@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>像素过马路</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+            touch-action: none;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-800 h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="relative w-full max-w-[400px]">
+        <canvas id="gameCanvas" width="400" height="400"
+            class="bg-green-100 rounded-lg shadow-2xl border-4 border-slate-700"></canvas>
+
+        <div id="ui-layer" class="absolute inset-0 pointer-events-none p-4 flex flex-col justify-between">
+            <div class="flex justify-between items-start text-slate-800 font-bold drop-shadow-md">
+                <span>SCORE: <span id="score">0</span></span>
+                <span>HI: <span id="hi">0</span></span>
+            </div>
+        </div>
+
+        <div id="overlay"
+            class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center pointer-events-auto rounded-lg">
+            <h1 class="text-4xl font-black text-white mb-2 text-shadow">CROSSY</h1>
+            <p class="text-white/70 text-xs mb-6">Swipe / Arrows to Move</p>
+            <button onclick="startGame()"
+                class="bg-green-500 hover:bg-green-400 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition transform active:scale-95">PLAY</button>
+        </div>
+    </div>
+
+    <div class="mt-4 text-center">
+        <a href="./navigation.html" class="text-xs text-slate-500 hover:text-white">EXIT</a>
+    </div>
+
+    <!-- Mobile D-Pad -->
+    <div class="mt-4 grid grid-cols-3 gap-2 md:hidden">
+        <div></div>
+        <button class="w-12 h-12 bg-slate-700 rounded text-white flex items-center justify-center active:bg-slate-600"
+            onclick="move(0, -1)">▲</button>
+        <div></div>
+        <button class="w-12 h-12 bg-slate-700 rounded text-white flex items-center justify-center active:bg-slate-600"
+            onclick="move(-1, 0)">◀</button>
+        <button class="w-12 h-12 bg-slate-700 rounded text-white flex items-center justify-center active:bg-slate-600"
+            onclick="move(0, 1)">▼</button>
+        <button class="w-12 h-12 bg-slate-700 rounded text-white flex items-center justify-center active:bg-slate-600"
+            onclick="move(1, 0)">▶</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const hiEl = document.getElementById('hi');
+        const overlay = document.getElementById('overlay');
+
+        const gridSize = 40;
+        const cols = 10;
+        const rows = 10;
+
+        let player = { x: 5, y: 9 };
+        let score = 0;
+        let hiScore = localStorage.getItem('crossy_hi') || 0;
+        hiEl.innerText = hiScore;
+        let isPlaying = false;
+        let lanes = []; // { type: 'road'|'grass', y, cars: [] }
+        let animationId;
+        let speedMult = 1;
+
+        function initLanes() {
+            lanes = [];
+            // Generate lanes from bottom up
+            // Row 9 (Bottom): Grass (Start)
+            lanes.push({ type: 'grass', y: 9 });
+
+            // Generate others
+            for (let i = 8; i >= 0; i--) {
+                const type = Math.random() > 0.4 ? 'road' : 'grass';
+                let lane = { type: type, y: i, cars: [] };
+
+                if (type === 'road') {
+                    // Init cars
+                    lane.speed = (Math.random() * 2 + 1) * (Math.random() > 0.5 ? 1 : -1);
+                    lane.color = Math.random() > 0.5 ? '#ef4444' : '#3b82f6';
+                    // Spawn
+                    if (Math.random() > 0.3) {
+                        lane.cars.push({ x: Math.random() * 400 });
+                    }
+                }
+                lanes.push(lane);
+            }
+        }
+
+        function startGame() {
+            score = 0;
+            scoreEl.innerText = 0;
+            player = { x: 4, y: 9 };
+            speedMult = 1;
+            initLanes();
+            isPlaying = true;
+            overlay.classList.add('hidden');
+            loop();
+        }
+
+        function move(dx, dy) {
+            if (!isPlaying) return;
+
+            const nx = player.x + dx;
+            const ny = player.y + dy;
+
+            if (nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
+                player.x = nx;
+                player.y = ny;
+
+                // Score logic: highest Y reached? 
+                // Simple: if moved up, score++? 
+                // Let's use simple logic: If reach top (y=0), reset to bottom, speed up, score += 10
+                if (player.y === 0) {
+                    levelUp();
+                }
+            }
+        }
+
+        function levelUp() {
+            score += 10;
+            scoreEl.innerText = score;
+            if (score > hiScore) {
+                hiScore = score;
+                localStorage.setItem('crossy_hi', hiScore);
+                hiEl.innerText = hiScore;
+            }
+            player.y = 9; // Reset to bottom
+            speedMult += 0.2;
+            initLanes(); // New map
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            cancelAnimationFrame(animationId);
+            overlay.classList.remove('hidden');
+            document.querySelector('#overlay h1').innerText = "SPLAT!";
+        }
+
+        function loop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Lanes
+            lanes.forEach(lane => {
+                const yPos = lane.y * gridSize;
+                if (lane.type === 'grass') {
+                    ctx.fillStyle = '#86efac'; // light green
+                    ctx.fillRect(0, yPos, canvas.width, gridSize);
+                    // Decoration
+                    ctx.fillStyle = '#4ade80';
+                    ctx.fillRect(0, yPos + 35, canvas.width, 5);
+                } else {
+                    ctx.fillStyle = '#94a3b8'; // gray road
+                    ctx.fillRect(0, yPos, canvas.width, gridSize);
+                    // Road lines
+                    ctx.strokeStyle = '#cbd5e1';
+                    ctx.setLineDash([10, 10]);
+                    ctx.beginPath();
+                    ctx.moveTo(0, yPos + gridSize / 2);
+                    ctx.lineTo(canvas.width, yPos + gridSize / 2);
+                    ctx.stroke();
+
+                    // Update & Draw Cars
+                    lane.cars.forEach(car => {
+                        car.x += lane.speed * speedMult;
+
+                        // Draw Car
+                        ctx.fillStyle = lane.color;
+                        ctx.fillRect(car.x, yPos + 5, 30, gridSize - 10);
+                        // Windows
+                        ctx.fillStyle = '#bfdbfe';
+                        ctx.fillRect(car.x + 5, yPos + 8, 20, 10);
+
+                        // Collision
+                        // Player Box: player.x*40 + 5, player.y*40 + 5, 30, 30
+                        // Car Box: car.x, yPos+5, 30, 30
+
+                        const px = player.x * gridSize;
+                        const py = player.y * gridSize;
+
+                        // Simple AABB
+                        if (px < car.x + 30 && px + 30 > car.x &&
+                            py < yPos + 30 && py + 30 > yPos + 5) { // y overlap is certain if same lane
+                            // Just check X if same Y
+                            gameOver();
+                        }
+                    });
+
+                    // Spawn/Despawn Cars
+                    // If car goes off screen, wrap or spawn new?
+                    // Simple wrap logic
+                    if (lane.speed > 0) {
+                        if (lane.cars.length > 0 && lane.cars[0].x > canvas.width) {
+                            lane.cars.shift(); // Remove
+                        }
+                        if (lane.cars.length === 0 || canvas.width - lane.cars[lane.cars.length - 1].x > 150) {
+                            if (Math.random() < 0.02) lane.cars.push({ x: -40 });
+                        }
+                    } else {
+                        if (lane.cars.length > 0 && lane.cars[0].x < -40) {
+                            lane.cars.shift();
+                        }
+                        if (lane.cars.length === 0 || lane.cars[lane.cars.length - 1].x > 150) {
+                            if (Math.random() < 0.02) lane.cars.push({ x: canvas.width });
+                        }
+                    }
+                }
+            });
+
+            // Draw Player (Chicken/Frog)
+            const px = player.x * gridSize + 5;
+            const py = player.y * gridSize + 5;
+            ctx.fillStyle = '#fbbf24'; // yellow
+            ctx.fillRect(px, py, 30, 30);
+            // Eye
+            ctx.fillStyle = 'black';
+            ctx.fillRect(px + 20, py + 5, 4, 4);
+            // Beak
+            ctx.fillStyle = '#f97316';
+            ctx.fillRect(px + 28, py + 10, 4, 4);
+
+            if (isPlaying) requestAnimationFrame(loop);
+        }
+
+        // Controls
+        document.addEventListener('keydown', e => {
+            if (!isPlaying) return;
+            if (e.key === 'ArrowUp') move(0, -1);
+            if (e.key === 'ArrowDown') move(0, 1);
+            if (e.key === 'ArrowLeft') move(-1, 0);
+            if (e.key === 'ArrowRight') move(1, 0);
+        });
+
+        // Swipe
+        let tx, ty;
+        canvas.addEventListener('touchstart', e => {
+            tx = e.touches[0].clientX;
+            ty = e.touches[0].clientY;
+            e.preventDefault();
+        });
+        canvas.addEventListener('touchend', e => {
+            const dx = e.changedTouches[0].clientX - tx;
+            const dy = e.changedTouches[0].clientY - ty;
+            if (Math.abs(dx) > Math.abs(dy)) {
+                if (Math.abs(dx) > 20) move(dx > 0 ? 1 : -1, 0);
+            } else {
+                if (Math.abs(dy) > 20) move(0, dy > 0 ? 1 : -1);
+            }
+        });
+    </script>
+</body>
+
+</html>

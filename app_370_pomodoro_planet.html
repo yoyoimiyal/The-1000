@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>番茄星球</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            color: white;
+        }
+
+        #planet-container {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle at 30% 30%, #4ade80, #15803d);
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 0 50px rgba(74, 222, 128, 0.2) inset, 0 0 20px rgba(74, 222, 128, 0.3);
+            transition: transform 1s ease-in-out;
+        }
+
+        .item {
+            position: absolute;
+            font-size: 24px;
+            transform: translate(-50%, -50%);
+            transition: all 0.5s;
+        }
+
+        .stars {
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col items-center justify-center h-screen font-sans">
+
+    <!-- Stars BG -->
+    <div id="stars" class="stars"></div>
+
+    <div class="relative z-10 flex flex-col items-center">
+
+        <header class="mb-10 text-center">
+            <h1 class="text-3xl font-bold tracking-widest text-green-300 mb-2">POMO PLANET</h1>
+            <p class="text-xs text-gray-500">Population: <span id="pop-count">0</span></p>
+        </header>
+
+        <div id="planet-container">
+            <!-- Items injected here -->
+            <div class="absolute inset-0 rounded-full border-4 border-black/10 pointer-events-none"></div>
+        </div>
+
+        <div class="mt-12 text-center">
+            <div id="timer" class="text-5xl font-mono font-bold mb-6">25:00</div>
+
+            <button onclick="toggleTimer()" id="btn-main"
+                class="px-8 py-3 bg-white text-green-800 font-bold rounded-full shadow-lg hover:bg-gray-200 transition transform active:scale-95">
+                开始专注
+            </button>
+        </div>
+
+        <div class="mt-8 flex gap-4 text-xs text-gray-500">
+            <button onclick="resetTimer()" class="hover:text-white">重置计时</button>
+            <button onclick="clearPlanet()" class="hover:text-red-400">重置星球</button>
+            <a href="./navigation.html" class="hover:text-white border-l border-gray-600 pl-4">退出</a>
+        </div>
+
+    </div>
+
+    <script>
+        const planet = document.getElementById('planet-container');
+        const timerEl = document.getElementById('timer');
+        const btnMain = document.getElementById('btn-main');
+        const popEl = document.getElementById('pop-count');
+        const starsContainer = document.getElementById('stars');
+
+        // Assets
+        const flora = ['🌲', '🌳', '🌴', '🌵', '🌷', '🌸', '🌹', '🌻', '🌼', '🌾', '🌿'];
+        const fauna = ['🐕', '🐈', '🐇', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐢'];
+
+        let items = JSON.parse(localStorage.getItem('planet_items') || '[]');
+        let timeLeft = 25 * 60;
+        let isRunning = false;
+        let timerId;
+
+        function init() {
+            // Render existing items
+            items.forEach(item => addItemToDOM(item.emoji, item.x, item.y, item.rot));
+            popEl.innerText = items.length;
+
+            // Create Stars
+            for (let i = 0; i < 50; i++) {
+                const s = document.createElement('div');
+                s.style.position = 'absolute';
+                s.style.left = Math.random() * 100 + '%';
+                s.style.top = Math.random() * 100 + '%';
+                s.style.width = Math.random() * 2 + 'px';
+                s.style.height = s.style.width;
+                s.style.background = 'white';
+                s.style.borderRadius = '50%';
+                s.style.opacity = Math.random();
+                starsContainer.appendChild(s);
+            }
+        }
+
+        function addItemToDOM(emoji, x, y, rot) {
+            const el = document.createElement('div');
+            el.className = 'item';
+            el.innerText = emoji;
+            // Position on circle surface? 
+            // x, y are relative % (0-100) inside 300px box.
+            el.style.left = x + '%';
+            el.style.top = y + '%';
+            el.style.transform = `translate(-50%, -50%) rotate(${rot}deg)`;
+            planet.appendChild(el);
+        }
+
+        function toggleTimer() {
+            if (isRunning) {
+                clearInterval(timerId);
+                isRunning = false;
+                btnMain.innerText = "继续";
+            } else {
+                isRunning = true;
+                btnMain.innerText = "暂停";
+                timerId = setInterval(() => {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                        const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                        const s = (timeLeft % 60).toString().padStart(2, '0');
+                        timerEl.innerText = `${m}:${s}`;
+                    } else {
+                        complete();
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timerId);
+            isRunning = false;
+            timeLeft = 25 * 60;
+            timerEl.innerText = "25:00";
+            btnMain.innerText = "开始专注";
+        }
+
+        function complete() {
+            clearInterval(timerId);
+            isRunning = false;
+            btnMain.innerText = "领取奖励";
+
+            // Add new item
+            // Pick random position on circle?
+            // Simple: Random inside circle r=140px (container is 300px, r=150)
+
+            // Random Angle and Radius
+            const angle = Math.random() * Math.PI * 2;
+            const r = Math.random() * 120; // Keep slightly inside
+            const x = 50 + (Math.cos(angle) * r / 150 * 50); // %
+            const y = 50 + (Math.sin(angle) * r / 150 * 50); // %
+            const rot = (angle * 180 / Math.PI) + 90; // Rotation to face center? Or random?
+
+            // Decide type: More flora than fauna
+            const list = Math.random() > 0.3 ? flora : fauna;
+            const emoji = list[Math.floor(Math.random() * list.length)];
+
+            const newItem = { emoji, x, y, rot };
+            items.push(newItem);
+            localStorage.setItem('planet_items', JSON.stringify(items));
+
+            addItemToDOM(emoji, x, y, rot);
+            popEl.innerText = items.length;
+
+            // Spin Planet
+            planet.style.transform = `rotate(${Math.random() * 360}deg)`;
+
+            alert(`专注完成！你的星球多了一个新居民: ${emoji}`);
+            resetTimer();
+        }
+
+        function clearPlanet() {
+            if (confirm("确定毁灭这个星球吗？")) {
+                items = [];
+                localStorage.setItem('planet_items', '[]');
+                planet.innerHTML = '<div class="absolute inset-0 rounded-full border-4 border-black/10 pointer-events-none"></div>';
+                popEl.innerText = 0;
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

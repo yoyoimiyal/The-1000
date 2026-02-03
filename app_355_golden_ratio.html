@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黄金比例计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-amber-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-3xl shadow-xl border border-amber-100">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-amber-800">
+                <span class="text-2xl font-serif">φ</span> Golden Ratio Calc
+            </h1>
+            <a href="./navigation.html" class="text-sm text-amber-600 hover:underline">退出</a>
+        </header>
+
+        <div class="space-y-8">
+
+            <div class="flex items-center gap-4">
+                <div class="flex-1">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Total (A + B)</label>
+                    <input type="number" id="total"
+                        class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-lg outline-none focus:ring-2 focus:ring-amber-500"
+                        placeholder="1000" oninput="calc('total')">
+                </div>
+            </div>
+
+            <div class="flex gap-4 items-center">
+                <div class="flex-1">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Longer (A)</label>
+                    <input type="number" id="a"
+                        class="w-full p-3 bg-amber-50 border border-amber-200 rounded-xl font-bold text-lg outline-none focus:ring-2 focus:ring-amber-500 text-amber-900"
+                        oninput="calc('a')">
+                </div>
+                <div class="text-2xl text-slate-300 font-light pt-6">:</div>
+                <div class="flex-1">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Shorter (B)</label>
+                    <input type="number" id="b"
+                        class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-lg outline-none focus:ring-2 focus:ring-amber-500"
+                        oninput="calc('b')">
+                </div>
+            </div>
+
+            <!-- Visual Preview -->
+            <div class="h-24 w-full flex rounded-lg overflow-hidden shadow-sm border border-slate-200">
+                <div class="h-full bg-amber-400 flex items-center justify-center text-white font-bold text-xs transition-all duration-300 relative group"
+                    id="bar-a" style="width: 61.8%">
+                    A
+                    <span class="absolute bottom-1 text-[10px] opacity-70">61.8%</span>
+                </div>
+                <div class="h-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold text-xs transition-all duration-300 relative group"
+                    id="bar-b" style="width: 38.2%">
+                    B
+                    <span class="absolute bottom-1 text-[10px] opacity-70">38.2%</span>
+                </div>
+            </div>
+
+            <div class="text-center text-xs text-slate-400 italic">
+                A / B = (A + B) / A = 1.6180339887...
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const PHI = 1.61803398875;
+
+        const elTotal = document.getElementById('total');
+        const elA = document.getElementById('a');
+        const elB = document.getElementById('b');
+
+        function calc(source) {
+            let t = parseFloat(elTotal.value);
+            let a = parseFloat(elA.value);
+            let b = parseFloat(elB.value);
+
+            if (source === 'total' && !isNaN(t)) {
+                // A = Total / PHI
+                a = t / PHI;
+                b = t - a;
+                elA.value = a.toFixed(3);
+                elB.value = b.toFixed(3);
+            } else if (source === 'a' && !isNaN(a)) {
+                // B = A / PHI
+                b = a / PHI;
+                t = a + b;
+                elB.value = b.toFixed(3);
+                elTotal.value = t.toFixed(3);
+            } else if (source === 'b' && !isNaN(b)) {
+                // A = B * PHI
+                a = b * PHI;
+                t = a + b;
+                elA.value = a.toFixed(3);
+                elTotal.value = t.toFixed(3);
+            }
+        }
+
+        // Init
+        elTotal.value = 1000;
+        calc('total');
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>立体声测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-900 min-h-screen flex flex-col items-center justify-center p-6 text-white">
+
+    <div class="w-full max-w-lg bg-slate-800 p-8 rounded-3xl shadow-2xl border border-slate-700">
+
+        <header class="flex justify-between items-center mb-10">
+            <h1 class="text-2xl font-bold flex items-center gap-2 text-indigo-400">
+                <span class="text-3xl">🎧</span> Stereo Test
+            </h1>
+            <a href="./navigation.html"
+                class="text-sm text-slate-500 hover:text-white border border-slate-600 px-3 py-1 rounded">退出</a>
+        </header>
+
+        <div class="grid grid-cols-2 gap-8 mb-8">
+
+            <!-- Left Channel -->
+            <button onclick="playChannel('left')" id="btn-left"
+                class="aspect-square bg-slate-700 rounded-2xl flex flex-col items-center justify-center hover:bg-slate-600 transition shadow-lg group border-2 border-transparent hover:border-blue-500">
+                <div class="text-4xl font-bold text-slate-500 group-hover:text-blue-400 mb-2">L</div>
+                <div class="text-xs text-slate-400 uppercase tracking-widest">Left</div>
+                <div class="w-2 h-2 rounded-full bg-blue-500 opacity-0 mt-2 transition-opacity" id="ind-left"></div>
+            </button>
+
+            <!-- Right Channel -->
+            <button onclick="playChannel('right')" id="btn-right"
+                class="aspect-square bg-slate-700 rounded-2xl flex flex-col items-center justify-center hover:bg-slate-600 transition shadow-lg group border-2 border-transparent hover:border-red-500">
+                <div class="text-4xl font-bold text-slate-500 group-hover:text-red-400 mb-2">R</div>
+                <div class="text-xs text-slate-400 uppercase tracking-widest">Right</div>
+                <div class="w-2 h-2 rounded-full bg-red-500 opacity-0 mt-2 transition-opacity" id="ind-right"></div>
+            </button>
+
+        </div>
+
+        <div class="flex justify-center mb-8">
+            <button onclick="playChannel('center')" id="btn-center"
+                class="w-full py-4 bg-slate-700 rounded-xl hover:bg-slate-600 transition font-bold text-slate-300 hover:text-white border-2 border-transparent hover:border-purple-500 relative">
+                Center (Both)
+                <div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-purple-500 opacity-0 transition-opacity"
+                    id="ind-center"></div>
+            </button>
+        </div>
+
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
+            <div class="flex justify-between text-xs font-bold text-slate-400 mb-2 uppercase">
+                <span>Frequency</span>
+                <span id="freq-val">440 Hz</span>
+            </div>
+            <input type="range" id="freq" min="100" max="1000" value="440"
+                class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                oninput="updateFreq()">
+        </div>
+
+    </div>
+
+    <script>
+        let audioCtx;
+        let osc;
+        let panner;
+        let gainNode;
+        let isPlaying = false;
+        let currentFreq = 440;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playChannel(channel) {
+            initAudio();
+            stop(); // Stop any current sound
+
+            osc = audioCtx.createOscillator();
+            panner = audioCtx.createStereoPanner();
+            gainNode = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.value = currentFreq;
+
+            // Pan value: -1 (Left), 0 (Center), 1 (Right)
+            let panVal = 0;
+            if (channel === 'left') panVal = -1;
+            if (channel === 'right') panVal = 1;
+
+            panner.pan.value = panVal;
+
+            osc.connect(gainNode);
+            gainNode.connect(panner);
+            panner.connect(audioCtx.destination);
+
+            // Smooth start
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.1);
+
+            osc.start();
+            isPlaying = true;
+
+            // Visuals
+            updateIndicators(channel);
+
+            // Auto stop after 2s
+            setTimeout(() => {
+                if (isPlaying) stop();
+            }, 2000);
+        }
+
+        function stop() {
+            if (osc) {
+                const now = audioCtx.currentTime;
+                gainNode.gain.cancelScheduledValues(now);
+                gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+                gainNode.gain.linearRampToValueAtTime(0, now + 0.1);
+                osc.stop(now + 0.1);
+                osc = null;
+            }
+            isPlaying = false;
+            updateIndicators(null);
+        }
+
+        function updateFreq() {
+            currentFreq = document.getElementById('freq').value;
+            document.getElementById('freq-val').innerText = currentFreq + " Hz";
+            if (osc && isPlaying) {
+                osc.frequency.setValueAtTime(currentFreq, audioCtx.currentTime);
+            }
+        }
+
+        function updateIndicators(active) {
+            document.getElementById('ind-left').style.opacity = active === 'left' ? '1' : '0';
+            document.getElementById('ind-right').style.opacity = active === 'right' ? '1' : '0';
+            document.getElementById('ind-center').style.opacity = active === 'center' ? '1' : '0';
+
+            // Reset borders
+            document.getElementById('btn-left').classList.remove('border-blue-500');
+            document.getElementById('btn-right').classList.remove('border-red-500');
+            document.getElementById('btn-center').classList.remove('border-purple-500');
+
+            if (active === 'left') document.getElementById('btn-left').classList.add('border-blue-500');
+            if (active === 'right') document.getElementById('btn-right').classList.add('border-red-500');
+            if (active === 'center') document.getElementById('btn-center').classList.add('border-purple-500');
+        }
+    </script>
+</body>
+
+</html>

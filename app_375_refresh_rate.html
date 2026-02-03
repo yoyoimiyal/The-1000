@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>屏幕刷新率测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .ufo {
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-black min-h-screen flex flex-col items-center justify-center p-6 text-white overflow-hidden">
+
+    <div class="w-full max-w-xl text-center z-10">
+
+        <header class="mb-12">
+            <h1 class="text-3xl font-bold mb-2 text-cyan-400 tracking-wider">REFRESH RATE</h1>
+            <p class="text-xs text-gray-500">Frame Per Second (FPS) Test</p>
+        </header>
+
+        <div class="mb-12 relative">
+            <div class="text-[120px] md:text-[180px] font-black leading-none bg-gradient-to-b from-white to-gray-600 text-transparent bg-clip-text"
+                id="fps-display">
+                0
+            </div>
+            <div
+                class="absolute top-0 right-0 left-0 bottom-0 flex items-center justify-center pointer-events-none opacity-20">
+                <span class="text-xl font-bold text-gray-500">Hz</span>
+            </div>
+        </div>
+
+        <!-- Animation to prove smoothness -->
+        <div class="relative h-20 bg-gray-900 rounded-full border border-gray-800 overflow-hidden mb-8">
+            <div id="ufo" class="absolute top-1/2 -translate-y-1/2 text-4xl w-10 h-10 flex items-center justify-center">
+                🛸</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 text-xs font-mono text-gray-400 max-w-xs mx-auto">
+            <div class="bg-gray-900 p-3 rounded-lg border border-gray-800">
+                <span class="block text-gray-600 mb-1">Frame Time</span>
+                <span id="frame-time" class="text-white font-bold">0 ms</span>
+            </div>
+            <div class="bg-gray-900 p-3 rounded-lg border border-gray-800">
+                <span class="block text-gray-600 mb-1">Frame Count</span>
+                <span id="frame-count" class="text-white font-bold">0</span>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-gray-600 hover:text-white border border-gray-800 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const fpsEl = document.getElementById('fps-display');
+        const ftEl = document.getElementById('frame-time');
+        const fcEl = document.getElementById('frame-count');
+        const ufo = document.getElementById('ufo');
+
+        let lastTime = performance.now();
+        let frames = 0;
+        let ufoPos = 0;
+        let ufoSpeed = 500; // px/s
+        let totalFrames = 0;
+
+        function loop(now) {
+            const dt = now - lastTime;
+
+            // Only update FPS display once per second (approx) or smoothing?
+            // Let's smooth update every 500ms
+
+            frames++;
+            totalFrames++;
+
+            if (dt >= 500) {
+                const fps = Math.round((frames * 1000) / dt);
+                fpsEl.innerText = fps;
+                ftEl.innerText = (1000 / fps).toFixed(2) + ' ms';
+
+                frames = 0;
+                lastTime = now;
+            }
+
+            fcEl.innerText = totalFrames;
+
+            // Animate UFO to verify smoothness visually
+            // Move based on real delta time
+            // We use previous frame's dt estimate or just calc delta per frame for position
+            // Since `dt` above is accumulating for FPS, we need per-frame delta for physics
+
+            // We can't use the `dt` variable above because it resets every 500ms.
+            // We need a separate lastFrameTime.
+
+            const frameDelta = (now - (window.lastFrameTime || now)) / 1000;
+            window.lastFrameTime = now;
+
+            ufoPos += ufoSpeed * frameDelta;
+            const containerWidth = ufo.parentElement.clientWidth;
+
+            if (ufoPos > containerWidth) {
+                ufoPos = -50;
+            }
+
+            ufo.style.transform = `translate(${ufoPos}px, -50%)`;
+
+            requestAnimationFrame(loop);
+        }
+
+        requestAnimationFrame(loop);
+    </script>
+</body>
+
+</html>

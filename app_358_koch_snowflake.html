@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科赫雪花分形</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #0f172a;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="fixed top-6 left-6 text-white pointer-events-none opacity-80 z-10">
+        <h1 class="text-2xl font-bold">Koch Snowflake</h1>
+        <p class="text-xs text-slate-400">Fractal Geometry</p>
+    </div>
+
+    <!-- Controls -->
+    <div
+        class="fixed bottom-8 left-1/2 -translate-x-1/2 flex gap-6 bg-slate-800/90 backdrop-blur p-4 rounded-xl border border-slate-700 z-10 items-center">
+
+        <div class="flex flex-col w-32">
+            <label class="text-[10px] text-slate-400 uppercase font-bold mb-1">Depth (Recursion)</label>
+            <input type="range" id="depth" min="0" max="6" value="4"
+                class="w-full h-1 bg-slate-600 rounded appearance-none cursor-pointer accent-cyan-400" oninput="draw()">
+            <div class="text-right text-xs text-cyan-400 font-bold" id="depth-val">4</div>
+        </div>
+
+        <button onclick="toggleAnim()" id="btn-anim"
+            class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition">Animate</button>
+        <a href="./navigation.html"
+            class="text-slate-500 hover:text-white text-xs font-bold uppercase transition">Exit</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const depthInput = document.getElementById('depth');
+        const depthVal = document.getElementById('depth-val');
+
+        let width, height;
+        let isAnimating = false;
+        let animDepth = 0;
+        let animDir = 1;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            draw();
+        }
+        window.addEventListener('resize', resize);
+
+        function drawLine(p1, p2) {
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+        }
+
+        function koch(p1, p2, limit) {
+            if (limit === 0) {
+                drawLine(p1, p2);
+                return;
+            }
+
+            // Calculate 3 intermediate points
+            // p1 -> a -> b -> c -> p2
+
+            // a: 1/3 from p1
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const unit = dist / 3;
+            const angle = Math.atan2(dy, dx);
+
+            const a = {
+                x: p1.x + dx / 3,
+                y: p1.y + dy / 3
+            };
+
+            const c = {
+                x: p1.x + 2 * dx / 3,
+                y: p1.y + 2 * dy / 3
+            };
+
+            // b: Equilateral triangle peak from a-c
+            // Rotate 60 deg (PI/3) from a
+            const b = {
+                x: a.x + Math.cos(angle - Math.PI / 3) * unit,
+                y: a.y + Math.sin(angle - Math.PI / 3) * unit
+            };
+
+            limit--;
+            koch(p1, a, limit);
+            koch(a, b, limit);
+            koch(b, c, limit);
+            koch(c, p2, limit);
+        }
+
+        function draw() {
+            const depth = isAnimating ? Math.floor(animDepth) : parseInt(depthInput.value);
+            if (!isAnimating) depthVal.innerText = depth;
+
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.strokeStyle = '#22d3ee'; // cyan-400
+            ctx.lineWidth = 1;
+
+            // Initial Triangle Points (Centered)
+            const size = Math.min(width, height) * 0.7;
+            const h = size * Math.sqrt(3) / 2;
+
+            const p1 = { x: width / 2 - size / 2, y: height / 2 + h / 3 };
+            const p2 = { x: width / 2 + size / 2, y: height / 2 + h / 3 };
+            const p3 = { x: width / 2, y: height / 2 - 2 * h / 3 };
+
+            // 3 Koch curves
+            // p1 -> p2 (Bottom, actually should be inverted for snowflake pointing up? No standard is fine)
+            // Let's draw p1->p2, p2->p3, p3->p1? No order matters for outward spikes.
+            // Standard: p1->p3->p2->p1 (Counter clockwise)
+
+            koch(p1, p3, depth);
+            koch(p3, p2, depth);
+            koch(p2, p1, depth);
+        }
+
+        function toggleAnim() {
+            isAnimating = !isAnimating;
+            if (isAnimating) animate();
+            else draw();
+        }
+
+        function animate() {
+            if (!isAnimating) return;
+
+            animDepth += 0.05 * animDir;
+            if (animDepth >= 6) animDir = -1;
+            if (animDepth <= 0) animDir = 1;
+
+            // Draw integer depth, maybe interpolation?
+            // True fractal interp is hard, just step
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        // Init
+        resize();
+    </script>
+</body>
+
+</html>

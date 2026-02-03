@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>利萨茹图形表</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            opacity: 0.7;
+            z-index: 10;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="ui">
+        <h1 class="text-lg font-bold">Lissajous Table</h1>
+        <p class="text-xs text-gray-400">Rows: fY, Cols: fX</p>
+    </div>
+
+    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-4">
+        <button onclick="toggleAnim()"
+            class="pointer-events-auto bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full backdrop-blur border border-white/20 text-xs font-bold transition"
+            id="btn-pause">Pause</button>
+        <a href="./navigation.html"
+            class="pointer-events-auto bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full backdrop-blur border border-white/20 text-xs font-bold transition">Exit</a>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const btnPause = document.getElementById('btn-pause');
+
+        let width, height;
+        const cols = 8;
+        const rows = 5;
+        let cellW, cellH;
+        let angle = 0;
+        let isPaused = false;
+
+        // Grid padding
+        const padding = 20;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            cellW = (width - padding * 2) / (cols + 1); // +1 for header
+            cellH = (height - padding * 2) / (rows + 1);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function draw() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.1)"; // Trails
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = "white";
+
+            const cxStart = padding + cellW * 1.5; // Start after headers
+            const cyStart = padding + cellH * 1.5;
+
+            // Draw Headers (Circles moving)
+            // Top Row (X frequencies: 1 to cols)
+            for (let i = 0; i < cols; i++) {
+                const cx = cxStart + i * cellW;
+                const cy = padding + cellH / 2;
+                const r = Math.min(cellW, cellH) * 0.4;
+
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.strokeStyle = "#333";
+                ctx.stroke();
+
+                // Point
+                const px = cx + r * Math.cos(angle * (i + 1));
+                const py = cy + r * Math.sin(angle * (i + 1));
+
+                ctx.beginPath();
+                ctx.arc(px, py, 3, 0, Math.PI * 2);
+                ctx.fillStyle = "#fff";
+                ctx.fill();
+
+                // Vertical Line
+                ctx.beginPath();
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+                ctx.moveTo(px, py);
+                ctx.lineTo(px, height);
+                ctx.stroke();
+            }
+
+            // Left Column (Y frequencies: 1 to rows)
+            for (let j = 0; j < rows; j++) {
+                const cx = padding + cellW / 2;
+                const cy = cyStart + j * cellH;
+                const r = Math.min(cellW, cellH) * 0.4;
+
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.strokeStyle = "#333";
+                ctx.stroke();
+
+                const px = cx + r * Math.cos(angle * (j + 1));
+                const py = cy + r * Math.sin(angle * (j + 1));
+
+                ctx.beginPath();
+                ctx.arc(px, py, 3, 0, Math.PI * 2);
+                ctx.fillStyle = "#fff";
+                ctx.fill();
+
+                // Horizontal Line
+                ctx.beginPath();
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+                ctx.moveTo(px, py);
+                ctx.lineTo(width, py);
+                ctx.stroke();
+            }
+
+            // Draw Intersection Points (The Curves)
+            for (let i = 0; i < cols; i++) {
+                for (let j = 0; j < rows; j++) {
+                    const r = Math.min(cellW, cellH) * 0.4;
+
+                    // X from top header i
+                    const xHeaderCx = cxStart + i * cellW;
+                    const xHeaderCy = padding + cellH / 2;
+                    const xVal = xHeaderCx + r * Math.cos(angle * (i + 1));
+
+                    // Y from left header j
+                    const yHeaderCx = padding + cellW / 2;
+                    const yHeaderCy = cyStart + j * cellH;
+                    const yVal = yHeaderCy + r * Math.sin(angle * (j + 1));
+
+                    ctx.beginPath();
+                    ctx.arc(xVal, yVal, 2, 0, Math.PI * 2);
+
+                    // Color based on x/y freq
+                    const hue = (i + j) * 20;
+                    ctx.fillStyle = `hsl(${hue}, 80%, 60%)`;
+                    ctx.fill();
+                }
+            }
+
+            if (!isPaused) {
+                angle -= 0.02;
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        function toggleAnim() {
+            isPaused = !isPaused;
+            btnPause.innerText = isPaused ? "Resume" : "Pause";
+        }
+
+        draw();
+    </script>
+</body>
+
+</html>

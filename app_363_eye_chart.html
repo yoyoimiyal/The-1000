@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>标准视力表</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .e-char {
+            font-family: sans-serif;
+            font-weight: 900;
+            line-height: 1;
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body class="bg-white min-h-screen flex flex-col items-center text-black print:p-0">
+
+    <!-- Controls (Hidden on print) -->
+    <div
+        class="w-full max-w-4xl p-4 flex justify-between items-center bg-slate-100 border-b border-slate-200 sticky top-0 z-10 print:hidden">
+        <h1 class="text-lg font-bold flex items-center gap-2">
+            <span class="text-2xl">👁️</span> Eye Chart
+        </h1>
+        <div class="flex gap-4 items-center text-sm">
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-500 uppercase">Size Scale</span>
+                <input type="range" id="scale" min="0.5" max="2" step="0.1" value="1" class="w-24"
+                    oninput="updateScale()">
+                <span id="scale-val" class="text-xs font-mono w-8">1.0x</span>
+            </div>
+            <button onclick="window.print()"
+                class="bg-black text-white px-4 py-1 rounded font-bold hover:bg-slate-800">Print</button>
+            <a href="./navigation.html" class="text-slate-500 hover:text-black">Exit</a>
+        </div>
+    </div>
+
+    <!-- Chart Container -->
+    <div class="bg-white w-full max-w-[800px] p-8 flex flex-col items-center gap-8" id="chart-container">
+
+        <div class="text-center w-full border-b-4 border-black pb-4 mb-4">
+            <h2 class="text-4xl font-black tracking-[1em]">E</h2>
+        </div>
+
+        <!-- Rows -->
+        <!-- Standard LogMAR approx progression -->
+        <!-- Row 1: 0.1 (4.0) -->
+        <div class="row flex gap-12 items-center">
+            <div class="e-char" style="font-size: 100px; transform: rotate(0deg);">E</div>
+            <div class="e-char" style="font-size: 100px; transform: rotate(90deg);">E</div>
+            <span class="text-xs text-slate-400 absolute right-8">0.1</span>
+        </div>
+
+        <!-- Row 2: 0.125 -->
+        <div class="row flex gap-10 items-center">
+            <div class="e-char" style="font-size: 80px; transform: rotate(180deg);">E</div>
+            <div class="e-char" style="font-size: 80px; transform: rotate(-90deg);">E</div>
+            <span class="text-xs text-slate-400 absolute right-8">0.12</span>
+        </div>
+
+        <!-- Row 3: 0.16 -->
+        <div class="row flex gap-8 items-center">
+            <div class="e-char" style="font-size: 60px; transform: rotate(0deg);">E</div>
+            <div class="e-char" style="font-size: 60px; transform: rotate(90deg);">E</div>
+            <div class="e-char" style="font-size: 60px; transform: rotate(180deg);">E</div>
+            <span class="text-xs text-slate-400 absolute right-8">0.16</span>
+        </div>
+
+        <!-- Row 4: 0.2 -->
+        <div class="row flex gap-6 items-center">
+            <div class="e-char" style="font-size: 50px; transform: rotate(-90deg);">E</div>
+            <div class="e-char" style="font-size: 50px; transform: rotate(0deg);">E</div>
+            <div class="e-char" style="font-size: 50px; transform: rotate(90deg);">E</div>
+            <span class="text-xs text-slate-400 absolute right-8">0.2</span>
+        </div>
+
+        <!-- Row 5: 0.25 -->
+        <div class="row flex gap-5 items-center">
+            <div class="e-char" style="font-size: 40px; transform: rotate(180deg);">E</div>
+            <div class="e-char" style="font-size: 40px; transform: rotate(90deg);">E</div>
+            <div class="e-char" style="font-size: 40px; transform: rotate(0deg);">E</div>
+            <div class="e-char" style="font-size: 40px; transform: rotate(-90deg);">E</div>
+            <span class="text-xs text-slate-400 absolute right-8">0.25</span>
+        </div>
+
+        <!-- Row 6: 0.3 -->
+        <div class="row flex gap-4 items-center">
+            <div class="e-char" style="font-size: 33px; transform: rotate(0deg);">E</div>
+            <div class="e-char" style="font-size: 33px; transform: rotate(180deg);">E</div>
+            <div class="e-char" style="font-size: 33px; transform: rotate(90deg);">E</div>
+            <div class="e-char" style="font-size: 33px; transform: rotate(-90deg);">E</div>
+            <span class="text-xs text-slate-400 absolute right-8">0.3</span>
+        </div>
+
+        <!-- Row 7: 0.4 -->
+        <div class="row flex gap-4 items-center">
+            <div class="e-char" style="font-size: 25px; transform: rotate(90deg);">E</div>
+            <div class="e-char" style="font-size: 25px; transform: rotate(0deg);">E</div>
+            <div class="e-char" style="font-size: 25px; transform: rotate(-90deg);">E</div>
+            <div class="e-char" style="font-size: 25px; transform: rotate(180deg);">E</div>
+            <div class="e-char" style="font-size: 25px; transform: rotate(0deg);">E</div>
+            <span class="text-xs text-slate-400 absolute right-8">0.4</span>
+        </div>
+
+        <!-- Row 8: 0.5 -->
+        <div class="row flex gap-3 items-center">
+            <div class="e-char" style="font-size: 20px; transform: rotate(180deg);">E</div>
+            <div class="e-char" style="font-size: 20px; transform: rotate(-90deg);">E</div>
+            <div class="e-char" style="font-size: 20px; transform: rotate(0deg);">E</div>
+            <div class="e-char" style="font-size: 20px; transform: rotate(90deg);">E</div>
+            <div class="e-char" style="font-size: 20px; transform: rotate(180deg);">E</div>
+            <div class="e-char" style="font-size: 20px; transform: rotate(0deg);">E</div>
+            <span class="text-xs text-slate-400 absolute right-8">0.5</span>
+        </div>
+
+        <!-- Row 9: 0.8 -->
+        <div class="row flex gap-3 items-center">
+            <div class="e-char" style="font-size: 12.5px; transform: rotate(0deg);">E</div>
+            <div class="e-char" style="font-size: 12.5px; transform: rotate(90deg);">E</div>
+            <div class="e-char" style="font-size: 12.5px; transform: rotate(180deg);">E</div>
+            <div class="e-char" style="font-size: 12.5px; transform: rotate(-90deg);">E</div>
+            <div class="e-char" style="font-size: 12.5px; transform: rotate(0deg);">E</div>
+            <div class="e-char" style="font-size: 12.5px; transform: rotate(90deg);">E</div>
+            <div class="e-char" style="font-size: 12.5px; transform: rotate(180deg);">E</div>
+            <div class="e-char" style="font-size: 12.5px; transform: rotate(-90deg);">E</div>
+            <span class="text-xs text-slate-400 absolute right-8">0.8</span>
+        </div>
+
+        <!-- Row 10: 1.0 -->
+        <div class="row flex gap-2 items-center text-red-600">
+            <div class="e-char" style="font-size: 10px; transform: rotate(90deg);">E</div>
+            <div class="e-char" style="font-size: 10px; transform: rotate(0deg);">E</div>
+            <div class="e-char" style="font-size: 10px; transform: rotate(-90deg);">E</div>
+            <div class="e-char" style="font-size: 10px; transform: rotate(180deg);">E</div>
+            <div class="e-char" style="font-size: 10px; transform: rotate(0deg);">E</div>
+            <div class="e-char" style="font-size: 10px; transform: rotate(90deg);">E</div>
+            <div class="e-char" style="font-size: 10px; transform: rotate(180deg);">E</div>
+            <div class="e-char" style="font-size: 10px; transform: rotate(-90deg);">E</div>
+            <span class="text-xs text-red-500 absolute right-8 font-bold">1.0</span>
+        </div>
+
+        <div class="h-8 w-full border-t border-slate-200 mt-4 pt-2 text-center text-xs text-slate-400">
+            距离 3-5 米测试 (Distance 3-5m)
+        </div>
+
+    </div>
+
+    <script>
+        const container = document.getElementById('chart-container');
+        const scaleVal = document.getElementById('scale-val');
+
+        function updateScale() {
+            const s = document.getElementById('scale').value;
+            container.style.transform = `scale(${s})`;
+            container.style.transformOrigin = 'top center';
+            scaleVal.innerText = s + 'x';
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>听音辨程</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .btn-opt {
+            transition: all 0.1s;
+        }
+
+        .btn-opt:active {
+            transform: scale(0.95);
+        }
+
+        .btn-opt.correct {
+            background-color: #22c55e;
+            color: white;
+            border-color: #22c55e;
+        }
+
+        .btn-opt.wrong {
+            background-color: #ef4444;
+            color: white;
+            border-color: #ef4444;
+        }
+    </style>
+</head>
+
+<body class="bg-indigo-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800 select-none">
+
+    <div class="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-indigo-100">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold text-indigo-800 flex items-center gap-2">
+                <span class="text-2xl">👂</span> Ear Trainer
+            </h1>
+            <div class="text-sm font-bold text-indigo-500">Score: <span id="score">0</span></div>
+        </header>
+
+        <div class="text-center mb-8">
+            <button onclick="playInterval()" id="play-btn"
+                class="w-24 h-24 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full flex items-center justify-center shadow-lg transition transform hover:scale-105">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                </svg>
+            </button>
+            <p class="text-xs text-slate-400 mt-4 uppercase font-bold tracking-widest" id="status-text">Click to Play
+            </p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4" id="options">
+            <!-- Buttons injected -->
+        </div>
+
+        <div class="mt-8 text-center">
+            <a href="./navigation.html" class="text-xs text-indigo-300 hover:text-indigo-500">退出</a>
+        </div>
+
+    </div>
+
+    <script>
+        const intervals = [
+            { name: "纯四度 (Perfect 4th)", semitones: 5 },
+            { name: "纯五度 (Perfect 5th)", semitones: 7 },
+            { name: "大三度 (Major 3rd)", semitones: 4 },
+            { name: "小三度 (Minor 3rd)", semitones: 3 },
+            { name: "大六度 (Major 6th)", semitones: 9 },
+            { name: "八度 (Octave)", semitones: 12 }
+        ];
+
+        let audioCtx;
+        let currentInterval = null;
+        let score = 0;
+        let isWaiting = false;
+
+        const scoreEl = document.getElementById('score');
+        const statusEl = document.getElementById('status-text');
+        const optionsEl = document.getElementById('options');
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function nextRound() {
+            // Pick random interval
+            currentInterval = intervals[Math.floor(Math.random() * intervals.length)];
+
+            // Render options
+            optionsEl.innerHTML = '';
+            // Shuffle list of all intervals for buttons? Or just 4 choices?
+            // Let's show all 6 to make it harder/consistent
+
+            intervals.forEach(int => {
+                const btn = document.createElement('button');
+                btn.className = "btn-opt w-full py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-indigo-50 hover:border-indigo-200";
+                btn.innerText = int.name;
+                btn.onclick = () => checkAnswer(int, btn);
+                optionsEl.appendChild(btn);
+            });
+
+            statusEl.innerText = "Listen & Guess";
+            playInterval();
+        }
+
+        function playTone(freq, time, duration) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.frequency.value = freq;
+            osc.type = 'triangle'; // Softer than square
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            gain.gain.setValueAtTime(0, time);
+            gain.gain.linearRampToValueAtTime(0.5, time + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+
+            osc.start(time);
+            osc.stop(time + duration);
+        }
+
+        function playInterval() {
+            initAudio();
+            if (!currentInterval) {
+                nextRound();
+                return;
+            }
+
+            const baseFreq = 261.63; // Middle C
+            // Random root note (C3 to C5 range approx)
+            const rootKey = Math.floor(Math.random() * 24);
+            // Freq = base * 2^(n/12)
+            const f1 = baseFreq * Math.pow(2, rootKey / 12);
+            const f2 = f1 * Math.pow(2, currentInterval.semitones / 12);
+
+            const now = audioCtx.currentTime;
+
+            // Play Arpeggio
+            playTone(f1, now, 0.6);
+            playTone(f2, now + 0.6, 0.6);
+            // Play Chord together after? Or just Arp? Arp is clearer for training.
+        }
+
+        function checkAnswer(selected, btn) {
+            if (isWaiting) return;
+
+            if (selected.name === currentInterval.name) {
+                score++;
+                scoreEl.innerText = score;
+                btn.classList.add('correct');
+                statusEl.innerText = "Correct!";
+                statusEl.className = "text-xs mt-4 uppercase font-bold tracking-widest text-green-500";
+            } else {
+                score = Math.max(0, score - 1);
+                scoreEl.innerText = score;
+                btn.classList.add('wrong');
+                statusEl.innerText = `Wrong! It was ${currentInterval.name}`;
+                statusEl.className = "text-xs mt-4 uppercase font-bold tracking-widest text-red-500";
+
+                // Highlight correct one
+                const buttons = optionsEl.querySelectorAll('button');
+                buttons.forEach(b => {
+                    if (b.innerText === currentInterval.name) b.classList.add('correct');
+                });
+            }
+
+            isWaiting = true;
+            setTimeout(() => {
+                statusEl.className = "text-xs mt-4 uppercase font-bold tracking-widest text-slate-400";
+                statusEl.innerText = "Listen & Guess";
+                isWaiting = false;
+                nextRound();
+            }, 1500);
+        }
+
+        // Init
+        // Wait for user interaction to start audio context
+    </script>
+</body>
+
+</html>

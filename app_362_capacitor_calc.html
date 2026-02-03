@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电容代码计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .capacitor-body {
+            background-color: #eab308;
+            /* yellow-500 ceramic look */
+            border-radius: 50% 50% 10% 10%;
+            box-shadow: inset -5px -5px 10px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-6 text-slate-800">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-yellow-700">
+                <span class="text-2xl">⚡</span> Capacitor Calc
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-yellow-600">退出</a>
+        </header>
+
+        <div class="flex flex-col items-center mb-8">
+            <!-- Visual -->
+            <div class="relative w-40 h-40 flex justify-center items-center">
+                <div class="absolute w-1 h-12 bg-gray-400 -bottom-8 left-12"></div>
+                <div class="absolute w-1 h-12 bg-gray-400 -bottom-8 right-12"></div>
+                <div class="capacitor-body w-32 h-24 flex items-center justify-center z-10 border-2 border-yellow-600">
+                    <span id="code-display" class="font-mono text-2xl font-bold text-slate-700 opacity-80">104</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">输入代码 (Code)</label>
+                <input type="number" id="input"
+                    class="w-full p-4 text-center text-3xl font-bold border-2 border-slate-200 rounded-xl outline-none focus:border-yellow-500 transition font-mono"
+                    placeholder="104" value="104" oninput="calc()">
+                <p class="text-xs text-center text-slate-400 mt-2">例如: 104 = 10 x 10^4 pF</p>
+            </div>
+
+            <div class="bg-yellow-50 p-6 rounded-2xl border border-yellow-100 space-y-4">
+                <div class="flex justify-between items-center border-b border-yellow-200 pb-2">
+                    <span class="text-sm font-bold text-yellow-800">Picofarads (pF)</span>
+                    <span class="font-mono font-bold text-lg" id="val-pf">100,000</span>
+                </div>
+                <div class="flex justify-between items-center border-b border-yellow-200 pb-2">
+                    <span class="text-sm font-bold text-yellow-800">Nanofarads (nF)</span>
+                    <span class="font-mono font-bold text-lg" id="val-nf">100</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-sm font-bold text-yellow-800">Microfarads (µF)</span>
+                    <span class="font-mono font-bold text-lg" id="val-uf">0.1</span>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const input = document.getElementById('input');
+        const display = document.getElementById('code-display');
+        const pfEl = document.getElementById('val-pf');
+        const nfEl = document.getElementById('val-nf');
+        const ufEl = document.getElementById('val-uf');
+
+        function calc() {
+            const val = input.value;
+            display.innerText = val || "---";
+
+            if (!val || val.length < 3) {
+                pfEl.innerText = "-";
+                nfEl.innerText = "-";
+                ufEl.innerText = "-";
+                return;
+            }
+
+            // Logic: 1st digit, 2nd digit, x 10^(3rd digit) pF
+            const d1 = parseInt(val[0]);
+            const d2 = parseInt(val[1]);
+            const mul = parseInt(val.substring(2)); // handle >3 digits? Usually 3 digits. 
+            // e.g. 104 = 10 * 10^4
+
+            // Allow 3 digit standard code
+            if (val.length === 3) {
+                const base = d1 * 10 + d2;
+                const pF = base * Math.pow(10, mul);
+
+                pfEl.innerText = pF.toLocaleString();
+                nfEl.innerText = (pF / 1000).toLocaleString(undefined, { maximumFractionDigits: 6 });
+                ufEl.innerText = (pF / 1000000).toLocaleString(undefined, { maximumFractionDigits: 9 });
+            } else {
+                // If user enters direct value e.g. 47? Assume pF raw? 
+                // Standard capacitor codes are usually 3 digits.
+                pfEl.innerText = "Invalid";
+                nfEl.innerText = "Code";
+                ufEl.innerText = "(3 Digits)";
+            }
+        }
+
+        // Init
+        calc();
+    </script>
+</body>
+
+</html>

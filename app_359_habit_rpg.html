@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG 习惯养成</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .pixel-art {
+            image-rendering: pixelated;
+        }
+
+        .shake {
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-5px);
+            }
+
+            75% {
+                transform: translateX(5px);
+            }
+        }
+
+        .hp-bar {
+            transition: width 0.3s ease-out;
+        }
+
+        .xp-bar {
+            transition: width 0.3s ease-out;
+        }
+    </style>
+</head>
+
+<body class="bg-stone-900 min-h-screen flex flex-col items-center p-4 text-stone-200 font-sans">
+
+    <div class="w-full max-w-md flex flex-col h-[90vh]">
+
+        <!-- Character Stats -->
+        <div class="bg-stone-800 p-6 rounded-2xl shadow-xl border border-stone-700 mb-6 relative overflow-hidden">
+
+            <div class="flex justify-between items-start mb-4 relative z-10">
+                <div class="flex gap-4">
+                    <div
+                        class="w-16 h-16 bg-indigo-600 rounded-lg flex items-center justify-center text-3xl shadow-lg border-2 border-indigo-400">
+                        🦸
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-xl text-white">Hero <span
+                                class="text-xs text-stone-400 font-normal">Lvl. <span id="level">1</span></span></h2>
+                        <p class="text-xs text-stone-400 mt-1">Warrior</p>
+                    </div>
+                </div>
+                <a href="./navigation.html" class="text-xs text-stone-500 hover:text-white">Exit</a>
+            </div>
+
+            <!-- Bars -->
+            <div class="space-y-3 relative z-10">
+                <div>
+                    <div class="flex justify-between text-[10px] font-bold uppercase mb-1">
+                        <span class="text-red-400">HP</span>
+                        <span id="hp-text">50 / 50</span>
+                    </div>
+                    <div class="w-full h-2 bg-stone-900 rounded-full overflow-hidden">
+                        <div id="hp-bar" class="h-full bg-red-500 hp-bar" style="width: 100%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-[10px] font-bold uppercase mb-1">
+                        <span class="text-yellow-400">XP</span>
+                        <span id="xp-text">0 / 100</span>
+                    </div>
+                    <div class="w-full h-2 bg-stone-900 rounded-full overflow-hidden">
+                        <div id="xp-bar" class="h-full bg-yellow-500 xp-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Quests -->
+        <div class="flex-1 bg-stone-800 rounded-2xl shadow-sm border border-stone-700 flex flex-col overflow-hidden">
+            <div class="p-4 border-b border-stone-700 flex justify-between items-center bg-stone-800/50">
+                <h3 class="font-bold text-sm text-stone-300 uppercase">Daily Quests</h3>
+                <button onclick="addTask()"
+                    class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded font-bold">+
+                    New</button>
+            </div>
+
+            <div id="task-list" class="flex-1 overflow-y-auto p-4 space-y-3">
+                <!-- Tasks injected -->
+            </div>
+        </div>
+
+        <div class="mt-4 text-center">
+            <button onclick="resetData()" class="text-xs text-red-900 hover:text-red-500">Reset Hero</button>
+        </div>
+
+    </div>
+
+    <script>
+        const hpBar = document.getElementById('hp-bar');
+        const xpBar = document.getElementById('xp-bar');
+        const hpText = document.getElementById('hp-text');
+        const xpText = document.getElementById('xp-text');
+        const lvlText = document.getElementById('level');
+        const taskList = document.getElementById('task-list');
+
+        let hero = JSON.parse(localStorage.getItem('rpg_hero') || JSON.stringify({
+            lvl: 1,
+            hp: 50,
+            maxHp: 50,
+            xp: 0,
+            maxXp: 100,
+            tasks: []
+        }));
+
+        function saveData() {
+            localStorage.setItem('rpg_hero', JSON.stringify(hero));
+            render();
+        }
+
+        function addTask() {
+            const name = prompt("Enter quest name:");
+            if (name) {
+                hero.tasks.push({ id: Date.now(), name: name, done: false });
+                saveData();
+            }
+        }
+
+        function completeTask(id) {
+            const task = hero.tasks.find(t => t.id === id);
+            if (!task) return;
+
+            // Gain XP
+            gainXP(20);
+
+            // Remove task (One-time quest logic for simplicity, or mark done for daily reset)
+            // Let's remove for "Quest Board" feel
+            hero.tasks = hero.tasks.filter(t => t.id !== id);
+            saveData();
+
+            // Play Sound? (Optional)
+        }
+
+        function failTask(id) {
+            // Taking damage
+            takeDamage(10);
+            // Don't remove task, just punish
+            // Or remove? Let's remove to clear board
+            hero.tasks = hero.tasks.filter(t => t.id !== id);
+            saveData();
+        }
+
+        function gainXP(amount) {
+            hero.xp += amount;
+            if (hero.xp >= hero.maxXp) {
+                // Level Up
+                hero.lvl++;
+                hero.xp -= hero.maxXp;
+                hero.maxXp = Math.floor(hero.maxXp * 1.2);
+                hero.maxHp += 10;
+                hero.hp = hero.maxHp; // Heal
+                alert("LEVEL UP! You are now level " + hero.lvl);
+            }
+        }
+
+        function takeDamage(amount) {
+            hero.hp -= amount;
+            if (hero.hp <= 0) {
+                hero.hp = 0;
+                alert("You died! Respawning...");
+                resetData(); // Hardcore? Or just penalty? Let's reset.
+                return;
+            }
+            // Shake effect
+            document.body.classList.add('shake');
+            setTimeout(() => document.body.classList.remove('shake'), 500);
+        }
+
+        function resetData() {
+            localStorage.removeItem('rpg_hero');
+            location.reload();
+        }
+
+        function render() {
+            // Stats
+            lvlText.innerText = hero.lvl;
+            hpText.innerText = `${hero.hp} / ${hero.maxHp}`;
+            xpText.innerText = `${hero.xp} / ${hero.maxXp}`;
+
+            hpBar.style.width = (hero.hp / hero.maxHp * 100) + '%';
+            xpBar.style.width = (hero.xp / hero.maxXp * 100) + '%';
+
+            // Tasks
+            taskList.innerHTML = '';
+            if (hero.tasks.length === 0) {
+                taskList.innerHTML = '<div class="text-center text-stone-600 text-xs mt-10">No active quests.</div>';
+            }
+
+            hero.tasks.forEach(t => {
+                const div = document.createElement('div');
+                div.className = "bg-stone-700 p-3 rounded-lg flex justify-between items-center shadow-sm border border-stone-600";
+                div.innerHTML = `
+                    <span class="font-bold text-sm">${t.name}</span>
+                    <div class="flex gap-2">
+                        <button onclick="completeTask(${t.id})" class="bg-green-600 hover:bg-green-500 text-white p-1 rounded text-xs w-8">✔</button>
+                        <button onclick="failTask(${t.id})" class="bg-red-600 hover:bg-red-500 text-white p-1 rounded text-xs w-8">✖</button>
+                    </div>
+                `;
+                taskList.appendChild(div);
+            });
+        }
+
+        render();
+    </script>
+</body>
+
+</html>

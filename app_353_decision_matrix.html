@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>加权决策矩阵</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        th,
+        td {
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+        }
+
+        input[type=number] {
+            width: 60px;
+            padding: 4px;
+            border: 1px solid #cbd5e1;
+            rounded: 4px;
+            text-align: center;
+        }
+
+        .winner {
+            background-color: #dcfce7;
+            font-weight: bold;
+            color: #166534;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen p-6 text-slate-800 flex flex-col items-center">
+
+    <div class="w-full max-w-4xl">
+
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-slate-700">
+                <span class="bg-slate-800 text-white px-2 py-1 rounded text-xs">DM</span> Decision Matrix
+            </h1>
+            <a href="./navigation.html" class="text-sm text-slate-400 hover:text-slate-600">退出</a>
+        </header>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+
+            <div class="flex justify-between mb-4 min-w-[600px]">
+                <h2 class="font-bold text-slate-700">评分表 (1-10分)</h2>
+                <div class="flex gap-2">
+                    <button onclick="addRow()"
+                        class="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded font-bold">+ 选项
+                        (Option)</button>
+                    <button onclick="addCol()"
+                        class="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded font-bold">+ 标准
+                        (Criteria)</button>
+                    <button onclick="calculate()"
+                        class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded font-bold shadow">计算最佳选择</button>
+                </div>
+            </div>
+
+            <table class="w-full min-w-[600px] border-collapse" id="matrix">
+                <thead>
+                    <tr class="bg-slate-50 text-xs font-bold text-slate-500 uppercase">
+                        <th class="w-32 text-left">选项 / 权重</th>
+                        <!-- Criteria Headers -->
+                    </tr>
+                    <tr id="weight-row" class="bg-slate-50/50">
+                        <td class="text-left text-xs font-bold text-slate-400">权重 (Weight)</td>
+                        <!-- Weight Inputs -->
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- Rows -->
+                </tbody>
+            </table>
+
+        </div>
+
+        <div id="result-box" class="mt-6 hidden bg-blue-50 border border-blue-200 p-6 rounded-xl text-center">
+            <p class="text-xs font-bold text-blue-400 uppercase mb-2">最佳选择 (Winner)</p>
+            <h2 class="text-3xl font-black text-blue-800" id="winner-name">-</h2>
+            <p class="text-sm text-blue-600 mt-2">总分: <span id="winner-score">0</span></p>
+        </div>
+
+    </div>
+
+    <script>
+        const table = document.getElementById('matrix');
+        const theadRow = table.querySelector('thead tr:first-child');
+        const weightRow = document.getElementById('weight-row');
+        const tbody = document.getElementById('table-body');
+        const resultBox = document.getElementById('result-box');
+
+        let criteriaCount = 3;
+        let optionCount = 2;
+
+        function init() {
+            // Initial render
+            // Criteria headers
+            for (let i = 0; i < criteriaCount; i++) {
+                addCriteriaHeader(i);
+            }
+            // Options rows
+            for (let i = 0; i < optionCount; i++) {
+                addOptionRow(i);
+            }
+        }
+
+        function addCriteriaHeader(idx) {
+            const th = document.createElement('th');
+            th.innerHTML = `<input type="text" value="标准 ${idx + 1}" class="w-full bg-transparent border-none text-center font-bold outline-none">`;
+            theadRow.appendChild(th);
+
+            const td = document.createElement('td');
+            td.innerHTML = `<input type="number" value="1" min="1" max="10" class="w-16 mx-auto bg-white" placeholder="Wt">`;
+            weightRow.appendChild(td);
+        }
+
+        function addOptionRow(idx) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td class="text-left"><input type="text" value="选项 ${idx + 1}" class="w-full bg-transparent border-none outline-none font-bold text-slate-700"></td>`;
+
+            for (let i = 0; i < criteriaCount; i++) {
+                const td = document.createElement('td');
+                td.innerHTML = `<input type="number" value="5" min="0" max="10" class="score-input">`;
+                tr.appendChild(td);
+            }
+
+            // Total col placeholder (calculated later)
+            const tdTotal = document.createElement('td');
+            tdTotal.className = "total-cell font-bold text-slate-400 text-sm";
+            tdTotal.innerText = "-";
+            tr.appendChild(tdTotal);
+
+            tbody.appendChild(tr);
+        }
+
+        function addCol() {
+            criteriaCount++;
+            // Add header
+            const th = document.createElement('th');
+            th.innerHTML = `<input type="text" value="标准 ${criteriaCount}" class="w-full bg-transparent border-none text-center font-bold outline-none">`;
+            theadRow.insertBefore(th, theadRow.lastChild); // Insert before total? No total col in head yet.
+
+            // Add weight
+            const tdW = document.createElement('td');
+            tdW.innerHTML = `<input type="number" value="1" min="1" max="10" class="w-16 mx-auto bg-white">`;
+            weightRow.appendChild(tdW);
+
+            // Add cells to rows
+            Array.from(tbody.children).forEach(tr => {
+                const td = document.createElement('td');
+                td.innerHTML = `<input type="number" value="5" min="0" max="10" class="score-input">`;
+                tr.insertBefore(td, tr.lastChild);
+            });
+        }
+
+        function addRow() {
+            optionCount++;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td class="text-left"><input type="text" value="选项 ${optionCount}" class="w-full bg-transparent border-none outline-none font-bold text-slate-700"></td>`;
+
+            for (let i = 0; i < criteriaCount; i++) {
+                const td = document.createElement('td');
+                td.innerHTML = `<input type="number" value="5" min="0" max="10" class="score-input">`;
+                tr.appendChild(td);
+            }
+            const tdTotal = document.createElement('td');
+            tdTotal.className = "total-cell font-bold text-slate-400 text-sm";
+            tdTotal.innerText = "-";
+            tr.appendChild(tdTotal);
+
+            tbody.appendChild(tr);
+        }
+
+        function calculate() {
+            // Get weights
+            const weights = Array.from(weightRow.querySelectorAll('input[type=number]')).map(i => parseFloat(i.value) || 0);
+
+            let maxScore = -1;
+            let winner = "";
+            let winnerRow = null;
+
+            // Clear styles
+            document.querySelectorAll('tr').forEach(r => r.classList.remove('winner'));
+
+            Array.from(tbody.children).forEach(tr => {
+                const name = tr.querySelector('td:first-child input').value;
+                const scores = Array.from(tr.querySelectorAll('.score-input')).map(i => parseFloat(i.value) || 0);
+
+                let total = 0;
+                scores.forEach((s, i) => {
+                    total += s * (weights[i] || 1);
+                });
+
+                tr.querySelector('.total-cell').innerText = total;
+
+                if (total > maxScore) {
+                    maxScore = total;
+                    winner = name;
+                    winnerRow = tr;
+                }
+            });
+
+            if (winnerRow) {
+                winnerRow.classList.add('winner');
+                document.getElementById('winner-name').innerText = winner;
+                document.getElementById('winner-score').innerText = maxScore;
+                resultBox.classList.remove('hidden');
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

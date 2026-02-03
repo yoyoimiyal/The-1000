@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打字机动画生成</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .typewriter-text {
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            /* Ensures the content is not revealed until the animation */
+            border-right: .15em solid orange;
+            /* The typwriter cursor */
+            white-space: nowrap;
+            /* Keeps the content on a single line */
+            margin: 0 auto;
+            /* Gives that scrolling effect as the typing happens */
+            letter-spacing: .15em;
+            /* Adjust as needed */
+        }
+
+        /* Animation classes injected by JS */
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center p-6 text-white">
+
+    <div class="w-full max-w-4xl">
+
+        <header class="flex justify-between items-center mb-10">
+            <h1 class="text-xl font-bold font-mono text-orange-500">Typewriter Effect</h1>
+            <a href="./navigation.html" class="text-xs text-gray-500 hover:text-white">Exit</a>
+        </header>
+
+        <!-- Preview -->
+        <div
+            class="bg-black p-12 rounded-xl border border-gray-700 shadow-2xl mb-8 flex items-center justify-center min-h-[200px]">
+            <div id="demo-text" class="typewriter-text text-2xl md:text-4xl text-green-400 font-bold">
+                Hello World!
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-6">
+
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">文本内容</label>
+                <input type="text" id="text-input" value="Hello World!"
+                    class="w-full p-3 bg-gray-900 border border-gray-600 rounded-lg text-white font-mono focus:border-orange-500 outline-none"
+                    oninput="update()">
+            </div>
+
+            <div class="flex gap-6">
+                <div class="flex-1">
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">速度 (Duration)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="range" id="duration" min="1" max="10" step="0.5" value="3.5"
+                            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                            oninput="update()">
+                        <span id="dur-val" class="text-xs font-mono w-8">3.5s</span>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">字体大小</label>
+                    <input type="range" id="size" min="16" max="64" value="32"
+                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                        oninput="update()">
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <button onclick="replay()"
+                    class="flex-1 py-3 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl shadow transition">重新播放</button>
+            </div>
+
+            <!-- Code -->
+            <div class="bg-gray-900 p-4 rounded-xl relative group mt-4 border border-gray-700">
+                <code id="code-output"
+                    class="text-[10px] text-green-400 font-mono break-all block leading-relaxed whitespace-pre-wrap"></code>
+                <button onclick="copyCode()"
+                    class="absolute top-2 right-2 text-[10px] bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded">Copy</button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <style id="dynamic-style"></style>
+
+    <script>
+        const demo = document.getElementById('demo-text');
+        const input = document.getElementById('text-input');
+        const styleTag = document.getElementById('dynamic-style');
+        const output = document.getElementById('code-output');
+
+        function update() {
+            const text = input.value;
+            const duration = document.getElementById('duration').value;
+            const size = document.getElementById('size').value;
+            const chars = text.length;
+
+            document.getElementById('dur-val').innerText = duration + 's';
+
+            // Update Preview
+            demo.innerText = text;
+            demo.style.fontSize = size + 'px';
+
+            // Generate CSS Animation
+            // Keyframe for typing needs steps equal to char count
+
+            const css = `
+.typewriter {
+  overflow: hidden;
+  border-right: .15em solid orange;
+  white-space: nowrap;
+  font-family: monospace;
+  font-size: ${size}px;
+  width: 0;
+  animation: 
+    typing ${duration}s steps(${chars}, end) forwards,
+    blink-caret .75s step-end infinite;
+}
+
+@keyframes typing {
+  from { width: 0 }
+  to { width: 100% }
+}
+
+@keyframes blink-caret {
+  from, to { border-color: transparent }
+  50% { border-color: orange; }
+}`;
+
+            styleTag.innerHTML = css.replace('.typewriter', '#demo-text'); // Apply to demo ID
+
+            // Output generic class code
+            output.innerText = css;
+
+            // Trigger reflow to restart anim
+            demo.classList.remove('typewriter-text'); // Remove old base class logic if conflict
+            demo.style.animation = 'none';
+            void demo.offsetWidth;
+            demo.style.animation = `typing ${duration}s steps(${chars}, end) forwards, blink-caret .75s step-end infinite`;
+
+            // Width 100% trick: For the effect to stop at end of text width, 
+            // container usually needs fit-content or ch units width.
+            // Simplified here: animating width 0 to 100% of the container text.
+        }
+
+        function replay() {
+            update();
+        }
+
+        function copyCode() {
+            navigator.clipboard.writeText(output.innerText);
+            alert("代码已复制!");
+        }
+
+        update();
+    </script>
+</body>
+
+</html>

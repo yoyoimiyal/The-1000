@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简录音机</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .waveform-bar {
+            background-color: #ef4444;
+            width: 4px;
+            margin: 0 1px;
+            border-radius: 2px;
+            transition: height 0.05s;
+            min-height: 2px;
+        }
+
+        .recording-pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 15px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-6 text-white">
+
+    <div class="w-full max-w-md bg-gray-800 p-8 rounded-3xl shadow-2xl border border-gray-700 text-center">
+
+        <header class="flex justify-between items-center mb-10">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <span class="text-2xl">🎙️</span> Voice Recorder
+            </h1>
+            <a href="./navigation.html"
+                class="text-xs text-gray-500 hover:text-white border border-gray-600 px-3 py-1 rounded">退出</a>
+        </header>
+
+        <!-- Visualization -->
+        <div
+            class="h-32 bg-black/50 rounded-xl mb-8 flex items-center justify-center overflow-hidden border border-gray-700 relative">
+            <div id="visualizer" class="flex items-center h-full w-full justify-center px-4">
+                <!-- Bars injected -->
+            </div>
+            <div id="timer" class="absolute top-2 right-4 font-mono text-sm text-gray-400">00:00</div>
+        </div>
+
+        <div class="flex justify-center items-center gap-8 mb-8">
+            <button onclick="toggleRecord()" id="rec-btn"
+                class="w-20 h-20 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center transition shadow-lg text-2xl">
+                ●
+            </button>
+        </div>
+
+        <div id="download-area" class="hidden animate-fade-in-up">
+            <audio id="audio-playback" controls class="w-full mb-4"></audio>
+            <a id="download-link"
+                class="block w-full py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold shadow transition">
+                下载录音 (.webm)
+            </a>
+            <button onclick="discard()" class="mt-4 text-xs text-gray-500 hover:text-red-400">丢弃并重新录制</button>
+        </div>
+
+        <p class="text-xs text-gray-600 mt-6" id="status-text">点击红色按钮开始录音</p>
+
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let audioCtx, analyser, dataArray;
+        let startTime;
+        let timerInt;
+
+        const recBtn = document.getElementById('rec-btn');
+        const visualizer = document.getElementById('visualizer');
+        const timerEl = document.getElementById('timer');
+        const statusText = document.getElementById('status-text');
+        const downloadArea = document.getElementById('download-area');
+        const audioPlayback = document.getElementById('audio-playback');
+        const downloadLink = document.getElementById('download-link');
+
+        // Create visualizer bars
+        const barCount = 30;
+        for (let i = 0; i < barCount; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'waveform-bar';
+            visualizer.appendChild(bar);
+        }
+        const bars = document.querySelectorAll('.waveform-bar');
+
+        async function toggleRecord() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                // Init Audio Context for visualization
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                const source = audioCtx.createMediaStreamSource(stream);
+                source.connect(analyser);
+                analyser.fftSize = 64;
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    audioPlayback.src = audioUrl;
+                    downloadLink.href = audioUrl;
+                    downloadLink.download = `recording_${new Date().getTime()}.webm`;
+
+                    downloadArea.classList.remove('hidden');
+                    recBtn.classList.add('hidden'); // Hide rec button when reviewing
+                    statusText.innerText = "录音完成";
+                    clearInterval(timerInt);
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                startTime = Date.now();
+
+                recBtn.innerHTML = "■"; // Stop icon
+                recBtn.classList.add('recording-pulse');
+                statusText.innerText = "正在录音...";
+                downloadArea.classList.add('hidden');
+
+                timerInt = setInterval(updateTimer, 1000);
+                visualize();
+
+            } catch (err) {
+                alert("无法访问麦克风: " + err.message);
+            }
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            isRecording = false;
+            recBtn.innerHTML = "●";
+            recBtn.classList.remove('recording-pulse');
+
+            // Stop tracks
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        }
+
+        function discard() {
+            downloadArea.classList.add('hidden');
+            recBtn.classList.remove('hidden');
+            statusText.innerText = "点击红色按钮开始录音";
+            timerEl.innerText = "00:00";
+            // Reset bars
+            bars.forEach(b => b.style.height = '2px');
+        }
+
+        function updateTimer() {
+            const diff = Math.floor((Date.now() - startTime) / 1000);
+            const m = Math.floor(diff / 60).toString().padStart(2, '0');
+            const s = (diff % 60).toString().padStart(2, '0');
+            timerEl.innerText = `${m}:${s}`;
+        }
+
+        function visualize() {
+            if (!isRecording) return;
+
+            requestAnimationFrame(visualize);
+            analyser.getByteFrequencyData(dataArray);
+
+            // Map data to bars
+            // We have 32 bins (fftSize 64 / 2)
+            // We have 30 bars.
+            for (let i = 0; i < barCount; i++) {
+                const val = dataArray[i];
+                const h = Math.max(2, val / 255 * 80); // Max height 80px
+                bars[i].style.height = `${h}px`;
+            }
+        }
+    </script>
+</body>
+
+</html>

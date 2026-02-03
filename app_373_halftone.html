@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>半调艺术生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body class="bg-stone-100 min-h-screen flex flex-col items-center p-6 text-stone-800">
+
+    <div class="w-full max-w-4xl flex flex-col h-[90vh]">
+
+        <header class="flex justify-between items-center mb-6 shrink-0">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-stone-700">
+                <span class="text-2xl">📰</span> Halftone Gen
+            </h1>
+            <a href="./navigation.html" class="text-sm text-stone-400 hover:text-stone-600">退出</a>
+        </header>
+
+        <div class="flex-1 flex flex-col md:flex-row gap-6 overflow-hidden">
+
+            <!-- Controls -->
+            <div
+                class="w-full md:w-80 bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex flex-col gap-6 shrink-0 overflow-y-auto">
+                <label
+                    class="block w-full py-2 bg-stone-100 border border-stone-200 rounded-lg text-center cursor-pointer hover:bg-stone-200 transition text-sm font-bold text-stone-600">
+                    📂 上传图片
+                    <input type="file" class="hidden" accept="image/*" onchange="loadImage(event)">
+                </label>
+
+                <div>
+                    <label class="block text-xs font-bold text-stone-400 uppercase mb-2">点大小 (Dot Size)</label>
+                    <input type="range" id="size" min="4" max="20" value="8" class="w-full accent-stone-600"
+                        oninput="render()">
+                    <div class="text-right text-xs text-stone-500 mt-1" id="val-size">8px</div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-stone-400 uppercase mb-2">对比度 (Contrast)</label>
+                    <input type="range" id="contrast" min="1" max="3" step="0.1" value="1.2"
+                        class="w-full accent-stone-600" oninput="render()">
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="invert" class="rounded text-stone-600 focus:ring-stone-500"
+                        onchange="render()">
+                    <span class="text-sm font-bold text-stone-600">反色 (Invert)</span>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-stone-400 uppercase mb-2">颜色 (Ink Color)</label>
+                    <input type="color" id="color" value="#000000"
+                        class="w-full h-8 rounded cursor-pointer p-0 border border-stone-200" oninput="render()">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-stone-400 uppercase mb-2">背景色 (Paper Color)</label>
+                    <input type="color" id="bg-color" value="#ffffff"
+                        class="w-full h-8 rounded cursor-pointer p-0 border border-stone-200" oninput="render()">
+                </div>
+
+                <button onclick="download()"
+                    class="w-full py-3 bg-stone-800 text-white font-bold rounded-xl shadow-lg hover:bg-stone-700 transition">下载图片</button>
+            </div>
+
+            <!-- Preview -->
+            <div
+                class="flex-1 bg-stone-200 rounded-2xl flex items-center justify-center p-4 overflow-hidden border border-stone-300 relative">
+                <p id="placeholder" class="text-stone-400 font-bold">Preview Area</p>
+                <canvas id="canvas" class="max-w-full max-h-full object-contain hidden"></canvas>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const placeholder = document.getElementById('placeholder');
+
+        let img = new Image();
+        let isLoaded = false;
+
+        // Sample image
+        img.crossOrigin = "Anonymous";
+        img.src = "https://images.unsplash.com/photo-1544377854-f25b293309a6?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80"; // A statue face
+        img.onload = () => {
+            isLoaded = true;
+            placeholder.classList.add('hidden');
+            canvas.classList.remove('hidden');
+            render();
+        }
+
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                img.src = url;
+            }
+        }
+
+        function render() {
+            if (!isLoaded) return;
+
+            const dotSize = parseInt(document.getElementById('size').value);
+            const contrast = parseFloat(document.getElementById('contrast').value);
+            const invert = document.getElementById('invert').checked;
+            const inkColor = document.getElementById('color').value;
+            const paperColor = document.getElementById('bg-color').value;
+
+            document.getElementById('val-size').innerText = dotSize + 'px';
+
+            const w = img.width;
+            const h = img.height;
+
+            // Limit canvas size for performance? No, render full but scale in CSS.
+            canvas.width = w;
+            canvas.height = h;
+
+            // Draw image to offscreen canvas to get data
+            const offCanvas = document.createElement('canvas');
+            offCanvas.width = w;
+            offCanvas.height = h;
+            const offCtx = offCanvas.getContext('2d');
+            offCtx.drawImage(img, 0, 0);
+
+            const imgData = offCtx.getImageData(0, 0, w, h);
+            const data = imgData.data;
+
+            // Clear main canvas with paper color
+            ctx.fillStyle = paperColor;
+            ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = inkColor;
+
+            // Halftone Loop
+            for (let y = 0; y < h; y += dotSize) {
+                for (let x = 0; x < w; x += dotSize) {
+                    // Average brightness in this block
+                    let sum = 0;
+                    let count = 0;
+
+                    for (let by = 0; by < dotSize; by++) {
+                        for (let bx = 0; bx < dotSize; bx++) {
+                            const px = x + bx;
+                            const py = y + by;
+                            if (px < w && py < h) {
+                                const idx = (py * w + px) * 4;
+                                const r = data[idx];
+                                const g = data[idx + 1];
+                                const b = data[idx + 2];
+                                // Luminance
+                                sum += 0.299 * r + 0.587 * g + 0.114 * b;
+                                count++;
+                            }
+                        }
+                    }
+
+                    let avg = sum / count;
+
+                    // Apply contrast
+                    avg = ((avg - 128) * contrast) + 128;
+                    avg = Math.max(0, Math.min(255, avg)); // Clamp
+
+                    if (invert) avg = 255 - avg;
+
+                    // Radius depends on darkness (darker = bigger dot)
+                    // avg 0 (black) -> radius max
+                    // avg 255 (white) -> radius 0
+
+                    const maxRadius = dotSize / 2 * 1.3; // Allow slight overlap
+                    const radius = (1 - avg / 255) * maxRadius;
+
+                    if (radius > 0.5) {
+                        ctx.beginPath();
+                        ctx.arc(x + dotSize / 2, y + dotSize / 2, radius, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+
+        function download() {
+            const link = document.createElement('a');
+            link.download = 'halftone.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+
+</html>

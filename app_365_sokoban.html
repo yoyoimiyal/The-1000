@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>推箱子</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .grid-game {
+            display: inline-grid;
+            gap: 0;
+            background: #333;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .tile {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .wall {
+            background-color: #64748b;
+            border: 1px solid #475569;
+        }
+
+        .floor {
+            background-color: #f1f5f9;
+        }
+
+        .target {
+            background-color: #fca5a5;
+        }
+
+        /* Red tint */
+        .box {
+            background-color: #d97706;
+            border: 4px solid #92400e;
+            box-sizing: border-box;
+        }
+
+        /* Brown box */
+        .player {
+            background-color: transparent;
+        }
+
+        /* Entities as emojis or shapes */
+        .entity-box::after {
+            content: '📦';
+        }
+
+        .entity-player::after {
+            content: '👷';
+        }
+
+        .tile-target::after {
+            content: '🔴';
+            font-size: 10px;
+            opacity: 0.5;
+        }
+
+        .tile-target.entity-box::after {
+            content: '✅';
+        }
+
+        /* Box on target */
+    </style>
+</head>
+
+<body class="bg-stone-800 min-h-screen flex flex-col items-center justify-center p-4 select-none">
+
+    <header class="mb-6 text-center text-white">
+        <h1 class="text-2xl font-bold text-amber-400">SOKOBAN</h1>
+        <p class="text-xs text-gray-400">Moves: <span id="moves">0</span></p>
+    </header>
+
+    <div id="game-container" class="grid-game shadow-2xl">
+        <!-- Grid injected -->
+    </div>
+
+    <div class="mt-8 flex gap-4">
+        <button onclick="undo()"
+            class="px-4 py-2 bg-stone-600 hover:bg-stone-500 text-white rounded font-bold text-xs">Undo</button>
+        <button onclick="reset()"
+            class="px-4 py-2 bg-stone-600 hover:bg-stone-500 text-white rounded font-bold text-xs">Restart</button>
+        <a href="./navigation.html"
+            class="px-4 py-2 border border-stone-500 text-gray-400 hover:text-white rounded font-bold text-xs">Exit</a>
+    </div>
+
+    <!-- Mobile D-Pad -->
+    <div class="mt-6 grid grid-cols-3 gap-2 md:hidden">
+        <div></div>
+        <button class="w-12 h-12 bg-stone-600 rounded text-white flex items-center justify-center"
+            onclick="move(0, -1)">▲</button>
+        <div></div>
+        <button class="w-12 h-12 bg-stone-600 rounded text-white flex items-center justify-center"
+            onclick="move(-1, 0)">◀</button>
+        <button class="w-12 h-12 bg-stone-600 rounded text-white flex items-center justify-center"
+            onclick="move(0, 1)">▼</button>
+        <button class="w-12 h-12 bg-stone-600 rounded text-white flex items-center justify-center"
+            onclick="move(1, 0)">▶</button>
+    </div>
+
+    <script>
+        // Level Map
+        // #: Wall, .: Floor, @: Player, $: Box, +: Player on Goal, *: Box on Goal, .: Goal
+        // Simplified map encoding: 0:Floor, 1:Wall, 2:Box, 3:Target, 4:Player
+        // We use a simple string map for readabilty
+
+        const levelMap = [
+            "  ##### ",
+            "###   # ",
+            "#.@$  # ",
+            "### $.# ",
+            "#.##$ # ",
+            "# # . ##",
+            "#$ *$. #",
+            "#   .  #",
+            "########"
+        ];
+
+        // Entities logic:
+        // Static Layer: Wall(1), Floor(0), Target(3)
+        // Dynamic Layer: Box(2), Player(4)
+
+        let grid = [];
+        let player = { x: 0, y: 0 };
+        let history = [];
+        let moves = 0;
+        let w, h;
+
+        const container = document.getElementById('game-container');
+        const movesEl = document.getElementById('moves');
+
+        function parseLevel() {
+            h = levelMap.length;
+            w = levelMap[0].length;
+            grid = [];
+
+            for (let y = 0; y < h; y++) {
+                let row = [];
+                for (let x = 0; x < w; x++) {
+                    const char = levelMap[y][x] || ' ';
+                    let cell = { type: 'floor', hasBox: false, isTarget: false };
+
+                    if (char === '#') cell.type = 'wall';
+                    else if (char === '@') { player = { x, y }; }
+                    else if (char === '$') { cell.hasBox = true; }
+                    else if (char === '.') { cell.isTarget = true; }
+                    else if (char === '+') { cell.isTarget = true; player = { x, y }; }
+                    else if (char === '*') { cell.isTarget = true; cell.hasBox = true; }
+
+                    row.push(cell);
+                }
+                grid.push(row);
+            }
+        }
+
+        function render() {
+            container.innerHTML = '';
+            container.style.gridTemplateColumns = `repeat(${w}, 40px)`;
+
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const cell = grid[y][x];
+                    const div = document.createElement('div');
+
+                    let classes = "tile ";
+                    if (cell.type === 'wall') classes += "wall";
+                    else {
+                        classes += "floor";
+                        if (cell.isTarget) classes += " tile-target";
+                    }
+
+                    if (cell.hasBox) classes += " entity-box";
+                    if (player.x === x && player.y === y) classes += " entity-player";
+
+                    div.className = classes;
+                    container.appendChild(div);
+                }
+            }
+            movesEl.innerText = moves;
+        }
+
+        function move(dx, dy) {
+            const nx = player.x + dx;
+            const ny = player.y + dy;
+
+            // Check bounds (walls are usually boundary, but safety check)
+            if (grid[ny][nx].type === 'wall') return;
+
+            // Save state for undo
+            saveState();
+
+            // Check Box
+            if (grid[ny][nx].hasBox) {
+                const nnx = nx + dx;
+                const nny = ny + dy;
+
+                // Can push?
+                if (grid[nny][nnx].type === 'wall' || grid[nny][nnx].hasBox) {
+                    history.pop(); // Invalid move, pop save
+                    return;
+                }
+
+                // Move box
+                grid[ny][nx].hasBox = false;
+                grid[nny][nnx].hasBox = true;
+            }
+
+            // Move Player
+            player.x = nx;
+            player.y = ny;
+            moves++;
+
+            render();
+            checkWin();
+        }
+
+        function saveState() {
+            // Deep copy grid box state and player
+            // Only need to store box positions and player pos to restore
+            const boxes = [];
+            for (let y = 0; y < h; y++)
+                for (let x = 0; x < w; x++)
+                    if (grid[y][x].hasBox) boxes.push({ x, y });
+
+            history.push({
+                player: { ...player },
+                boxes: boxes,
+                moves: moves
+            });
+            if (history.length > 50) history.shift();
+        }
+
+        function undo() {
+            if (history.length === 0) return;
+            const state = history.pop();
+
+            player = state.player;
+            moves = state.moves;
+
+            // Clear boxes
+            for (let y = 0; y < h; y++)
+                for (let x = 0; x < w; x++)
+                    grid[y][x].hasBox = false;
+
+            // Restore boxes
+            state.boxes.forEach(b => grid[b.y][b.x].hasBox = true);
+
+            render();
+        }
+
+        function checkWin() {
+            let win = true;
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    if (grid[y][x].isTarget && !grid[y][x].hasBox) win = false;
+                }
+            }
+            if (win) {
+                setTimeout(() => alert("🎉 Level Cleared!"), 50);
+            }
+        }
+
+        function reset() {
+            parseLevel();
+            moves = 0;
+            history = [];
+            render();
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === "ArrowUp") move(0, -1);
+            if (e.key === "ArrowDown") move(0, 1);
+            if (e.key === "ArrowLeft") move(-1, 0);
+            if (e.key === "ArrowRight") move(1, 0);
+            if (e.key === "z" && (e.ctrlKey || e.metaKey)) undo(); // Ctrl+Z
+        });
+
+        reset();
+    </script>
+</body>
+
+</html>
