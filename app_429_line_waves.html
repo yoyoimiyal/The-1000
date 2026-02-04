@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>线波实验室</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #0f172a;
+            color: #f8fafc;
+        }
+
+        canvas {
+            background: #020617;
+            border-radius: 16px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-5xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">线波实验室</h1>
+                <p class="text-sm text-slate-300">拖动参数绘制多层正弦波。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-700 rounded-2xl p-4 grid gap-4 lg:grid-cols-[1fr_220px]">
+            <canvas id="canvas" width="720" height="420" class="w-full h-[420px]"></canvas>
+            <div class="text-sm flex flex-col gap-4">
+                <label class="flex flex-col gap-2">波数
+                    <input id="count" type="range" min="2" max="8" value="4">
+                </label>
+                <label class="flex flex-col gap-2">振幅
+                    <input id="amp" type="range" min="20" max="120" value="60">
+                </label>
+                <label class="flex flex-col gap-2">速度
+                    <input id="speed" type="range" min="1" max="10" value="4">
+                </label>
+                <button id="toggle" class="px-3 py-2 rounded-xl bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/30">暂停/继续</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const countInput = document.getElementById('count');
+        const ampInput = document.getElementById('amp');
+        const speedInput = document.getElementById('speed');
+        const toggleBtn = document.getElementById('toggle');
+        let time = 0;
+        let running = true;
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const count = Number(countInput.value);
+            const amp = Number(ampInput.value);
+            const speed = Number(speedInput.value) * 0.01;
+
+            for (let i = 0; i < count; i++) {
+                ctx.beginPath();
+                const hue = 200 + i * 20;
+                ctx.strokeStyle = `hsla(${hue}, 80%, 60%, 0.8)`;
+                ctx.lineWidth = 2;
+                for (let x = 0; x <= canvas.width; x += 6) {
+                    const y = canvas.height / 2 + Math.sin(x * 0.02 + time + i) * (amp - i * 6);
+                    if (x === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            if (running) {
+                time += speed;
+            }
+            requestAnimationFrame(draw);
+        }
+
+        toggleBtn.addEventListener('click', () => {
+            running = !running;
+        });
+
+        draw();
+    </script>
+</body>
+
+</html>

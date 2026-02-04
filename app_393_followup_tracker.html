@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跟进提醒板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-violet-200/70">Follow-up Tracker</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-violet-200">跟进提醒板</h1>
+            <p class="text-sm text-slate-400 mt-2">记录客户/任务跟进事项，设置提醒日期。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-800/70 border border-violet-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-slate-300 mb-2">跟进对象</label>
+                        <input id="followName" type="text" placeholder="例如：客户A"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-300 mb-2">跟进事项</label>
+                        <textarea id="followNote" rows="3"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-300 mb-2">提醒日期</label>
+                        <input id="followDate" type="date"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+                    </div>
+                </div>
+                <button id="addFollow"
+                    class="mt-6 w-full py-3 rounded-xl bg-violet-400 text-slate-950 font-semibold hover:bg-violet-300 transition">加入列表</button>
+            </section>
+
+            <section class="bg-slate-800/70 border border-violet-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">跟进清单</h2>
+                    <button id="clearFollow" class="text-xs text-violet-200 hover:text-white">清空</button>
+                </div>
+                <ul id="followList" class="space-y-3 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const followName = document.getElementById('followName');
+        const followNote = document.getElementById('followNote');
+        const followDate = document.getElementById('followDate');
+        const addFollow = document.getElementById('addFollow');
+        const clearFollow = document.getElementById('clearFollow');
+        const followList = document.getElementById('followList');
+
+        const storageKey = 'followup-tracker';
+
+        const render = () => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            followList.innerHTML = '';
+            if (!data.length) {
+                followList.innerHTML = '<li class="text-slate-500">暂无跟进事项。</li>';
+                return;
+            }
+            data.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'bg-slate-900/70 border border-slate-700 rounded-xl p-3 space-y-2';
+                li.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="font-semibold">${item.name}</span>
+                        <span class="text-xs text-violet-200">${item.date || '未设置日期'}</span>
+                    </div>
+                    <p class="text-xs text-slate-300">${item.note || '暂无说明'}</p>
+                `;
+                followList.appendChild(li);
+            });
+        };
+
+        addFollow.addEventListener('click', () => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            data.unshift({
+                name: followName.value.trim(),
+                note: followNote.value.trim(),
+                date: followDate.value
+            });
+            localStorage.setItem(storageKey, JSON.stringify(data.slice(0, 6)));
+            render();
+        });
+
+        clearFollow.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            render();
+        });
+
+        render();
+    </script>
+</body>
+
+</html>

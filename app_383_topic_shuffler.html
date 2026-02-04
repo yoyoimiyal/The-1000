@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主题随机推进器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-purple-200/70">Topic Shuffle</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-purple-200">主题随机推进器</h1>
+            <p class="text-sm text-slate-400 mt-2">把你的待研究主题放进池子，随机抽取推进顺序。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-900/70 border border-purple-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">主题清单（每行一个）</label>
+                <textarea id="topicInput" rows="8"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                    placeholder="例如：
+产品更新计划
+客户访谈总结
+竞品功能对比"></textarea>
+                <div class="flex gap-3 mt-4">
+                    <button id="buildPool"
+                        class="flex-1 py-3 rounded-xl bg-purple-400 text-slate-950 font-semibold hover:bg-purple-300 transition">生成池子</button>
+                    <button id="resetPool"
+                        class="px-4 py-3 rounded-xl border border-slate-700 text-slate-300 hover:border-purple-300 hover:text-white transition">清空</button>
+                </div>
+            </section>
+
+            <section class="bg-slate-900/70 border border-purple-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">抽取结果</h2>
+                    <button id="drawTopic" class="text-xs text-purple-200 hover:text-white">抽一个</button>
+                </div>
+                <div id="currentTopic" class="bg-slate-950/70 border border-slate-700 rounded-xl p-4 text-lg text-center">等待抽取</div>
+                <div class="mt-5">
+                    <h3 class="text-sm text-slate-400 mb-2">已抽取</h3>
+                    <ul id="history" class="space-y-2 text-sm"></ul>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-800 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const topicInput = document.getElementById('topicInput');
+        const buildPool = document.getElementById('buildPool');
+        const resetPool = document.getElementById('resetPool');
+        const drawTopic = document.getElementById('drawTopic');
+        const currentTopic = document.getElementById('currentTopic');
+        const history = document.getElementById('history');
+
+        const storageKey = 'topic-shuffle-data';
+
+        const render = (data) => {
+            currentTopic.textContent = data.current || '等待抽取';
+            history.innerHTML = '';
+            if (data.history.length === 0) {
+                history.innerHTML = '<li class="text-slate-500">暂无记录</li>';
+                return;
+            }
+            data.history.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.textContent = item;
+                history.appendChild(li);
+            });
+        };
+
+        const save = (data) => {
+            localStorage.setItem(storageKey, JSON.stringify(data));
+        };
+
+        const load = () => JSON.parse(localStorage.getItem(storageKey) || '{"pool":[],"history":[],"current":""}');
+
+        buildPool.addEventListener('click', () => {
+            const pool = topicInput.value.split('\n').map(item => item.trim()).filter(Boolean);
+            const data = { pool, history: [], current: '' };
+            save(data);
+            render(data);
+        });
+
+        drawTopic.addEventListener('click', () => {
+            const data = load();
+            if (data.pool.length === 0) {
+                currentTopic.textContent = '池子空了，请重新生成。';
+                return;
+            }
+            const index = Math.floor(Math.random() * data.pool.length);
+            const [picked] = data.pool.splice(index, 1);
+            data.current = picked;
+            data.history.unshift(picked);
+            save(data);
+            render(data);
+        });
+
+        resetPool.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            topicInput.value = '';
+            render({ pool: [], history: [], current: '' });
+        });
+
+        const cached = load();
+        if (cached.pool.length || cached.history.length) {
+            render(cached);
+        }
+    </script>
+</body>
+
+</html>

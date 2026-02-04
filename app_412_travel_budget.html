@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旅行预算分配</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-sky-200/70">Travel Budget</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-sky-200">旅行预算分配</h1>
+            <p class="text-sm text-slate-400 mt-2">根据类别快速拆分旅行预算。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-800/70 border border-sky-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">总预算（元）</label>
+                <input id="totalBudget" type="number" min="1" value="8000"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                <div class="grid grid-cols-2 gap-3 mt-4">
+                    <input id="transport" type="number" value="35" min="0"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                    <input id="stay" type="number" value="30" min="0"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                    <input id="food" type="number" value="20" min="0"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                    <input id="fun" type="number" value="15" min="0"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                </div>
+                <button id="calculate"
+                    class="mt-6 w-full py-3 rounded-xl bg-sky-400 text-slate-950 font-semibold hover:bg-sky-300 transition">计算</button>
+            </section>
+
+            <section class="bg-slate-800/70 border border-sky-400/20 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-lg font-semibold mb-4">分配结果</h2>
+                <ul id="result" class="space-y-2 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const totalBudget = document.getElementById('totalBudget');
+        const transport = document.getElementById('transport');
+        const stay = document.getElementById('stay');
+        const food = document.getElementById('food');
+        const fun = document.getElementById('fun');
+        const calculate = document.getElementById('calculate');
+        const result = document.getElementById('result');
+
+        const build = () => {
+            const total = Number(totalBudget.value);
+            const categories = [
+                { name: '交通', ratio: Number(transport.value) },
+                { name: '住宿', ratio: Number(stay.value) },
+                { name: '餐饮', ratio: Number(food.value) },
+                { name: '娱乐', ratio: Number(fun.value) }
+            ];
+            result.innerHTML = '';
+            categories.forEach(item => {
+                const amount = ((total * item.ratio) / 100).toFixed(2);
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-slate-900/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.innerHTML = `<span>${item.name} (${item.ratio}%)</span><span class="text-sky-200">${amount} 元</span>`;
+                result.appendChild(li);
+            });
+        };
+
+        calculate.addEventListener('click', build);
+        build();
+    </script>
+</body>
+
+</html>

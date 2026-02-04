@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>习惯热力格</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-emerald-200/70">Habit Heatmap</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-emerald-200">习惯热力格</h1>
+            <p class="text-sm text-slate-400 mt-2">记录 14 天习惯完成情况，形成热力格。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.2fr]">
+            <section class="bg-slate-900/70 border border-emerald-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">习惯名称</label>
+                <input id="habitName" type="text" placeholder="例如：阅读 30 分钟"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                <button id="saveHabit"
+                    class="mt-4 w-full py-3 rounded-xl bg-emerald-400 text-slate-950 font-semibold hover:bg-emerald-300 transition">保存习惯</button>
+                <button id="clearGrid"
+                    class="mt-3 w-full py-3 rounded-xl border border-slate-700 text-slate-300 hover:border-emerald-300 hover:text-white transition">清空记录</button>
+            </section>
+
+            <section class="bg-slate-900/70 border border-emerald-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 id="habitTitle" class="text-lg font-semibold">14 天打卡</h2>
+                    <span class="text-xs text-slate-400">点击方块切换</span>
+                </div>
+                <div id="grid" class="grid grid-cols-7 gap-2"></div>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const habitName = document.getElementById('habitName');
+        const saveHabit = document.getElementById('saveHabit');
+        const clearGrid = document.getElementById('clearGrid');
+        const grid = document.getElementById('grid');
+        const habitTitle = document.getElementById('habitTitle');
+
+        const storageKey = 'habit-heatmap-data';
+
+        const buildGrid = (data) => {
+            grid.innerHTML = '';
+            data.days.forEach((value, index) => {
+                const cell = document.createElement('button');
+                cell.className = `h-12 rounded-xl border border-slate-700 ${value ? 'bg-emerald-400' : 'bg-slate-800'}`;
+                cell.addEventListener('click', () => {
+                    data.days[index] = data.days[index] ? 0 : 1;
+                    saveData(data);
+                    buildGrid(data);
+                });
+                grid.appendChild(cell);
+            });
+        };
+
+        const saveData = (data) => {
+            localStorage.setItem(storageKey, JSON.stringify(data));
+        };
+
+        const loadData = () => JSON.parse(localStorage.getItem(storageKey) || '{"name":"我的习惯","days":[]}');
+
+        const init = () => {
+            const data = loadData();
+            if (!data.days.length) {
+                data.days = Array.from({ length: 14 }, () => 0);
+            }
+            habitTitle.textContent = `${data.name} · 14 天`;
+            habitName.value = data.name;
+            buildGrid(data);
+        };
+
+        saveHabit.addEventListener('click', () => {
+            const data = loadData();
+            data.name = habitName.value.trim() || '我的习惯';
+            saveData(data);
+            init();
+        });
+
+        clearGrid.addEventListener('click', () => {
+            const data = loadData();
+            data.days = Array.from({ length: 14 }, () => 0);
+            saveData(data);
+            buildGrid(data);
+        });
+
+        init();
+    </script>
+</body>
+
+</html>

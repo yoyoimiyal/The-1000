@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专注仪表</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="max-w-4xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">专注仪表</h1>
+                <p class="text-sm text-slate-400">记录今日专注时长，自动保存。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-400 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="grid gap-4 lg:grid-cols-[240px_1fr]">
+            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 space-y-4">
+                <div class="text-sm text-slate-400">今日专注</div>
+                <div id="total" class="text-3xl font-bold">00:00</div>
+                <button id="toggle" class="w-full px-3 py-2 rounded-xl bg-cyan-500/20 text-cyan-100">开始专注</button>
+                <button id="reset" class="w-full px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">重置今日</button>
+            </div>
+            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+                <h2 class="text-lg font-semibold">专注记录</h2>
+                <ul id="logs" class="mt-3 space-y-2 text-sm text-slate-300"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const totalEl = document.getElementById('total');
+        const toggleBtn = document.getElementById('toggle');
+        const resetBtn = document.getElementById('reset');
+        const logsEl = document.getElementById('logs');
+        const STORAGE_KEY = 'miniapp_focus_meter';
+
+        let data = { totalSeconds: 0, logs: [], running: false, lastTick: null };
+
+        function format(seconds) {
+            const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            return `${h}:${m}`;
+        }
+
+        function save() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function render() {
+            totalEl.textContent = format(data.totalSeconds);
+            toggleBtn.textContent = data.running ? '暂停专注' : '开始专注';
+            logsEl.innerHTML = '';
+            data.logs.slice().reverse().forEach((log) => {
+                const li = document.createElement('li');
+                li.className = 'rounded-xl bg-slate-950/70 border border-slate-800 px-3 py-2';
+                li.textContent = `${log.label} · ${log.duration} 分钟`;
+                logsEl.appendChild(li);
+            });
+        }
+
+        toggleBtn.addEventListener('click', () => {
+            if (!data.running) {
+                data.running = true;
+                data.lastTick = Date.now();
+            } else {
+                const now = Date.now();
+                const delta = Math.floor((now - data.lastTick) / 1000);
+                data.totalSeconds += delta;
+                data.logs.push({
+                    label: new Date().toLocaleTimeString(),
+                    duration: Math.ceil(delta / 60)
+                });
+                data.running = false;
+                data.lastTick = null;
+            }
+            save();
+            render();
+        });
+
+        resetBtn.addEventListener('click', () => {
+            data = { totalSeconds: 0, logs: [], running: false, lastTick: null };
+            save();
+            render();
+        });
+
+        setInterval(() => {
+            if (data.running && data.lastTick) {
+                const now = Date.now();
+                const delta = Math.floor((now - data.lastTick) / 1000);
+                totalEl.textContent = format(data.totalSeconds + delta);
+            }
+        }, 1000);
+
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) data = JSON.parse(stored);
+        render();
+    </script>
+</body>
+
+</html>
