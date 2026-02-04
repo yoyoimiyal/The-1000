@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专注得分仪表</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-indigo-200/70">Focus Score</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-indigo-200">专注得分仪表</h1>
+            <p class="text-sm text-slate-400 mt-2">记录今天的专注表现，生成一个自我评分。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-900/70 border border-indigo-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-slate-300 mb-2">专注时长（分钟）</label>
+                        <input id="focusMinutes" type="number" min="0" value="90"
+                            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-300 mb-2">打断次数</label>
+                        <input id="interruptions" type="number" min="0" value="3"
+                            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-300 mb-2">完成的关键任务数</label>
+                        <input id="tasks" type="number" min="0" value="2"
+                            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    </div>
+                </div>
+                <button id="calcScore"
+                    class="mt-6 w-full py-3 rounded-xl bg-indigo-400 text-slate-950 font-semibold hover:bg-indigo-300 transition">计算得分</button>
+            </section>
+
+            <section class="bg-slate-900/70 border border-indigo-400/20 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-lg font-semibold mb-4">今日得分</h2>
+                <div class="text-6xl font-bold text-indigo-200" id="score">--</div>
+                <p class="text-sm text-slate-400 mt-3" id="scoreNote">输入数据后计算。</p>
+                <div class="mt-6">
+                    <h3 class="text-sm text-slate-400 mb-2">记录</h3>
+                    <ul id="history" class="space-y-2 text-sm"></ul>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-800 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const focusMinutes = document.getElementById('focusMinutes');
+        const interruptions = document.getElementById('interruptions');
+        const tasks = document.getElementById('tasks');
+        const calcScore = document.getElementById('calcScore');
+        const score = document.getElementById('score');
+        const scoreNote = document.getElementById('scoreNote');
+        const history = document.getElementById('history');
+
+        const storageKey = 'focus-score-history';
+
+        const renderHistory = () => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            history.innerHTML = '';
+            if (data.length === 0) {
+                history.innerHTML = '<li class="text-slate-500">暂无记录。</li>';
+                return;
+            }
+            data.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.innerHTML = `<span>${item.date}</span><span class="text-indigo-200">${item.score} 分</span>`;
+                history.appendChild(li);
+            });
+        };
+
+        const saveRecord = (value) => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            data.unshift({ date: new Date().toLocaleDateString(), score: value });
+            localStorage.setItem(storageKey, JSON.stringify(data.slice(0, 7)));
+            renderHistory();
+        };
+
+        const calculate = () => {
+            const focus = Number(focusMinutes.value);
+            const interruptionsCount = Number(interruptions.value);
+            const taskCount = Number(tasks.value);
+            let value = Math.min(100, Math.max(0, focus * 0.6 + taskCount * 15 - interruptionsCount * 8));
+            value = Math.round(value);
+            score.textContent = value;
+            scoreNote.textContent = value >= 80 ? '状态很棒，继续保持！' : value >= 60 ? '表现不错，可以更稳定。' : '需要减少干扰，试试微调节奏。';
+            saveRecord(value);
+        };
+
+        calcScore.addEventListener('click', calculate);
+        renderHistory();
+    </script>
+</body>
+
+</html>

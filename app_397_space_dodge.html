@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>太空闪避</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-6">
+            <p class="text-xs uppercase tracking-[0.4em] text-cyan-200/70">Space Dodge</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-cyan-200">太空闪避</h1>
+            <p class="text-sm text-slate-400 mt-2">左右移动飞船躲避陨石，坚持越久越好。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.2fr]">
+            <section class="bg-slate-900/70 border border-cyan-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-4">
+                        <p class="text-xs text-slate-400">存活时间</p>
+                        <p id="time" class="text-2xl font-semibold">0.0s</p>
+                    </div>
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-4">
+                        <p class="text-xs text-slate-400">最佳记录</p>
+                        <p id="best" class="text-2xl font-semibold">0.0s</p>
+                    </div>
+                </div>
+                <div class="mt-6 flex gap-3">
+                    <button id="left"
+                        class="flex-1 py-3 rounded-xl bg-slate-800 text-slate-200 hover:bg-slate-700 transition">向左</button>
+                    <button id="right"
+                        class="flex-1 py-3 rounded-xl bg-slate-800 text-slate-200 hover:bg-slate-700 transition">向右</button>
+                </div>
+                <button id="start"
+                    class="mt-4 w-full py-3 rounded-xl bg-cyan-400 text-slate-950 font-semibold hover:bg-cyan-300 transition">开始</button>
+            </section>
+
+            <section class="bg-slate-900/70 border border-cyan-400/20 rounded-2xl p-6 shadow-lg">
+                <div id="space" class="relative w-full h-80 bg-slate-950/70 rounded-2xl border border-slate-800 overflow-hidden">
+                    <div id="ship" class="absolute bottom-4 left-1/2 -translate-x-1/2 text-2xl">🚀</div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-800 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const space = document.getElementById('space');
+        const ship = document.getElementById('ship');
+        const leftBtn = document.getElementById('left');
+        const rightBtn = document.getElementById('right');
+        const startBtn = document.getElementById('start');
+        const timeEl = document.getElementById('time');
+        const bestEl = document.getElementById('best');
+
+        const storageKey = 'space-dodge-best';
+        let shipX = 0;
+        let running = false;
+        let startTime = 0;
+        let obstacleId = null;
+        let timerId = null;
+
+        const updateShip = () => {
+            ship.style.left = `${shipX}%`;
+        };
+
+        const spawnObstacle = () => {
+            const rock = document.createElement('div');
+            rock.className = 'absolute text-xl';
+            rock.textContent = '☄️';
+            const x = Math.random() * 90 + 5;
+            rock.style.left = `${x}%`;
+            rock.style.top = '-10px';
+            space.appendChild(rock);
+
+            let y = -10;
+            const fall = setInterval(() => {
+                if (!running) {
+                    clearInterval(fall);
+                    rock.remove();
+                    return;
+                }
+                y += 4 + Math.random() * 2;
+                rock.style.top = `${y}px`;
+                const shipRect = ship.getBoundingClientRect();
+                const rockRect = rock.getBoundingClientRect();
+                if (rockRect.bottom >= shipRect.top && rockRect.left <= shipRect.right && rockRect.right >= shipRect.left) {
+                    endGame();
+                }
+                if (y > space.clientHeight) {
+                    clearInterval(fall);
+                    rock.remove();
+                }
+            }, 30);
+        };
+
+        const updateTime = () => {
+            const elapsed = (performance.now() - startTime) / 1000;
+            timeEl.textContent = `${elapsed.toFixed(1)}s`;
+        };
+
+        const endGame = () => {
+            running = false;
+            clearInterval(obstacleId);
+            clearInterval(timerId);
+            const elapsed = Number(timeEl.textContent.replace('s', ''));
+            const best = Math.max(elapsed, Number(localStorage.getItem(storageKey) || 0));
+            localStorage.setItem(storageKey, best.toFixed(1));
+            bestEl.textContent = `${best.toFixed(1)}s`;
+            startBtn.disabled = false;
+            startBtn.className = 'mt-4 w-full py-3 rounded-xl bg-cyan-400 text-slate-950 font-semibold hover:bg-cyan-300 transition';
+        };
+
+        const startGame = () => {
+            space.querySelectorAll('.obstacle').forEach(node => node.remove());
+            running = true;
+            startBtn.disabled = true;
+            startBtn.className = 'mt-4 w-full py-3 rounded-xl bg-slate-700 text-slate-400 font-semibold cursor-not-allowed';
+            startTime = performance.now();
+            obstacleId = setInterval(spawnObstacle, 800);
+            timerId = setInterval(updateTime, 100);
+        };
+
+        leftBtn.addEventListener('click', () => {
+            shipX = Math.max(5, shipX - 10);
+            updateShip();
+        });
+
+        rightBtn.addEventListener('click', () => {
+            shipX = Math.min(95, shipX + 10);
+            updateShip();
+        });
+
+        startBtn.addEventListener('click', startGame);
+
+        shipX = 50;
+        updateShip();
+        bestEl.textContent = `${Number(localStorage.getItem(storageKey) || 0).toFixed(1)}s`;
+    </script>
+</body>
+
+</html>
