@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微跳跃闯关</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-6">
+            <p class="text-xs uppercase tracking-[0.4em] text-lime-200/70">Micro Jumper</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-lime-200">微跳跃闯关</h1>
+            <p class="text-sm text-slate-400 mt-2">点击或按空格跳过方块，得分越高越好。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.2fr]">
+            <section class="bg-slate-900/70 border border-lime-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-4">
+                        <p class="text-xs text-slate-400">得分</p>
+                        <p id="score" class="text-2xl font-semibold">0</p>
+                    </div>
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-4">
+                        <p class="text-xs text-slate-400">最高</p>
+                        <p id="best" class="text-2xl font-semibold">0</p>
+                    </div>
+                </div>
+                <button id="start"
+                    class="mt-6 w-full py-3 rounded-xl bg-lime-400 text-slate-950 font-semibold hover:bg-lime-300 transition">开始</button>
+                <p id="hint" class="text-xs text-slate-500 mt-3">点击场地或按空格跳跃。</p>
+            </section>
+
+            <section class="bg-slate-900/70 border border-lime-400/20 rounded-2xl p-6 shadow-lg">
+                <div id="field" class="relative w-full h-72 bg-slate-950/70 rounded-2xl border border-slate-800 overflow-hidden">
+                    <div id="player" class="absolute bottom-6 left-10 text-2xl">🟩</div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-800 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const field = document.getElementById('field');
+        const player = document.getElementById('player');
+        const start = document.getElementById('start');
+        const scoreEl = document.getElementById('score');
+        const bestEl = document.getElementById('best');
+        const hint = document.getElementById('hint');
+
+        const storageKey = 'micro-jumper-best';
+        let running = false;
+        let score = 0;
+        let jump = false;
+        let obstacleTimer = null;
+        let scoreTimer = null;
+
+        const jumpPlayer = () => {
+            if (!running || jump) return;
+            jump = true;
+            player.style.bottom = '110px';
+            setTimeout(() => {
+                player.style.bottom = '24px';
+                jump = false;
+            }, 450);
+        };
+
+        const spawnObstacle = () => {
+            const block = document.createElement('div');
+            block.className = 'absolute bottom-6 right-0 w-8 h-8 bg-lime-400 rounded-md';
+            field.appendChild(block);
+            let x = field.clientWidth;
+            const move = setInterval(() => {
+                if (!running) {
+                    clearInterval(move);
+                    block.remove();
+                    return;
+                }
+                x -= 6;
+                block.style.right = `${field.clientWidth - x}px`;
+                const blockRect = block.getBoundingClientRect();
+                const playerRect = player.getBoundingClientRect();
+                if (
+                    blockRect.left < playerRect.right &&
+                    blockRect.right > playerRect.left &&
+                    blockRect.bottom > playerRect.top
+                ) {
+                    endGame();
+                }
+                if (x <= -20) {
+                    clearInterval(move);
+                    block.remove();
+                }
+            }, 20);
+        };
+
+        const startGame = () => {
+            field.querySelectorAll('div.obstacle').forEach(node => node.remove());
+            score = 0;
+            scoreEl.textContent = score;
+            running = true;
+            start.disabled = true;
+            start.className = 'mt-6 w-full py-3 rounded-xl bg-slate-700 text-slate-400 font-semibold cursor-not-allowed';
+            hint.textContent = '保持跳跃，躲避方块！';
+            obstacleTimer = setInterval(spawnObstacle, 1200);
+            scoreTimer = setInterval(() => {
+                score += 1;
+                scoreEl.textContent = score;
+            }, 500);
+        };
+
+        const endGame = () => {
+            running = false;
+            clearInterval(obstacleTimer);
+            clearInterval(scoreTimer);
+            const best = Math.max(score, Number(localStorage.getItem(storageKey) || 0));
+            localStorage.setItem(storageKey, best);
+            bestEl.textContent = best;
+            start.disabled = false;
+            start.className = 'mt-6 w-full py-3 rounded-xl bg-lime-400 text-slate-950 font-semibold hover:bg-lime-300 transition';
+            hint.textContent = '碰到障碍了，点击开始重试。';
+        };
+
+        start.addEventListener('click', startGame);
+        field.addEventListener('click', jumpPlayer);
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'Space') {
+                event.preventDefault();
+                jumpPlayer();
+            }
+        });
+
+        bestEl.textContent = localStorage.getItem(storageKey) || '0';
+    </script>
+</body>
+
+</html>
