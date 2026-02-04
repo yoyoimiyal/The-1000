@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>信号滑行</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: radial-gradient(circle at top, #111827, #0f172a 55%, #020617);
+            color: #e2e8f0;
+        }
+        .panel {
+            background: rgba(15, 23, 42, 0.78);
+            border: 1px solid #334155;
+            border-radius: 18px;
+            box-shadow: 0 20px 50px rgba(2, 6, 23, 0.45);
+        }
+        .soft {
+            color: #94a3b8;
+        }
+        .btn {
+            background: rgba(56, 189, 248, 0.2);
+            color: #e0f2fe;
+            padding: 0.55rem 0.9rem;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(56, 189, 248, 0.2);
+        }
+        canvas {
+            border-radius: 18px;
+            background: rgba(2, 6, 23, 0.92);
+        }
+        .tag {
+            border-radius: 999px;
+            padding: 0.15rem 0.6rem;
+            background: rgba(148, 163, 184, 0.16);
+            font-size: 0.7rem;
+        }
+        .chip {
+            border-radius: 999px;
+            padding: 0.25rem 0.75rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-6xl mx-auto p-6 space-y-5">
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold">信号滑行</h1>
+                <p class="text-sm text-slate-300">切换轨道避开干扰波。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <section class="grid gap-4 lg:grid-cols-[2fr_1fr]">
+            <div class="panel p-4 space-y-4">
+                <div class="flex flex-wrap items-center gap-4 text-sm">
+                    <div>得分：<span id="score">0</span></div>
+                    <div>等级：<span id="level">1</span></div>
+                    <div>能量：<span id="energy">100</span>%</div>
+                    <button id="start" class="btn">开始</button>
+                    <button id="pause" class="btn">暂停</button>
+                </div>
+                <canvas id="gameCanvas" width="720" height="420" class="w-full h-[420px]"></canvas>
+                <div class="flex flex-wrap gap-2 text-xs soft">
+                    <span class="chip">方向键 / WASD</span>
+                    <span class="chip">连击奖励</span>
+                    <span class="chip">能量补给</span>
+                </div>
+            </div>
+            <div class="panel p-4 space-y-4 text-sm">
+                <h2 class="text-lg font-semibold">状态面板</h2>
+                <div class="space-y-2" id="stats"></div>
+                <div class="pt-2 border-t border-slate-700">
+                    <label class="flex flex-col gap-2">难度
+                        <input id="difficulty" type="range" min="1" max="10" value="4">
+                    </label>
+                    <label class="flex flex-col gap-2">障碍密度
+                        <input id="density" type="range" min="4" max="14" value="8">
+                    </label>
+                    <label class="flex flex-col gap-2">推进倍率
+                        <input id="boost" type="range" min="6" max="16" value="10">
+                    </label>
+                </div>
+                <div class="pt-2 border-t border-slate-700 text-xs soft" id="tip"></div>
+            </div>
+        </section>
+
+        <section class="panel p-4 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+            <div>
+                <h3 class="text-lg font-semibold">挑战日志</h3>
+                <ul id="log" class="mt-3 space-y-2 text-xs soft"></ul>
+            </div>
+            <div class="space-y-3 text-sm">
+                <h3 class="text-lg font-semibold">策略建议</h3>
+                <p class="text-xs soft">保持节奏移动能够稳定提升分数。能量低时优先收集补给。</p>
+                <div class="flex flex-wrap gap-2" id="badges"></div>
+            </div>
+        </section>
+
+        <script>
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const scoreEl = document.getElementById('score');
+            const levelEl = document.getElementById('level');
+            const energyEl = document.getElementById('energy');
+            const statsEl = document.getElementById('stats');
+            const startBtn = document.getElementById('start');
+            const pauseBtn = document.getElementById('pause');
+            const difficultyInput = document.getElementById('difficulty');
+            const densityInput = document.getElementById('density');
+            const boostInput = document.getElementById('boost');
+            const tipEl = document.getElementById('tip');
+
+            const STORAGE_KEY = `miniapp_${document.title.replace(/\s+/g, '_')}_best`;
+            const tips = [
+                '保持移动可以获得连续奖励。',
+                '能量低于 30% 会降低速度。',
+                '每提升 120 分，等级增加。',
+                '避开障碍中心区域，边缘更安全。',
+                '提升推进倍率可快速穿越空档。'
+            ];
+            const badgePool = ['连击达人', '极速穿梭', '能量守护', '节奏掌控', '完美闪避'];
+
+            let player = { x: 60, y: 210, r: 12, vx: 0, vy: 0 };
+            let obstacles = [];
+            let shards = [];
+            let running = false;
+            let paused = false;
+            let score = 0;
+            let level = 1;
+            let energy = 100;
+            let combo = 0;
+            let best = Number(localStorage.getItem(STORAGE_KEY)) || 0;
+            let lastSpawn = 0;
+
+            const keys = new Set();
+            window.addEventListener('keydown', (event) => keys.add(event.key.toLowerCase()));
+            window.addEventListener('keyup', (event) => keys.delete(event.key.toLowerCase()));
+
+            function randomBetween(min, max) {
+                return Math.random() * (max - min) + min;
+            }
+}
+
+            function resetGame() {
+                player = { x: 60, y: canvas.height / 2, r: 12, vx: 0, vy: 0 };
+                obstacles = [];
+                shards = [];
+                score = 0;
+                level = 1;
+                energy = 100;
+                combo = 0;
+                lastSpawn = 0;
+                updateStats();
+            }
+
+            function spawnObstacle() {
+                const size = randomBetween(18, 42);
+                obstacles.push({
+                    x: canvas.width + size,
+                    y: randomBetween(40, canvas.height - 40),
+                    r: size,
+                    speed: randomBetween(1.5, 3.5) + level * 0.2
+                });
+            }
+
+            function spawnShard() {
+                shards.push({
+                    x: canvas.width + 20,
+                    y: randomBetween(30, canvas.height - 30),
+                    r: 8,
+                    speed: randomBetween(1.2, 2.6),
+                    hue: randomBetween(180, 280)
+                });
+            }
+
+            function updateStats() {
+                statsEl.innerHTML = '';
+                const entries = [
+                    { label: '最高得分', value: best },
+                    { label: '当前得分', value: Math.floor(score) },
+                    { label: '当前等级', value: level },
+                    { label: '能量余量', value: `${Math.round(energy)}%` },
+                    { label: '连击', value: combo }
+                ];
+                entries.forEach((entry) => {
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center justify-between bg-slate-900/60 border border-slate-800 rounded-xl px-3 py-2';
+                    row.innerHTML = `<span class="soft">${entry.label}</span><span>${entry.value}</span>`;
+                    statsEl.appendChild(row);
+                });
+                tipEl.textContent = tips[Math.floor(Math.random() * tips.length)];
+            }
+
+            function updatePlayer() {
+                const baseSpeed = 2 + level * 0.2 + Number(difficultyInput.value) * 0.2;
+                const boost = Number(boostInput.value) * 0.1;
+                const speed = energy > 20 ? baseSpeed + boost : baseSpeed * 0.8;
+                player.vx = 0;
+                player.vy = 0;
+                if (keys.has('arrowup') || keys.has('w')) player.vy = -speed;
+                if (keys.has('arrowdown') || keys.has('s')) player.vy = speed;
+                if (keys.has('arrowleft') || keys.has('a')) player.vx = -speed;
+                if (keys.has('arrowright') || keys.has('d')) player.vx = speed;
+                player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x + player.vx));
+                player.y = Math.max(player.r, Math.min(canvas.height - player.r, player.y + player.vy));
+            }
+
+            function updateEntities(delta) {
+                const density = Number(densityInput.value);
+                lastSpawn += delta;
+                if (lastSpawn > 600 - density * 30) {
+                    if (Math.random() > 0.35) {
+                        spawnObstacle();
+                    } else {
+                        spawnShard();
+                    }
+                    lastSpawn = 0;
+                }
+
+                obstacles.forEach((obs) => obs.x -= obs.speed);
+                shards.forEach((shard) => shard.x -= shard.speed);
+                obstacles = obstacles.filter((obs) => obs.x + obs.r > 0);
+                shards = shards.filter((shard) => shard.x + shard.r > 0);
+            }
+
+            function handleCollisions() {
+                let hit = false;
+                obstacles.forEach((obs) => {
+                    const dx = player.x - obs.x;
+                    const dy = player.y - obs.y;
+                    if (Math.hypot(dx, dy) < player.r + obs.r) {
+                        energy = Math.max(0, energy - 8);
+                        hit = true;
+                    }
+                });                shards = shards.filter((shard) => {
+                    const dx = player.x - shard.x;
+                    const dy = player.y - shard.y;
+                    if (Math.hypot(dx, dy) < player.r + shard.r) {
+                        score += 12 + combo * 2;
+                        combo += 1;
+                        energy = Math.min(100, energy + 6);
+                        return false;
+                    }
+                    return true;
+                });
+            }
+
+            function updateScore(delta) {
+                if (running && !paused) {
+                    score += delta * 0.02 + level * 0.12;
+                    if (score > level * 140) {
+                        level += 1;
+                    }
+                    if (energy <= 0) {
+                        running = false;
+                        best = Math.max(best, Math.floor(score));
+                        localStorage.setItem(STORAGE_KEY, best);
+                        tipEl.textContent = '能量耗尽，点击开始重新挑战。';
+                    }
+                }
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
+                for (let x = 0; x < canvas.width; x += 40) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                }
+
+                obstacles.forEach((obs) => {
+                    ctx.fillStyle = 'rgba(248, 113, 113, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(obs.x, obs.y, obs.r, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                shards.forEach((shard) => {
+                    ctx.fillStyle = `hsla(${shard.hue}, 80%, 60%, 0.9)`;
+                    ctx.beginPath();
+                    ctx.arc(shard.x, shard.y, shard.r, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.9)';
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            let lastTime = 0;
+            function loop(timestamp) {
+                const delta = timestamp - lastTime;
+                lastTime = timestamp;
+                if (running && !paused) {
+                    updatePlayer();
+                    updateEntities(delta);
+                    handleCollisions();
+                    updateScore(delta);
+                    updateStats();
+                }
+                draw();
+                requestAnimationFrame(loop);
+            }
+
+            startBtn.addEventListener('click', () => {
+                resetGame();
+                running = true;
+                paused = false;
+                updateStats();
+            });
+            pauseBtn.addEventListener('click', () => {
+                paused = !paused;
+                pauseBtn.textContent = paused ? '继续' : '暂停';
+            });
+
+            updateStats();
+            requestAnimationFrame(loop);
+        </script>
+
+    </div>
+</body>
+
+</html>

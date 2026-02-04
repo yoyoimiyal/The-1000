@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>弹跳实验室</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #020617;
+            color: #e2e8f0;
+        }
+
+        canvas {
+            background: linear-gradient(180deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+            border-radius: 16px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-5xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">弹跳实验室</h1>
+                <p class="text-sm text-slate-300">观察小球在重力与弹性下的运动。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-700 rounded-2xl p-4 grid gap-4 lg:grid-cols-[1fr_220px]">
+            <canvas id="canvas" width="720" height="420" class="w-full h-[420px]"></canvas>
+            <div class="text-sm flex flex-col gap-4">
+                <label class="flex flex-col gap-2">重力
+                    <input id="gravity" type="range" min="2" max="20" value="8">
+                </label>
+                <label class="flex flex-col gap-2">弹性
+                    <input id="bounce" type="range" min="40" max="90" value="70">
+                </label>
+                <button id="add" class="px-3 py-2 rounded-xl bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/30">添加小球</button>
+                <button id="reset" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">重置</button>
+                <p class="text-xs text-slate-400">点击画布也可添加小球。</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const gravityInput = document.getElementById('gravity');
+        const bounceInput = document.getElementById('bounce');
+        const addBtn = document.getElementById('add');
+        const resetBtn = document.getElementById('reset');
+        const balls = [];
+
+        function addBall(x = Math.random() * canvas.width, y = 40) {
+            balls.push({
+                x,
+                y,
+                vx: (Math.random() - 0.5) * 6,
+                vy: Math.random() * 2,
+                r: Math.random() * 12 + 8,
+                hue: Math.random() * 360
+            });
+        }
+
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            addBall(event.clientX - rect.left, event.clientY - rect.top);
+        });
+
+        addBtn.addEventListener('click', () => addBall());
+        resetBtn.addEventListener('click', () => balls.splice(0, balls.length));
+
+        for (let i = 0; i < 6; i++) addBall();
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const g = Number(gravityInput.value) * 0.1;
+            const bounce = Number(bounceInput.value) / 100;
+
+            balls.forEach((ball) => {
+                ball.vy += g;
+                ball.x += ball.vx;
+                ball.y += ball.vy;
+
+                if (ball.x - ball.r < 0 || ball.x + ball.r > canvas.width) {
+                    ball.vx *= -bounce;
+                }
+                if (ball.y + ball.r > canvas.height) {
+                    ball.y = canvas.height - ball.r;
+                    ball.vy *= -bounce;
+                }
+
+                ctx.beginPath();
+                ctx.fillStyle = `hsla(${ball.hue}, 70%, 60%, 0.9)`;
+                ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+
+</html>

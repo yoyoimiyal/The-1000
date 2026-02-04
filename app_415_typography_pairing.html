@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>字体搭配试验台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&family=Source+Sans+3:wght@400;600&family=Space+Grotesk:wght@500&display=swap" rel="stylesheet">
+</head>
+
+<body class="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-purple-200/70">Typography Pairing</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-purple-200">字体搭配试验台</h1>
+            <p class="text-sm text-slate-400 mt-2">切换标题与正文的字体组合。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-800/70 border border-purple-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">标题字体</label>
+                <select id="headlineFont"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300">
+                    <option value="'Playfair Display', serif">Playfair Display</option>
+                    <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
+                    <option value="'Source Sans 3', sans-serif">Source Sans 3</option>
+                </select>
+                <label class="block text-sm text-slate-300 mt-4 mb-2">正文字体</label>
+                <select id="bodyFont"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300">
+                    <option value="'Source Sans 3', sans-serif">Source Sans 3</option>
+                    <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
+                    <option value="'Playfair Display', serif">Playfair Display</option>
+                </select>
+            </section>
+
+            <section class="bg-slate-800/70 border border-purple-400/20 rounded-2xl p-6 shadow-lg">
+                <h2 id="previewTitle" class="text-2xl font-semibold mb-3">探索字体搭配</h2>
+                <p id="previewBody" class="text-sm text-slate-300">选择不同的字体组合，感受文字的氛围变化。这段文字用于模拟正文的阅读体验。</p>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const headlineFont = document.getElementById('headlineFont');
+        const bodyFont = document.getElementById('bodyFont');
+        const previewTitle = document.getElementById('previewTitle');
+        const previewBody = document.getElementById('previewBody');
+
+        const applyFonts = () => {
+            previewTitle.style.fontFamily = headlineFont.value;
+            previewBody.style.fontFamily = bodyFont.value;
+        };
+
+        headlineFont.addEventListener('change', applyFonts);
+        bodyFont.addEventListener('change', applyFonts);
+        applyFonts();
+    </script>
+</body>
+
+</html>

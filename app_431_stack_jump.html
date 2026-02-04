@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>堆叠跳跃</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #0f172a;
+            color: #f8fafc;
+        }
+
+        .lane {
+            position: relative;
+            height: 120px;
+            background: rgba(15, 23, 42, 0.7);
+            border-radius: 16px;
+            border: 1px solid #334155;
+            overflow: hidden;
+        }
+
+        .runner {
+            position: absolute;
+            bottom: 30px;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #38bdf8, #4f46e5);
+        }
+
+        .target-zone {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90px;
+            background: rgba(56, 189, 248, 0.15);
+            border-left: 2px dashed rgba(56, 189, 248, 0.6);
+            border-right: 2px dashed rgba(56, 189, 248, 0.6);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-4xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">堆叠跳跃</h1>
+                <p class="text-sm text-slate-300">点击让方块停在中央区域，连续命中可升级等级。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-700 rounded-2xl p-6 space-y-4">
+            <div class="flex flex-wrap gap-4 text-sm">
+                <div>得分：<span id="score">0</span></div>
+                <div>等级：<span id="level">1</span></div>
+                <button id="start" class="px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/30">开始</button>
+            </div>
+            <div id="lane" class="lane">
+                <div class="target-zone"></div>
+                <div id="runner" class="runner"></div>
+            </div>
+            <p id="hint" class="text-xs text-slate-400">点击车道停止方块。</p>
+        </div>
+    </div>
+
+    <script>
+        const lane = document.getElementById('lane');
+        const runner = document.getElementById('runner');
+        const scoreEl = document.getElementById('score');
+        const levelEl = document.getElementById('level');
+        const startBtn = document.getElementById('start');
+        const hint = document.getElementById('hint');
+
+        let animationId = null;
+        let position = 0;
+        let direction = 1;
+        let speed = 2.2;
+        let score = 0;
+        let level = 1;
+
+        function reset() {
+            position = 0;
+            direction = 1;
+            speed = 2.2;
+            score = 0;
+            level = 1;
+            scoreEl.textContent = score;
+            levelEl.textContent = level;
+            hint.textContent = '点击车道停止方块。';
+        }
+
+        function animate() {
+            position += direction * speed;
+            if (position <= 0 || position + 40 >= lane.clientWidth) {
+                direction *= -1;
+            }
+            runner.style.left = `${position}px`;
+            animationId = requestAnimationFrame(animate);
+        }
+
+        function stopRunner() {
+            const center = lane.clientWidth / 2;
+            const runnerCenter = position + 20;
+            const distance = Math.abs(center - runnerCenter);
+            if (distance < 40) {
+                score += 1;
+                hint.textContent = '命中！继续点击提高等级。';
+                if (score % 3 === 0) {
+                    level += 1;
+                    levelEl.textContent = level;
+                    speed += 0.6;
+                }
+            } else {
+                hint.textContent = '偏离目标，重试。';
+                score = 0;
+                level = 1;
+                speed = 2.2;
+                scoreEl.textContent = score;
+                levelEl.textContent = level;
+            }
+            scoreEl.textContent = score;
+        }
+
+        startBtn.addEventListener('click', () => {
+            reset();
+            if (animationId) cancelAnimationFrame(animationId);
+            animate();
+        });
+
+        lane.addEventListener('click', () => {
+            if (!animationId) return;
+            stopRunner();
+        });
+    </script>
+</body>
+
+</html>

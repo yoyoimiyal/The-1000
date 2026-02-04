@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>故事灵感卡</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-rose-200/70">Story Prompt</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-rose-200">故事灵感卡</h1>
+            <p class="text-sm text-slate-400 mt-2">随机生成角色、场景和挑战，快速开写。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-900/70 border border-rose-400/20 rounded-2xl p-6 shadow-lg">
+                <button id="generate"
+                    class="w-full py-3 rounded-xl bg-rose-400 text-slate-950 font-semibold hover:bg-rose-300 transition">生成灵感卡</button>
+                <div class="mt-6 space-y-3 text-sm">
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-3">
+                        <p class="text-xs text-slate-500">角色</p>
+                        <p id="role" class="text-lg"></p>
+                    </div>
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-3">
+                        <p class="text-xs text-slate-500">场景</p>
+                        <p id="scene" class="text-lg"></p>
+                    </div>
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-3">
+                        <p class="text-xs text-slate-500">挑战</p>
+                        <p id="challenge" class="text-lg"></p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bg-slate-900/70 border border-rose-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">最近灵感</h2>
+                    <button id="clear" class="text-xs text-rose-200 hover:text-white">清空</button>
+                </div>
+                <ul id="history" class="space-y-2 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const role = document.getElementById('role');
+        const scene = document.getElementById('scene');
+        const challenge = document.getElementById('challenge');
+        const generate = document.getElementById('generate');
+        const history = document.getElementById('history');
+        const clear = document.getElementById('clear');
+
+        const roles = ['背包客', '机械师', '实习记者', '孤独画家', '时间旅行者'];
+        const scenes = ['暴风雪夜的车站', '漂浮的城市', '深夜的图书馆', '荒野里的灯塔', '海底科研基地'];
+        const challenges = ['必须在黎明前找到答案', '被迫与旧日伙伴合作', '时间正在倒流', '失去方向却拥有线索', '危险正在逼近'];
+
+        const storageKey = 'story-prompt-history';
+
+        const renderHistory = (data) => {
+            history.innerHTML = '';
+            if (!data.length) {
+                history.innerHTML = '<li class="text-slate-500">暂无记录。</li>';
+                return;
+            }
+            data.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.textContent = item;
+                history.appendChild(li);
+            });
+        };
+
+        const saveHistory = (text) => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            data.unshift(text);
+            localStorage.setItem(storageKey, JSON.stringify(data.slice(0, 5)));
+            renderHistory(data.slice(0, 5));
+        };
+
+        generate.addEventListener('click', () => {
+            const result = `${roles[Math.floor(Math.random() * roles.length)]} · ${scenes[Math.floor(Math.random() * scenes.length)]} · ${challenges[Math.floor(Math.random() * challenges.length)]}`;
+            const [r, s, c] = result.split(' · ');
+            role.textContent = r;
+            scene.textContent = s;
+            challenge.textContent = c;
+            saveHistory(result);
+        });
+
+        clear.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            renderHistory([]);
+        });
+
+        renderHistory(JSON.parse(localStorage.getItem(storageKey) || '[]'));
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>节奏圆环</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #0f172a;
+            color: #f8fafc;
+        }
+
+        canvas {
+            background: #020617;
+            border-radius: 16px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-4xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">节奏圆环</h1>
+                <p class="text-sm text-slate-300">在圆环接近靶圈时点击。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-700 rounded-2xl p-6 space-y-4">
+            <div class="flex items-center gap-4 text-sm">
+                <div>得分：<span id="score">0</span></div>
+                <button id="start" class="px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/30">开始</button>
+            </div>
+            <canvas id="canvas" width="520" height="320" class="w-full h-[320px]"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const startBtn = document.getElementById('start');
+        let score = 0;
+        let running = false;
+        let radius = 20;
+        let speed = 1.5;
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const targetRadius = 110;
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, targetRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(251, 191, 36, 0.8)';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            if (running) {
+                radius += speed;
+                if (radius > 160 || radius < 20) speed *= -1;
+            }
+            requestAnimationFrame(draw);
+        }
+
+        canvas.addEventListener('click', () => {
+            if (!running) return;
+            const target = 110;
+            const diff = Math.abs(radius - target);
+            if (diff < 12) {
+                score += 2;
+            } else if (diff < 25) {
+                score += 1;
+            } else {
+                score = Math.max(0, score - 1);
+            }
+            scoreEl.textContent = score;
+        });
+
+        startBtn.addEventListener('click', () => {
+            score = 0;
+            radius = 20;
+            speed = 1.5;
+            running = true;
+            scoreEl.textContent = score;
+        });
+
+        draw();
+    </script>
+</body>
+
+</html>

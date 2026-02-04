@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>目标复盘清单</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-teal-200/70">Goal Review</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-teal-200">目标复盘清单</h1>
+            <p class="text-sm text-slate-400 mt-2">为目标填写复盘问题，记录答案。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-900/70 border border-teal-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">目标名称</label>
+                <input id="goalTitle" type="text" placeholder="例如：完成季度OKR"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300" />
+                <div class="mt-4">
+                    <label class="block text-sm text-slate-300 mb-2">复盘问题</label>
+                    <div id="questionList" class="space-y-3"></div>
+                    <button id="addQuestion"
+                        class="mt-3 px-4 py-2 rounded-xl border border-slate-700 text-slate-300 hover:border-teal-300 hover:text-white transition">添加问题</button>
+                </div>
+                <button id="saveReview"
+                    class="mt-6 w-full py-3 rounded-xl bg-teal-400 text-slate-950 font-semibold hover:bg-teal-300 transition">保存复盘</button>
+            </section>
+
+            <section class="bg-slate-900/70 border border-teal-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">复盘预览</h2>
+                    <button id="clearReview" class="text-xs text-teal-200 hover:text-white">清空</button>
+                </div>
+                <div id="reviewPreview" class="space-y-3 text-sm"></div>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-800 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const goalTitle = document.getElementById('goalTitle');
+        const questionList = document.getElementById('questionList');
+        const addQuestion = document.getElementById('addQuestion');
+        const saveReview = document.getElementById('saveReview');
+        const clearReview = document.getElementById('clearReview');
+        const reviewPreview = document.getElementById('reviewPreview');
+
+        const storageKey = 'goal-review-data';
+
+        const createQuestion = (text = '') => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'bg-slate-950/70 border border-slate-700 rounded-xl p-3';
+            wrapper.innerHTML = `
+                <input type="text" value="${text}" placeholder="复盘问题" class="w-full bg-transparent text-sm text-slate-200 focus:outline-none" />
+                <textarea rows="2" placeholder="你的回答" class="w-full mt-2 bg-transparent text-xs text-slate-400 focus:outline-none"></textarea>
+            `;
+            questionList.appendChild(wrapper);
+        };
+
+        const renderPreview = (data) => {
+            reviewPreview.innerHTML = '';
+            if (!data) {
+                reviewPreview.innerHTML = '<p class="text-slate-500">暂无复盘记录。</p>';
+                return;
+            }
+            reviewPreview.innerHTML = `
+                <div>
+                    <p class="text-xs text-slate-500">目标</p>
+                    <p class="text-lg font-semibold">${data.title || '未命名目标'}</p>
+                </div>
+            `;
+            data.questions.forEach(item => {
+                const block = document.createElement('div');
+                block.className = 'bg-slate-950/70 border border-slate-700 rounded-xl p-3';
+                block.innerHTML = `
+                    <p class="text-sm text-teal-200">${item.question}</p>
+                    <p class="text-xs text-slate-300 mt-2">${item.answer || '暂无回答'}</p>
+                `;
+                reviewPreview.appendChild(block);
+            });
+        };
+
+        addQuestion.addEventListener('click', () => createQuestion());
+
+        saveReview.addEventListener('click', () => {
+            const questions = Array.from(questionList.children).map(wrapper => {
+                const input = wrapper.querySelector('input');
+                const textarea = wrapper.querySelector('textarea');
+                return { question: input.value.trim(), answer: textarea.value.trim() };
+            }).filter(item => item.question);
+            const data = {
+                title: goalTitle.value.trim(),
+                questions
+            };
+            localStorage.setItem(storageKey, JSON.stringify(data));
+            renderPreview(data);
+        });
+
+        clearReview.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            reviewPreview.innerHTML = '<p class="text-slate-500">暂无复盘记录。</p>';
+        });
+
+        const cached = JSON.parse(localStorage.getItem(storageKey) || 'null');
+        if (cached) {
+            goalTitle.value = cached.title;
+            cached.questions.forEach(item => createQuestion(item.question));
+            const textareas = questionList.querySelectorAll('textarea');
+            cached.questions.forEach((item, index) => {
+                if (textareas[index]) textareas[index].value = item.answer;
+            });
+            renderPreview(cached);
+        } else {
+            createQuestion('最满意的进展是什么？');
+            createQuestion('遇到的最大阻力是什么？');
+        }
+    </script>
+</body>
+
+</html>
