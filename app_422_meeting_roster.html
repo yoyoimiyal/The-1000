@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会议出席统计</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-slate-200/70">Meeting Roster</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-200">会议出席统计</h1>
+            <p class="text-sm text-slate-400 mt-2">快速标记与会人员。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-900/70 border border-slate-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">人员名单（每行一个）</label>
+                <textarea id="rosterInput" rows="8"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"></textarea>
+                <button id="saveRoster"
+                    class="mt-6 w-full py-3 rounded-xl bg-slate-200 text-slate-900 font-semibold hover:bg-slate-100 transition">生成名单</button>
+            </section>
+
+            <section class="bg-slate-900/70 border border-slate-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">出席情况</h2>
+                    <button id="clearRoster" class="text-xs text-slate-200 hover:text-white">清空</button>
+                </div>
+                <ul id="rosterList" class="space-y-2 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const rosterInput = document.getElementById('rosterInput');
+        const saveRoster = document.getElementById('saveRoster');
+        const clearRoster = document.getElementById('clearRoster');
+        const rosterList = document.getElementById('rosterList');
+
+        const storageKey = 'meeting-roster-data';
+
+        const render = (data) => {
+            rosterList.innerHTML = '';
+            if (!data.length) {
+                rosterList.innerHTML = '<li class="text-slate-500">暂无名单。</li>';
+                return;
+            }
+            data.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-slate-900/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.innerHTML = `
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" ${item.attend ? 'checked' : ''} data-index="${index}" class="accent-slate-300" />
+                        <span>${item.name}</span>
+                    </label>
+                `;
+                rosterList.appendChild(li);
+            });
+        };
+
+        saveRoster.addEventListener('click', () => {
+            const data = rosterInput.value.split('\n').map(name => name.trim()).filter(Boolean).map(name => ({ name, attend: false }));
+            localStorage.setItem(storageKey, JSON.stringify(data));
+            render(data);
+        });
+
+        rosterList.addEventListener('change', (event) => {
+            if (!event.target.matches('input[type="checkbox"]')) return;
+            const index = Number(event.target.dataset.index);
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            data[index].attend = event.target.checked;
+            localStorage.setItem(storageKey, JSON.stringify(data));
+        });
+
+        clearRoster.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            render([]);
+        });
+
+        render(JSON.parse(localStorage.getItem(storageKey) || '[]'));
+    </script>
+</body>
+
+</html>

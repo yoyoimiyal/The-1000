@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>饮水打卡</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-cyan-200/70">Hydration Check</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-cyan-200">饮水打卡</h1>
+            <p class="text-sm text-slate-400 mt-2">记录今日喝水杯数。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-900/70 border border-cyan-400/20 rounded-2xl p-6 shadow-lg text-center">
+                <p class="text-xs text-slate-400">今日杯数</p>
+                <div id="count" class="text-6xl font-bold text-cyan-200">0</div>
+                <div class="flex gap-3 mt-6">
+                    <button id="add"
+                        class="flex-1 py-3 rounded-xl bg-cyan-400 text-slate-950 font-semibold hover:bg-cyan-300 transition">+1 杯</button>
+                    <button id="reset"
+                        class="px-4 py-3 rounded-xl border border-slate-700 text-slate-300 hover:border-cyan-300 hover:text-white transition">重置</button>
+                </div>
+            </section>
+
+            <section class="bg-slate-900/70 border border-cyan-400/20 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-lg font-semibold mb-4">打卡记录</h2>
+                <ul id="history" class="space-y-2 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const count = document.getElementById('count');
+        const add = document.getElementById('add');
+        const reset = document.getElementById('reset');
+        const history = document.getElementById('history');
+
+        const storageKey = 'hydration-check-data';
+
+        const render = (data) => {
+            count.textContent = data.count;
+            history.innerHTML = '';
+            if (!data.history.length) {
+                history.innerHTML = '<li class="text-slate-500">暂无记录。</li>';
+                return;
+            }
+            data.history.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.textContent = item;
+                history.appendChild(li);
+            });
+        };
+
+        const load = () => JSON.parse(localStorage.getItem(storageKey) || '{"count":0,"history":[]}');
+
+        add.addEventListener('click', () => {
+            const data = load();
+            data.count += 1;
+            data.history.unshift(`+1 杯 · ${new Date().toLocaleTimeString()}`);
+            localStorage.setItem(storageKey, JSON.stringify({ count: data.count, history: data.history.slice(0, 6) }));
+            render({ count: data.count, history: data.history.slice(0, 6) });
+        });
+
+        reset.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            render(load());
+        });
+
+        render(load());
+    </script>
+</body>
+
+</html>
