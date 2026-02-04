@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>行李打包清单</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-rose-200/70">Packing List</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-rose-200">行李打包清单</h1>
+            <p class="text-sm text-slate-400 mt-2">为出行快速列出必备物品。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-900/70 border border-rose-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">新增物品</label>
+                <div class="flex gap-2">
+                    <input id="itemInput" type="text" placeholder="例如：护照"
+                        class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" />
+                    <button id="addItem"
+                        class="px-4 py-2 rounded-xl bg-rose-400 text-slate-950 font-semibold hover:bg-rose-300 transition">添加</button>
+                </div>
+            </section>
+
+            <section class="bg-slate-900/70 border border-rose-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">打包清单</h2>
+                    <button id="clearItems" class="text-xs text-rose-200 hover:text-white">清空</button>
+                </div>
+                <ul id="itemList" class="space-y-2 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const itemInput = document.getElementById('itemInput');
+        const addItem = document.getElementById('addItem');
+        const clearItems = document.getElementById('clearItems');
+        const itemList = document.getElementById('itemList');
+
+        const storageKey = 'packing-list-items';
+
+        const render = () => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            itemList.innerHTML = '';
+            if (!data.length) {
+                itemList.innerHTML = '<li class="text-slate-500">暂无物品。</li>';
+                return;
+            }
+            data.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-slate-900/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.innerHTML = `
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" ${item.done ? 'checked' : ''} data-index="${index}" class="accent-rose-300" />
+                        <span>${item.text}</span>
+                    </label>
+                `;
+                itemList.appendChild(li);
+            });
+        };
+
+        addItem.addEventListener('click', () => {
+            const text = itemInput.value.trim();
+            if (!text) return;
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            data.push({ text, done: false });
+            localStorage.setItem(storageKey, JSON.stringify(data));
+            itemInput.value = '';
+            render();
+        });
+
+        itemList.addEventListener('change', (event) => {
+            if (!event.target.matches('input[type="checkbox"]')) return;
+            const index = Number(event.target.dataset.index);
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            data[index].done = event.target.checked;
+            localStorage.setItem(storageKey, JSON.stringify(data));
+        });
+
+        clearItems.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            render();
+        });
+
+        render();
+    </script>
+</body>
+
+</html>

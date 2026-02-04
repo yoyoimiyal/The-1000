@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日常预算胶囊</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-emerald-200/70">Budget Capsule</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-emerald-200">日常预算胶囊</h1>
+            <p class="text-sm text-slate-400 mt-2">为今天设置预算上限，记录开销并实时剩余。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-900/70 border border-emerald-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">今日预算（元）</label>
+                <div class="flex items-center gap-3">
+                    <input id="budgetInput" type="number" min="1" value="120"
+                        class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                    <button id="saveBudget"
+                        class="px-4 py-3 bg-emerald-400 text-slate-950 rounded-xl font-semibold hover:bg-emerald-300 transition">保存</button>
+                </div>
+                <div class="mt-6">
+                    <label class="block text-sm text-slate-300 mb-2">新增开销</label>
+                    <div class="flex gap-2">
+                        <input id="expenseName" type="text" placeholder="例如：午餐"
+                            class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                        <input id="expenseValue" type="number" min="1" placeholder="金额"
+                            class="w-28 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                        <button id="addExpense"
+                            class="px-3 py-2 rounded-xl bg-emerald-400 text-slate-950 font-semibold hover:bg-emerald-300 transition">添加</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bg-slate-900/70 border border-emerald-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">今日概览</h2>
+                    <button id="clearAll" class="text-xs text-emerald-200 hover:text-white">清空</button>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-4">
+                        <p class="text-xs text-slate-400">已用预算</p>
+                        <p id="spent" class="text-2xl font-semibold">0</p>
+                    </div>
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-4">
+                        <p class="text-xs text-slate-400">剩余预算</p>
+                        <p id="remaining" class="text-2xl font-semibold">0</p>
+                    </div>
+                </div>
+                <ul id="expenseList" class="space-y-2 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const budgetInput = document.getElementById('budgetInput');
+        const saveBudget = document.getElementById('saveBudget');
+        const expenseName = document.getElementById('expenseName');
+        const expenseValue = document.getElementById('expenseValue');
+        const addExpense = document.getElementById('addExpense');
+        const expenseList = document.getElementById('expenseList');
+        const spent = document.getElementById('spent');
+        const remaining = document.getElementById('remaining');
+        const clearAll = document.getElementById('clearAll');
+
+        const storageKey = 'budget-capsule-data';
+
+        const render = (data) => {
+            expenseList.innerHTML = '';
+            if (data.items.length === 0) {
+                expenseList.innerHTML = '<li class="text-slate-500">暂无开销记录。</li>';
+            } else {
+                data.items.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'flex items-center justify-between bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2';
+                    li.innerHTML = `<span>${item.name}</span><span class="text-emerald-200">-${item.value} 元</span>`;
+                    expenseList.appendChild(li);
+                });
+            }
+            const totalSpent = data.items.reduce((sum, item) => sum + item.value, 0);
+            spent.textContent = `${totalSpent} 元`;
+            remaining.textContent = `${Math.max(0, data.budget - totalSpent)} 元`;
+        };
+
+        const save = (data) => {
+            localStorage.setItem(storageKey, JSON.stringify(data));
+        };
+
+        const load = () => JSON.parse(localStorage.getItem(storageKey) || '{"budget":120,"items":[]}');
+
+        saveBudget.addEventListener('click', () => {
+            const data = load();
+            data.budget = Math.max(1, Number(budgetInput.value));
+            save(data);
+            render(data);
+        });
+
+        addExpense.addEventListener('click', () => {
+            const name = expenseName.value.trim();
+            const value = Number(expenseValue.value);
+            if (!name || !value) return;
+            const data = load();
+            data.items.unshift({ name, value });
+            save(data);
+            render(data);
+            expenseName.value = '';
+            expenseValue.value = '';
+        });
+
+        clearAll.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            const data = load();
+            budgetInput.value = data.budget;
+            render(data);
+        });
+
+        const cached = load();
+        budgetInput.value = cached.budget;
+        render(cached);
+    </script>
+</body>
+
+</html>

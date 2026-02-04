@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一周餐食计划</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-orange-200/70">Meal Planner</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-orange-200">一周餐食计划</h1>
+            <p class="text-sm text-slate-400 mt-2">填写早餐、午餐、晚餐安排。</p>
+        </header>
+
+        <div class="bg-slate-900/70 border border-orange-400/20 rounded-2xl p-6 shadow-lg">
+            <div id="planner" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            <div class="flex gap-3 mt-6">
+                <button id="save"
+                    class="flex-1 py-3 rounded-xl bg-orange-400 text-slate-950 font-semibold hover:bg-orange-300 transition">保存计划</button>
+                <button id="clear"
+                    class="px-4 py-3 rounded-xl border border-slate-700 text-slate-300 hover:border-orange-300 hover:text-white transition">清空</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const planner = document.getElementById('planner');
+        const save = document.getElementById('save');
+        const clear = document.getElementById('clear');
+        const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        const storageKey = 'meal-planner-week';
+
+        const buildPlanner = (data) => {
+            planner.innerHTML = '';
+            days.forEach(day => {
+                const section = document.createElement('div');
+                section.className = 'bg-slate-950/70 border border-slate-700 rounded-xl p-4';
+                section.innerHTML = `
+                    <h3 class="text-sm text-orange-200 font-semibold mb-2">${day}</h3>
+                    <input data-day="${day}" data-meal="breakfast" placeholder="早餐" class="w-full bg-transparent text-sm text-slate-200 border-b border-slate-700 py-1 mb-2 focus:outline-none" />
+                    <input data-day="${day}" data-meal="lunch" placeholder="午餐" class="w-full bg-transparent text-sm text-slate-200 border-b border-slate-700 py-1 mb-2 focus:outline-none" />
+                    <input data-day="${day}" data-meal="dinner" placeholder="晚餐" class="w-full bg-transparent text-sm text-slate-200 border-b border-slate-700 py-1 focus:outline-none" />
+                `;
+                planner.appendChild(section);
+            });
+            if (data) {
+                Object.keys(data).forEach(day => {
+                    ['breakfast', 'lunch', 'dinner'].forEach(meal => {
+                        const input = planner.querySelector(`input[data-day="${day}"][data-meal="${meal}"]`);
+                        if (input) input.value = data[day][meal] || '';
+                    });
+                });
+            }
+        };
+
+        const collectData = () => {
+            const data = {};
+            days.forEach(day => {
+                data[day] = { breakfast: '', lunch: '', dinner: '' };
+            });
+            planner.querySelectorAll('input').forEach(input => {
+                const day = input.dataset.day;
+                const meal = input.dataset.meal;
+                data[day][meal] = input.value.trim();
+            });
+            return data;
+        };
+
+        save.addEventListener('click', () => {
+            const data = collectData();
+            localStorage.setItem(storageKey, JSON.stringify(data));
+        });
+
+        clear.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            buildPlanner(null);
+        });
+
+        buildPlanner(JSON.parse(localStorage.getItem(storageKey) || 'null'));
+    </script>
+</body>
+
+</html>

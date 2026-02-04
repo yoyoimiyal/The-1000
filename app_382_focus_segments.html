@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专注分段规划器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-blue-200/70">Focus Segments</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-200">专注分段规划器</h1>
+            <p class="text-sm text-slate-300 mt-2">把一段总时长拆成多段专注与休息节奏。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-800/70 border border-blue-400/30 rounded-2xl p-6 shadow-lg">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-slate-300 mb-2">总时长（分钟）</label>
+                        <input id="totalMinutes" type="number" min="30" value="120"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm text-slate-300 mb-2">专注时长</label>
+                            <input id="focusMinutes" type="number" min="10" value="25"
+                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-300 mb-2">休息时长</label>
+                            <input id="breakMinutes" type="number" min="5" value="5"
+                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                        </div>
+                    </div>
+                </div>
+                <button id="buildPlan"
+                    class="mt-6 w-full py-3 rounded-xl bg-blue-400 text-slate-950 font-semibold hover:bg-blue-300 transition">生成计划</button>
+            </section>
+
+            <section class="bg-slate-800/70 border border-blue-400/30 rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">时间线</h2>
+                    <button id="savePlan" class="text-xs text-blue-200 hover:text-white">保存</button>
+                </div>
+                <ul id="planList" class="space-y-2 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const totalMinutes = document.getElementById('totalMinutes');
+        const focusMinutes = document.getElementById('focusMinutes');
+        const breakMinutes = document.getElementById('breakMinutes');
+        const buildPlan = document.getElementById('buildPlan');
+        const planList = document.getElementById('planList');
+        const savePlan = document.getElementById('savePlan');
+
+        const storageKey = 'focus-segment-plan';
+
+        const renderPlan = (plan) => {
+            planList.innerHTML = '';
+            if (!plan.length) {
+                planList.innerHTML = '<li class="text-slate-500">暂无计划。</li>';
+                return;
+            }
+            plan.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-slate-900/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.innerHTML = `
+                    <span>${item.label}</span>
+                    <span class="text-blue-200">${item.duration} 分钟</span>
+                `;
+                planList.appendChild(li);
+            });
+        };
+
+        const build = () => {
+            const total = Math.max(30, Number(totalMinutes.value));
+            const focus = Math.max(10, Number(focusMinutes.value));
+            const rest = Math.max(5, Number(breakMinutes.value));
+
+            const plan = [];
+            let remaining = total;
+            let cycle = 1;
+            while (remaining > 0) {
+                const focusDuration = Math.min(focus, remaining);
+                plan.push({ label: `第 ${cycle} 段专注`, duration: focusDuration });
+                remaining -= focusDuration;
+                if (remaining <= 0) break;
+                const breakDuration = Math.min(rest, remaining);
+                plan.push({ label: `第 ${cycle} 段休息`, duration: breakDuration });
+                remaining -= breakDuration;
+                cycle += 1;
+            }
+            renderPlan(plan);
+            return plan;
+        };
+
+        buildPlan.addEventListener('click', () => {
+            const plan = build();
+            localStorage.setItem(storageKey, JSON.stringify({
+                total: totalMinutes.value,
+                focus: focusMinutes.value,
+                rest: breakMinutes.value,
+                plan
+            }));
+        });
+
+        savePlan.addEventListener('click', () => {
+            const plan = build();
+            localStorage.setItem(storageKey, JSON.stringify({
+                total: totalMinutes.value,
+                focus: focusMinutes.value,
+                rest: breakMinutes.value,
+                plan
+            }));
+        });
+
+        const cached = JSON.parse(localStorage.getItem(storageKey) || 'null');
+        if (cached) {
+            totalMinutes.value = cached.total;
+            focusMinutes.value = cached.focus;
+            breakMinutes.value = cached.rest;
+            renderPlan(cached.plan || []);
+        } else {
+            renderPlan(build());
+        }
+    </script>
+</body>
+
+</html>

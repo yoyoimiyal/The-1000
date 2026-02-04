@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打断统计器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-amber-200/70">Focus Interruptions</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-amber-200">打断统计器</h1>
+            <p class="text-sm text-slate-400 mt-2">记录专注过程中被打断的原因，找到最常见的干扰源。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-900/70 border border-amber-400/20 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-lg font-semibold mb-4">快速记录</h2>
+                <div class="grid grid-cols-2 gap-3" id="interruptButtons"></div>
+                <div class="mt-4">
+                    <label class="block text-sm text-slate-300 mb-2">其他原因</label>
+                    <div class="flex gap-2">
+                        <input id="customInput" type="text" placeholder="例如：被叫走、设备故障"
+                            class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                        <button id="addCustom"
+                            class="px-4 py-2 rounded-xl bg-amber-400 text-slate-950 font-semibold hover:bg-amber-300 transition">添加</button>
+                    </div>
+                </div>
+                <button id="resetDay"
+                    class="mt-5 w-full py-2 rounded-xl border border-slate-700 text-sm text-slate-300 hover:border-amber-300 hover:text-white transition">清空今日记录</button>
+            </section>
+
+            <section class="bg-slate-900/70 border border-amber-400/20 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-lg font-semibold mb-4">统计概览</h2>
+                <div id="summary" class="space-y-3 text-sm"></div>
+                <div class="mt-6">
+                    <h3 class="text-sm text-slate-400 mb-2">时间线</h3>
+                    <ul id="timeline" class="space-y-2 text-xs text-slate-300"></ul>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const interruptButtons = document.getElementById('interruptButtons');
+        const customInput = document.getElementById('customInput');
+        const addCustom = document.getElementById('addCustom');
+        const resetDay = document.getElementById('resetDay');
+        const summary = document.getElementById('summary');
+        const timeline = document.getElementById('timeline');
+
+        const presets = ['消息提醒', '走神发呆', '同事打断', '饥饿口渴', '多任务切换', '临时会议'];
+        const storageKey = 'focus-interruptions';
+
+        const loadData = () => JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+        const saveData = (data) => localStorage.setItem(storageKey, JSON.stringify(data));
+
+        const render = () => {
+            const data = loadData();
+            const counts = data.reduce((acc, item) => {
+                acc[item.reason] = (acc[item.reason] || 0) + 1;
+                return acc;
+            }, {});
+
+            summary.innerHTML = '';
+            const total = data.length;
+            if (total === 0) {
+                summary.innerHTML = '<p class="text-slate-500">暂无记录。</p>';
+            } else {
+                Object.entries(counts)
+                    .sort((a, b) => b[1] - a[1])
+                    .forEach(([reason, count]) => {
+                        const row = document.createElement('div');
+                        row.className = 'flex items-center justify-between bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2';
+                        row.innerHTML = `
+                            <span>${reason}</span>
+                            <span class="text-amber-200">${count} 次</span>
+                        `;
+                        summary.appendChild(row);
+                    });
+            }
+
+            timeline.innerHTML = '';
+            data.slice().reverse().slice(0, 6).forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 flex items-center justify-between';
+                li.innerHTML = `<span>${item.reason}</span><span class="text-slate-500">${item.time}</span>`;
+                timeline.appendChild(li);
+            });
+        };
+
+        const addRecord = (reason) => {
+            const data = loadData();
+            data.push({ reason, time: new Date().toLocaleTimeString() });
+            saveData(data);
+            render();
+        };
+
+        presets.forEach(reason => {
+            const btn = document.createElement('button');
+            btn.textContent = reason;
+            btn.className = 'py-2 rounded-xl bg-slate-950 border border-slate-700 text-sm hover:border-amber-300 hover:text-amber-200 transition';
+            btn.addEventListener('click', () => addRecord(reason));
+            interruptButtons.appendChild(btn);
+        });
+
+        addCustom.addEventListener('click', () => {
+            const value = customInput.value.trim();
+            if (!value) return;
+            addRecord(value);
+            customInput.value = '';
+        });
+
+        resetDay.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            render();
+        });
+
+        render();
+    </script>
+</body>
+
+</html>
