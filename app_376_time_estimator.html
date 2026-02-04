@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>时间感知校准器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-3xl">
+        <header class="mb-8 text-center">
+            <p class="text-xs uppercase tracking-[0.4em] text-slate-400">Time Estimation</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-cyan-300">时间感知校准器</h1>
+            <p class="text-sm text-slate-400 mt-2">练习你对时间的直觉，看看你和目标秒数的误差。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1.2fr_1fr]">
+            <section class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">目标时间（秒）</label>
+                <div class="flex items-center gap-3">
+                    <input id="targetInput" type="number" min="1" max="600" value="30"
+                        class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+                    <button id="setTarget"
+                        class="px-4 py-3 bg-cyan-500 text-slate-950 rounded-xl font-semibold hover:bg-cyan-400 transition">设置</button>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-4">
+                    <button class="quick-btn">5</button>
+                    <button class="quick-btn">10</button>
+                    <button class="quick-btn">30</button>
+                    <button class="quick-btn">45</button>
+                    <button class="quick-btn">60</button>
+                </div>
+
+                <div class="mt-6 bg-slate-950/70 rounded-2xl p-6 border border-slate-800">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-sm text-slate-400">当前目标</span>
+                        <span id="targetDisplay" class="text-2xl font-bold text-cyan-300">30 秒</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <button id="startBtn"
+                            class="flex-1 py-3 rounded-xl bg-emerald-500 text-slate-950 font-semibold hover:bg-emerald-400 transition">开始</button>
+                        <button id="stopBtn" disabled
+                            class="flex-1 py-3 rounded-xl bg-slate-700 text-slate-400 font-semibold cursor-not-allowed">停止</button>
+                    </div>
+                    <p id="statusText" class="text-center text-sm text-slate-400 mt-4">点击开始后心里默数，觉得时间到了再按停止。</p>
+                </div>
+            </section>
+
+            <section class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-lg font-semibold text-slate-100 mb-4">结果分析</h2>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-400 text-sm">实际用时</span>
+                        <span id="actualTime" class="text-xl font-semibold">--</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-400 text-sm">误差</span>
+                        <span id="diffTime" class="text-xl font-semibold">--</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-400 text-sm">准确度</span>
+                        <span id="accuracy" class="text-xl font-semibold">--</span>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm text-slate-300">最近记录</h3>
+                        <button id="clearHistory" class="text-xs text-slate-500 hover:text-slate-200">清空</button>
+                    </div>
+                    <ul id="historyList" class="space-y-2 text-sm text-slate-300"></ul>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-800 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const targetInput = document.getElementById('targetInput');
+        const targetDisplay = document.getElementById('targetDisplay');
+        const setTargetBtn = document.getElementById('setTarget');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusText = document.getElementById('statusText');
+        const actualTime = document.getElementById('actualTime');
+        const diffTime = document.getElementById('diffTime');
+        const accuracy = document.getElementById('accuracy');
+        const historyList = document.getElementById('historyList');
+        const clearHistory = document.getElementById('clearHistory');
+
+        let targetSeconds = 30;
+        let startTime = null;
+
+        const historyKey = 'time-estimator-history';
+
+        const renderHistory = () => {
+            const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+            historyList.innerHTML = '';
+            if (history.length === 0) {
+                historyList.innerHTML = '<li class="text-slate-500">暂无记录，完成一次练习吧。</li>';
+                return;
+            }
+            history.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-slate-950/60 border border-slate-800 rounded-xl px-3 py-2';
+                li.innerHTML = `<span>${item.time}s / 目标 ${item.target}s</span><span class="text-slate-400">误差 ${item.diff}s</span>`;
+                historyList.appendChild(li);
+            });
+        };
+
+        const saveHistory = (record) => {
+            const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+            history.unshift(record);
+            localStorage.setItem(historyKey, JSON.stringify(history.slice(0, 8)));
+            renderHistory();
+        };
+
+        const setTarget = (value) => {
+            targetSeconds = Math.max(1, Math.min(600, value));
+            targetDisplay.textContent = `${targetSeconds} 秒`;
+        };
+
+        document.querySelectorAll('.quick-btn').forEach(btn => {
+            btn.className = 'quick-btn px-3 py-1 rounded-full bg-slate-800 text-slate-300 text-xs hover:bg-slate-700 transition';
+            btn.addEventListener('click', () => {
+                targetInput.value = btn.textContent;
+                setTarget(Number(btn.textContent));
+            });
+        });
+
+        setTargetBtn.addEventListener('click', () => {
+            setTarget(Number(targetInput.value));
+        });
+
+        startBtn.addEventListener('click', () => {
+            startTime = performance.now();
+            startBtn.disabled = true;
+            startBtn.className = 'flex-1 py-3 rounded-xl bg-slate-700 text-slate-400 font-semibold cursor-not-allowed';
+            stopBtn.disabled = false;
+            stopBtn.className = 'flex-1 py-3 rounded-xl bg-rose-500 text-slate-950 font-semibold hover:bg-rose-400 transition';
+            statusText.textContent = '开始计时中... 保持专注';
+        });
+
+        stopBtn.addEventListener('click', () => {
+            if (!startTime) return;
+            const elapsed = (performance.now() - startTime) / 1000;
+            const rounded = Number(elapsed.toFixed(2));
+            const diff = Number((rounded - targetSeconds).toFixed(2));
+            const acc = Math.max(0, 100 - Math.abs(diff) / targetSeconds * 100).toFixed(1);
+
+            actualTime.textContent = `${rounded}s`;
+            diffTime.textContent = `${diff > 0 ? '+' : ''}${diff}s`;
+            accuracy.textContent = `${acc}%`;
+
+            saveHistory({
+                time: rounded,
+                target: targetSeconds,
+                diff: diff
+            });
+
+            startTime = null;
+            startBtn.disabled = false;
+            startBtn.className = 'flex-1 py-3 rounded-xl bg-emerald-500 text-slate-950 font-semibold hover:bg-emerald-400 transition';
+            stopBtn.disabled = true;
+            stopBtn.className = 'flex-1 py-3 rounded-xl bg-slate-700 text-slate-400 font-semibold cursor-not-allowed';
+            statusText.textContent = '完成一次练习！可以继续挑战。';
+        });
+
+        clearHistory.addEventListener('click', () => {
+            localStorage.removeItem(historyKey);
+            renderHistory();
+        });
+
+        setTarget(targetSeconds);
+        renderHistory();
+    </script>
+</body>
+
+</html>
