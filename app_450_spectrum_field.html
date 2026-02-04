@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>光谱场</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #020617;
+            color: #e2e8f0;
+        }
+
+        canvas {
+            background: #0f172a;
+            border-radius: 16px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-5xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">光谱场</h1>
+                <p class="text-sm text-slate-300">生成动态色谱场景。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-700 rounded-2xl p-4 grid gap-4 lg:grid-cols-[1fr_220px]">
+            <canvas id="canvas" width="720" height="420" class="w-full h-[420px]"></canvas>
+            <div class="text-sm flex flex-col gap-4">
+                <label class="flex flex-col gap-2">步进速度
+                    <input id="speed" type="range" min="1" max="10" value="4">
+                </label>
+                <label class="flex flex-col gap-2">色彩密度
+                    <input id="density" type="range" min="20" max="80" value="40">
+                </label>
+                <button id="refresh" class="px-3 py-2 rounded-xl bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/30">重新生成</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const speedInput = document.getElementById('speed');
+        const densityInput = document.getElementById('density');
+        const refreshBtn = document.getElementById('refresh');
+        let offset = 0;
+
+        function drawField() {
+            const density = Number(densityInput.value);
+            const step = Math.max(8, 100 - density);
+            for (let y = 0; y < canvas.height; y += step) {
+                for (let x = 0; x < canvas.width; x += step) {
+                    const hue = (x * 0.6 + y * 0.8 + offset) % 360;
+                    ctx.fillStyle = `hsla(${hue}, 80%, 60%, 0.8)`;
+                    ctx.fillRect(x, y, step, step);
+                }
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawField();
+            offset += Number(speedInput.value);
+            requestAnimationFrame(animate);
+        }
+
+        refreshBtn.addEventListener('click', () => {
+            offset = Math.random() * 360;
+        });
+
+        animate();
+    </script>
+</body>
+
+</html>

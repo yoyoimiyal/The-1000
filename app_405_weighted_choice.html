@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>权重抽签器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-amber-200/70">Weighted Choice</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-amber-200">权重抽签器</h1>
+            <p class="text-sm text-slate-400 mt-2">为每个选项设置权重，得到更符合偏好的随机结果。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-800/70 border border-amber-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">选项名称</label>
+                <input id="optionName" type="text" placeholder="例如：方案A"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                <label class="block text-sm text-slate-300 mt-4 mb-2">权重（1-10）</label>
+                <input id="optionWeight" type="number" min="1" max="10" value="5"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                <button id="addOption"
+                    class="mt-6 w-full py-3 rounded-xl bg-amber-400 text-slate-950 font-semibold hover:bg-amber-300 transition">添加选项</button>
+                <button id="draw"
+                    class="mt-3 w-full py-3 rounded-xl border border-slate-700 text-slate-300 hover:border-amber-300 hover:text-white transition">抽取结果</button>
+            </section>
+
+            <section class="bg-slate-800/70 border border-amber-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">当前选项</h2>
+                    <button id="clearOptions" class="text-xs text-amber-200 hover:text-white">清空</button>
+                </div>
+                <div id="result" class="text-2xl font-semibold text-amber-200 mb-4">等待抽取</div>
+                <ul id="optionList" class="space-y-2 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const optionName = document.getElementById('optionName');
+        const optionWeight = document.getElementById('optionWeight');
+        const addOption = document.getElementById('addOption');
+        const draw = document.getElementById('draw');
+        const clearOptions = document.getElementById('clearOptions');
+        const optionList = document.getElementById('optionList');
+        const result = document.getElementById('result');
+
+        const storageKey = 'weighted-choice-options';
+
+        const render = () => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            optionList.innerHTML = '';
+            if (!data.length) {
+                optionList.innerHTML = '<li class="text-slate-500">暂无选项。</li>';
+                return;
+            }
+            data.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-slate-900/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.innerHTML = `<span>${item.name}</span><span class="text-amber-200">权重 ${item.weight}</span>`;
+                optionList.appendChild(li);
+            });
+        };
+
+        addOption.addEventListener('click', () => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            data.push({ name: optionName.value.trim() || '未命名', weight: Number(optionWeight.value) || 1 });
+            localStorage.setItem(storageKey, JSON.stringify(data));
+            optionName.value = '';
+            render();
+        });
+
+        draw.addEventListener('click', () => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            if (!data.length) {
+                result.textContent = '请先添加选项。';
+                return;
+            }
+            const pool = data.flatMap(item => Array(item.weight).fill(item.name));
+            const pick = pool[Math.floor(Math.random() * pool.length)];
+            result.textContent = pick;
+        });
+
+        clearOptions.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            result.textContent = '等待抽取';
+            render();
+        });
+
+        render();
+    </script>
+</body>
+
+</html>

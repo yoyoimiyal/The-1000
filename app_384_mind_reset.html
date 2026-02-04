@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一分钟清空练习</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-3xl">
+        <header class="text-center mb-10">
+            <p class="text-xs uppercase tracking-[0.4em] text-cyan-200/70">Mind Reset</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-cyan-200">一分钟清空练习</h1>
+            <p class="text-sm text-slate-400 mt-2">60 秒微冥想，重置注意力。</p>
+        </header>
+
+        <div class="bg-slate-800/70 border border-cyan-400/20 rounded-2xl p-8 shadow-lg text-center">
+            <div class="text-7xl font-bold text-cyan-200 mb-4" id="timer">60</div>
+            <p id="guide" class="text-sm text-slate-300">深呼吸 4 秒，保持 4 秒，缓慢呼出 6 秒。</p>
+            <div class="flex items-center justify-center gap-4 mt-6">
+                <button id="start"
+                    class="px-6 py-3 rounded-xl bg-cyan-400 text-slate-950 font-semibold hover:bg-cyan-300 transition">开始</button>
+                <button id="pause" disabled
+                    class="px-6 py-3 rounded-xl bg-slate-700 text-slate-400 font-semibold cursor-not-allowed">暂停</button>
+                <button id="reset"
+                    class="px-6 py-3 rounded-xl border border-slate-600 text-slate-300 hover:border-cyan-300 hover:text-white transition">重置</button>
+            </div>
+        </div>
+
+        <div class="grid gap-4 mt-8 md:grid-cols-3 text-sm text-slate-300">
+            <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-4">
+                <p class="text-xs text-slate-400">步骤 1</p>
+                <p>放松肩颈，感受脚掌。</p>
+            </div>
+            <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-4">
+                <p class="text-xs text-slate-400">步骤 2</p>
+                <p>跟随提示呼吸，注意节奏。</p>
+            </div>
+            <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-4">
+                <p class="text-xs text-slate-400">步骤 3</p>
+                <p>60 秒后记录当前感受。</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const timer = document.getElementById('timer');
+        const guide = document.getElementById('guide');
+        const start = document.getElementById('start');
+        const pause = document.getElementById('pause');
+        const reset = document.getElementById('reset');
+
+        let remaining = 60;
+        let intervalId = null;
+
+        const cues = [
+            '深呼吸 4 秒，保持 4 秒，缓慢呼出 6 秒。',
+            '观察身体紧张处，缓缓放松。',
+            '注意呼吸的节奏与流动。',
+            '给自己一个温柔的提醒：我在这里。'
+        ];
+
+        const updateGuide = () => {
+            const index = Math.floor((60 - remaining) / 15) % cues.length;
+            guide.textContent = cues[index];
+        };
+
+        const tick = () => {
+            remaining -= 1;
+            timer.textContent = remaining;
+            updateGuide();
+            if (remaining <= 0) {
+                clearInterval(intervalId);
+                intervalId = null;
+                guide.textContent = '练习完成，记录一下感受。';
+                start.disabled = false;
+                pause.disabled = true;
+                pause.className = 'px-6 py-3 rounded-xl bg-slate-700 text-slate-400 font-semibold cursor-not-allowed';
+            }
+        };
+
+        start.addEventListener('click', () => {
+            if (intervalId) return;
+            intervalId = setInterval(tick, 1000);
+            start.disabled = true;
+            pause.disabled = false;
+            pause.className = 'px-6 py-3 rounded-xl bg-rose-400 text-slate-950 font-semibold hover:bg-rose-300 transition';
+        });
+
+        pause.addEventListener('click', () => {
+            if (!intervalId) return;
+            clearInterval(intervalId);
+            intervalId = null;
+            start.disabled = false;
+            pause.disabled = true;
+            pause.className = 'px-6 py-3 rounded-xl bg-slate-700 text-slate-400 font-semibold cursor-not-allowed';
+        });
+
+        reset.addEventListener('click', () => {
+            clearInterval(intervalId);
+            intervalId = null;
+            remaining = 60;
+            timer.textContent = remaining;
+            guide.textContent = cues[0];
+            start.disabled = false;
+            pause.disabled = true;
+            pause.className = 'px-6 py-3 rounded-xl bg-slate-700 text-slate-400 font-semibold cursor-not-allowed';
+        });
+    </script>
+</body>
+
+</html>

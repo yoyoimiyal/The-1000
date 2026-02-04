@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>感恩瓶</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-yellow-200/70">Gratitude Jar</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-yellow-200">感恩瓶</h1>
+            <p class="text-sm text-slate-400 mt-2">写下今天的感恩小事，装进瓶子。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-900/70 border border-yellow-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">感恩内容</label>
+                <textarea id="gratitudeInput" rows="4"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300"></textarea>
+                <button id="addGratitude"
+                    class="mt-6 w-full py-3 rounded-xl bg-yellow-400 text-slate-950 font-semibold hover:bg-yellow-300 transition">放入瓶子</button>
+                <button id="clearJar"
+                    class="mt-3 w-full py-3 rounded-xl border border-slate-700 text-slate-300 hover:border-yellow-300 hover:text-white transition">清空</button>
+            </section>
+
+            <section class="bg-slate-900/70 border border-yellow-400/20 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-lg font-semibold mb-4">瓶中记录</h2>
+                <ul id="jarList" class="space-y-2 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const gratitudeInput = document.getElementById('gratitudeInput');
+        const addGratitude = document.getElementById('addGratitude');
+        const clearJar = document.getElementById('clearJar');
+        const jarList = document.getElementById('jarList');
+
+        const storageKey = 'gratitude-jar-items';
+
+        const render = () => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            jarList.innerHTML = '';
+            if (!data.length) {
+                jarList.innerHTML = '<li class="text-slate-500">瓶子还空着。</li>';
+                return;
+            }
+            data.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.textContent = item;
+                jarList.appendChild(li);
+            });
+        };
+
+        addGratitude.addEventListener('click', () => {
+            const text = gratitudeInput.value.trim();
+            if (!text) return;
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            data.unshift(`${text} · ${new Date().toLocaleDateString()}`);
+            localStorage.setItem(storageKey, JSON.stringify(data.slice(0, 8)));
+            gratitudeInput.value = '';
+            render();
+        });
+
+        clearJar.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            render();
+        });
+
+        render();
+    </script>
+</body>
+
+</html>

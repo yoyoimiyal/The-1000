@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>桌面整理清单</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-stone-200/70">Desktop Tidy</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-stone-200">桌面整理清单</h1>
+            <p class="text-sm text-slate-400 mt-2">整理电脑桌面，用清单逐一打勾。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-800/70 border border-stone-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">新增任务</label>
+                <div class="flex gap-2">
+                    <input id="taskInput" type="text" placeholder="例如：清理下载文件夹"
+                        class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-stone-300" />
+                    <button id="addTask"
+                        class="px-4 py-2 rounded-xl bg-stone-400 text-slate-950 font-semibold hover:bg-stone-300 transition">添加</button>
+                </div>
+            </section>
+
+            <section class="bg-slate-800/70 border border-stone-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">清单</h2>
+                    <button id="clearTasks" class="text-xs text-stone-200 hover:text-white">清空</button>
+                </div>
+                <ul id="taskList" class="space-y-2 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const taskInput = document.getElementById('taskInput');
+        const addTask = document.getElementById('addTask');
+        const clearTasks = document.getElementById('clearTasks');
+        const taskList = document.getElementById('taskList');
+
+        const storageKey = 'desktop-tidy-list';
+
+        const render = () => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            taskList.innerHTML = '';
+            if (!data.length) {
+                taskList.innerHTML = '<li class="text-slate-500">暂无任务。</li>';
+                return;
+            }
+            data.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-slate-900/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.innerHTML = `
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" ${item.done ? 'checked' : ''} data-index="${index}" class="accent-stone-300" />
+                        <span>${item.text}</span>
+                    </label>
+                `;
+                taskList.appendChild(li);
+            });
+        };
+
+        addTask.addEventListener('click', () => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            const text = taskInput.value.trim();
+            if (!text) return;
+            data.push({ text, done: false });
+            localStorage.setItem(storageKey, JSON.stringify(data));
+            taskInput.value = '';
+            render();
+        });
+
+        taskList.addEventListener('change', (event) => {
+            if (!event.target.matches('input[type="checkbox"]')) return;
+            const index = Number(event.target.dataset.index);
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            data[index].done = event.target.checked;
+            localStorage.setItem(storageKey, JSON.stringify(data));
+        });
+
+        clearTasks.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            render();
+        });
+
+        render();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>粒子弹弓</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #0f172a;
+            color: #f8fafc;
+        }
+
+        canvas {
+            background: #020617;
+            border-radius: 16px;
+            cursor: crosshair;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-5xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">粒子弹弓</h1>
+                <p class="text-sm text-slate-300">拖动拉力线，释放命中目标圆环。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-700 rounded-2xl p-4 space-y-4">
+            <div class="flex items-center gap-4 text-sm">
+                <div>得分：<span id="score">0</span></div>
+                <button id="reset" class="px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/30">重置目标</button>
+            </div>
+            <canvas id="canvas" width="720" height="420" class="w-full h-[420px]"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const resetBtn = document.getElementById('reset');
+        let score = 0;
+        let dragging = false;
+        let sling = { x: 120, y: 300 };
+        let particle = { x: sling.x, y: sling.y, vx: 0, vy: 0, active: false };
+        let target = { x: 520, y: 180, r: 32 };
+
+        function resetTarget() {
+            target = {
+                x: 420 + Math.random() * 220,
+                y: 120 + Math.random() * 180,
+                r: 24 + Math.random() * 16
+            };
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+            ctx.beginPath();
+            ctx.arc(target.x, target.y, target.r, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, 10, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (dragging) {
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)';
+                ctx.beginPath();
+                ctx.moveTo(sling.x, sling.y);
+                ctx.lineTo(particle.x, particle.y);
+                ctx.stroke();
+            }
+        }
+
+        function update() {
+            if (particle.active) {
+                particle.vy += 0.2;
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+
+                const dx = particle.x - target.x;
+                const dy = particle.y - target.y;
+                if (Math.sqrt(dx * dx + dy * dy) < target.r) {
+                    score += 1;
+                    scoreEl.textContent = score;
+                    particle.active = false;
+                    particle.x = sling.x;
+                    particle.y = sling.y;
+                    resetTarget();
+                }
+
+                if (particle.y > canvas.height || particle.x > canvas.width) {
+                    particle.active = false;
+                    particle.x = sling.x;
+                    particle.y = sling.y;
+                }
+            }
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        canvas.addEventListener('mousedown', (event) => {
+            if (particle.active) return;
+            dragging = true;
+            const rect = canvas.getBoundingClientRect();
+            particle.x = event.clientX - rect.left;
+            particle.y = event.clientY - rect.top;
+        });
+
+        canvas.addEventListener('mousemove', (event) => {
+            if (!dragging) return;
+            const rect = canvas.getBoundingClientRect();
+            particle.x = event.clientX - rect.left;
+            particle.y = event.clientY - rect.top;
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (!dragging) return;
+            dragging = false;
+            particle.vx = (sling.x - particle.x) * 0.12;
+            particle.vy = (sling.y - particle.y) * 0.12;
+            particle.active = true;
+        });
+
+        resetBtn.addEventListener('click', resetTarget);
+        resetTarget();
+        update();
+    </script>
+</body>
+
+</html>
