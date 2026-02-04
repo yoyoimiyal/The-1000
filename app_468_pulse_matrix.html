@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>脉冲矩阵</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        .panel {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid #334155;
+            border-radius: 16px;
+        }
+        .soft {
+            color: #94a3b8;
+        }
+        .btn {
+            background: rgba(56, 189, 248, 0.2);
+            color: #e0f2fe;
+            padding: 0.5rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        canvas {
+            border-radius: 16px;
+            background: rgba(2, 6, 23, 0.9);
+        }
+        .tag {
+            border-radius: 999px;
+            padding: 0.1rem 0.5rem;
+            background: rgba(148, 163, 184, 0.2);
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-6xl mx-auto p-6 space-y-4">
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold">脉冲矩阵</h1>
+                <p class="text-sm text-slate-300">在限定步数内清理矩阵。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <section class="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+            <div class="panel p-4 space-y-4">
+                <div class="flex flex-wrap items-center gap-4 text-sm">
+                    <div>步数：<span id="moves">0</span></div>
+                    <div>计时：<span id="timer">00:00</span></div>
+                    <div>最佳：<span id="best">--</span></div>
+                    <button id="reset" class="btn">重置</button>
+                    <button id="shuffle" class="btn">随机挑战</button>
+                    <button id="hint" class="btn">提示</button>
+                </div>
+                <div id="grid" class="grid grid-cols-6 gap-2"></div>
+            </div>
+            <div class="panel p-4 space-y-3 text-sm">
+                <h2 class="text-lg font-semibold">目标图案</h2>
+                <div id="target" class="grid grid-cols-6 gap-2"></div>
+                <div class="text-xs soft" id="status"></div>
+                <div class="pt-2 border-t border-slate-700">
+                    <label class="flex flex-col gap-2">网格尺寸
+                        <input id="size" type="range" min="4" max="7" value="6">
+                    </label>
+                    <label class="flex flex-col gap-2">挑战模式
+                        <select id="mode" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+                            <option value="classic">经典</option>
+                            <option value="mirror">镜像</option>
+                            <option value="pulse">脉冲</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="pt-2 border-t border-slate-700 text-xs soft" id="history"></div>
+            </div>
+        </section>
+
+        <script>
+            const gridEl = document.getElementById('grid');
+            const targetEl = document.getElementById('target');
+            const movesEl = document.getElementById('moves');
+            const timerEl = document.getElementById('timer');
+            const bestEl = document.getElementById('best');
+            const resetBtn = document.getElementById('reset');
+            const shuffleBtn = document.getElementById('shuffle');
+            const hintBtn = document.getElementById('hint');
+            const sizeInput = document.getElementById('size');
+            const modeInput = document.getElementById('mode');
+            const statusEl = document.getElementById('status');
+            const historyEl = document.getElementById('history');
+
+            const STORAGE_KEY = `miniapp_${title.replace(/\s+/g, '_')}_best`;
+            let size = Number(sizeInput.value);
+            let grid = [];
+            let target = [];
+            let moves = 0;
+            let seconds = 0;
+            let timer = null;
+            let best = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+
+            function createGrid(value = 0) {
+                return Array.from({ length: size }, () => Array.from({ length: size }, () => value));
+            }
+
+            function randomPattern() {
+                return Array.from({ length: size }, () => Array.from({ length: size }, () => Math.random() > 0.6 ? 1 : 0));
+            }
+
+            function renderBoard(container, data) {
+                container.innerHTML = '';
+                container.style.gridTemplateColumns = `repeat(${size}, minmax(0, 1fr))`;
+                data.forEach((row, r) => {
+                    row.forEach((cell, c) => {
+                        const tile = document.createElement('button');
+                        tile.className = cell ? 'h-10 rounded-lg bg-cyan-400/80' : 'h-10 rounded-lg bg-slate-800';
+                        tile.dataset.row = r;
+                        tile.dataset.col = c;
+                        container.appendChild(tile);
+                    });
+                });
+            }
+
+            function toggleCell(r, c) {
+                const offsets = modeInput.value === 'pulse'
+                    ? [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1]]
+                    : [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]];
+
+                offsets.forEach(([dr, dc]) => {
+                    const nr = r + dr;
+                    const nc = c + dc;
+                    if (nr >= 0 && nr < size && nc >= 0 && nc < size) {
+                        grid[nr][nc] = grid[nr][nc] ? 0 : 1;
+                    }
+                });
+            }
+
+            function checkWin() {
+                const match = grid.every((row, r) => row.every((cell, c) => cell === target[r][c]));
+                if (match) {
+                    statusEl.textContent = '完成！尝试更高难度。';
+                    clearInterval(timer);
+                    const key = `${size}-${modeInput.value}`;
+                    const record = best[key] || { moves: Infinity, time: Infinity };
+                    if (moves < record.moves || seconds < record.time) {
+                        best[key] = { moves, time: seconds };
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(best));
+                        renderBest();
+                    }
+                } else {
+                    statusEl.textContent = '继续调整图案。';
+                }
+            }
+
+            function renderBest() {
+                const key = `${size}-${modeInput.value}`;
+                const record = best[key];
+                if (!record) {
+                    bestEl.textContent = '--';
+                    return;
+                }
+                const m = String(Math.floor(record.time / 60)).padStart(2, '0');
+                const s = String(record.time % 60).padStart(2, '0');
+                bestEl.textContent = `${record.moves}步 / ${m}:${s}`;
+            }
+
+            function updateTimer() {
+                seconds += 1;
+                const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+                const s = String(seconds % 60).padStart(2, '0');
+                timerEl.textContent = `${m}:${s}`;
+            }
+
+            function resetGame() {
+                grid = createGrid(0);
+                target = randomPattern();
+                moves = 0;
+                seconds = 0;
+                movesEl.textContent = moves;
+                timerEl.textContent = '00:00';
+                clearInterval(timer);
+                timer = setInterval(updateTimer, 1000);
+                renderBoard(gridEl, grid);
+                renderBoard(targetEl, target);
+                renderBest();
+                checkWin();
+                historyEl.textContent = `模式：${modeInput.value} · 尺寸：${size}x${size}`;
+            }
+
+            function applyHint() {
+                for (let r = 0; r < size; r++) {
+                    for (let c = 0; c < size; c++) {
+                        if (grid[r][c] !== target[r][c]) {
+                            toggleCell(r, c);
+                            moves += 1;
+                            movesEl.textContent = moves;
+                            renderBoard(gridEl, grid);
+                            checkWin();
+                            return;
+                        }
+                    }
+                }
+            }
+
+            gridEl.addEventListener('click', (event) => {
+                const btn = event.target.closest('button');
+                if (!btn) return;
+                const r = Number(btn.dataset.row);
+                const c = Number(btn.dataset.col);
+                toggleCell(r, c);
+                moves += 1;
+                movesEl.textContent = moves;
+                renderBoard(gridEl, grid);
+                checkWin();
+            });
+
+            resetBtn.addEventListener('click', resetGame);
+            shuffleBtn.addEventListener('click', () => {
+                target = randomPattern();
+                renderBoard(targetEl, target);
+                statusEl.textContent = '新目标已生成。';
+            });
+            hintBtn.addEventListener('click', applyHint);
+
+            sizeInput.addEventListener('input', () => {
+                size = Number(sizeInput.value);
+                resetGame();
+            });
+            modeInput.addEventListener('change', resetGame);
+
+            resetGame();
+        </script>
+
+    
+<!-- Additional history panel for puzzle -->
+<div class="panel p-4 text-xs soft">
+    <p>提示：先锁定一行/列，再逐步修正。</p>
+    <p>不同模式影响翻转范围。</p>
+</div>
+
+</div>
+</body>
+
+</html>
