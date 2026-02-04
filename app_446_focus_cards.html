@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专注提示卡</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="max-w-3xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">专注提示卡</h1>
+                <p class="text-sm text-slate-400">抽取专注提示，保持节奏。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-400 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 text-center space-y-4">
+            <div id="card" class="text-lg font-semibold"></div>
+            <div class="flex justify-center gap-3 text-sm">
+                <button id="next" class="px-3 py-2 rounded-xl bg-cyan-500/20 text-cyan-100">下一张</button>
+                <button id="save" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">收藏</button>
+            </div>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+            <h2 class="text-lg font-semibold">已收藏</h2>
+            <ul id="favorites" class="mt-3 space-y-2 text-sm text-slate-300"></ul>
+        </div>
+    </div>
+
+    <script>
+        const cardEl = document.getElementById('card');
+        const nextBtn = document.getElementById('next');
+        const saveBtn = document.getElementById('save');
+        const favoritesEl = document.getElementById('favorites');
+        const prompts = [
+            '设定 25 分钟专注 + 5 分钟休息。',
+            '今天的最重要任务是什么？',
+            '清理当前桌面，只保留必需物。',
+            '用一句话写下完成后的收益。',
+            '暂停 30 秒，深呼吸三次。',
+            '现在开始计时，避免分心标签页。'
+        ];
+        const STORAGE_KEY = 'miniapp_focus_cards';
+        let favorites = [];
+
+        function drawCard() {
+            const card = prompts[Math.floor(Math.random() * prompts.length)];
+            cardEl.textContent = card;
+        }
+
+        function renderFavorites() {
+            favoritesEl.innerHTML = '';
+            favorites.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center gap-2 bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2';
+                li.innerHTML = `
+                    <span class="flex-1">${item}</span>
+                    <button data-index="${index}" class="text-xs text-rose-200">移除</button>
+                `;
+                favoritesEl.appendChild(li);
+            });
+        }
+
+        nextBtn.addEventListener('click', drawCard);
+        saveBtn.addEventListener('click', () => {
+            if (!favorites.includes(cardEl.textContent)) {
+                favorites.push(cardEl.textContent);
+                renderFavorites();
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
+            }
+        });
+
+        favoritesEl.addEventListener('click', (event) => {
+            const index = Number(event.target.dataset.index);
+            if (Number.isNaN(index)) return;
+            favorites.splice(index, 1);
+            renderFavorites();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
+        });
+
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) favorites = JSON.parse(stored);
+        renderFavorites();
+        drawCard();
+    </script>
+</body>
+
+</html>

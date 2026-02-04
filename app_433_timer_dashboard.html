@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>计时器面板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="max-w-4xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">计时器面板</h1>
+                <p class="text-sm text-slate-400">创建多个倒计时，适合分段任务。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-400 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 space-y-4">
+            <div class="grid gap-3 md:grid-cols-[1fr_120px_120px]">
+                <input id="name" placeholder="计时器名称" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+                <input id="minutes" type="number" min="1" value="15" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+                <button id="add" class="rounded-xl bg-cyan-500/20 text-cyan-100 text-sm font-semibold">添加</button>
+            </div>
+            <div id="list" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <script>
+        const nameInput = document.getElementById('name');
+        const minutesInput = document.getElementById('minutes');
+        const addBtn = document.getElementById('add');
+        const list = document.getElementById('list');
+        const STORAGE_KEY = 'miniapp_timers_dashboard';
+        let timers = [];
+
+        function format(seconds) {
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function save() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(timers));
+        }
+
+        function render() {
+            list.innerHTML = '';
+            timers.forEach((timer, index) => {
+                const item = document.createElement('div');
+                item.className = 'flex flex-wrap items-center gap-3 rounded-xl bg-slate-950/70 border border-slate-800 px-3 py-2';
+                item.innerHTML = `
+                    <div class="flex-1">
+                        <div class="font-semibold text-sm">${timer.name}</div>
+                        <div class="text-xs text-slate-400">剩余 ${format(timer.remaining)}</div>
+                    </div>
+                    <button data-action="toggle" data-index="${index}" class="text-xs px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700">${timer.running ? '暂停' : '开始'}</button>
+                    <button data-action="reset" data-index="${index}" class="text-xs px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700">重置</button>
+                    <button data-action="remove" data-index="${index}" class="text-xs px-3 py-1 rounded-full bg-rose-500/20 text-rose-200 hover:bg-rose-500/30">删除</button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function tick() {
+            let changed = false;
+            timers = timers.map((timer) => {
+                if (timer.running && timer.remaining > 0) {
+                    changed = true;
+                    return { ...timer, remaining: timer.remaining - 1 };
+                }
+                return timer;
+            });
+            if (changed) {
+                render();
+                save();
+            }
+        }
+
+        addBtn.addEventListener('click', () => {
+            const name = nameInput.value.trim() || '新计时器';
+            const minutes = Math.max(1, Number(minutesInput.value));
+            timers.push({
+                name,
+                duration: minutes * 60,
+                remaining: minutes * 60,
+                running: false
+            });
+            nameInput.value = '';
+            render();
+            save();
+        });
+
+        list.addEventListener('click', (event) => {
+            const button = event.target.closest('button');
+            if (!button) return;
+            const index = Number(button.dataset.index);
+            const action = button.dataset.action;
+            if (action === 'toggle') {
+                timers[index].running = !timers[index].running;
+            } else if (action === 'reset') {
+                timers[index].remaining = timers[index].duration;
+                timers[index].running = false;
+            } else if (action === 'remove') {
+                timers.splice(index, 1);
+            }
+            render();
+            save();
+        });
+
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            timers = JSON.parse(stored);
+        }
+        render();
+        setInterval(tick, 1000);
+    </script>
+</body>
+
+</html>

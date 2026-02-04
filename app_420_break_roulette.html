@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微休息轮盘</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-lime-200/70">Break Roulette</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-lime-200">微休息轮盘</h1>
+            <p class="text-sm text-slate-400 mt-2">抽一个 3 分钟的休息动作。</p>
+        </header>
+
+        <div class="bg-slate-900/70 border border-lime-400/20 rounded-2xl p-8 shadow-lg text-center">
+            <div id="activity" class="text-2xl font-semibold text-lime-200">等待抽取</div>
+            <button id="spin"
+                class="mt-6 px-6 py-3 rounded-xl bg-lime-400 text-slate-950 font-semibold hover:bg-lime-300 transition">转一下</button>
+            <ul id="history" class="mt-6 space-y-2 text-sm"></ul>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const activity = document.getElementById('activity');
+        const spin = document.getElementById('spin');
+        const history = document.getElementById('history');
+
+        const activities = ['站起来伸展', '闭眼深呼吸', '喝水补给', '走动一下', '看远处 30 秒'];
+        const storageKey = 'break-roulette-history';
+
+        const renderHistory = (data) => {
+            history.innerHTML = '';
+            if (!data.length) {
+                history.innerHTML = '<li class="text-slate-500">暂无记录。</li>';
+                return;
+            }
+            data.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.textContent = item;
+                history.appendChild(li);
+            });
+        };
+
+        spin.addEventListener('click', () => {
+            const pick = activities[Math.floor(Math.random() * activities.length)];
+            activity.textContent = pick;
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            data.unshift(`${pick} · ${new Date().toLocaleTimeString()}`);
+            localStorage.setItem(storageKey, JSON.stringify(data.slice(0, 5)));
+            renderHistory(data.slice(0, 5));
+        });
+
+        renderHistory(JSON.parse(localStorage.getItem(storageKey) || '[]'));
+    </script>
+</body>
+
+</html>

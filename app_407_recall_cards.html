@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三分钟回忆卡</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-purple-200/70">Recall Cards</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-purple-200">三分钟回忆卡</h1>
+            <p class="text-sm text-slate-400 mt-2">快速回忆今天最重要的三件事。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-800/70 border border-purple-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">回忆内容（每行一个）</label>
+                <textarea id="recallInput" rows="6"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"></textarea>
+                <button id="saveRecall"
+                    class="mt-6 w-full py-3 rounded-xl bg-purple-400 text-slate-950 font-semibold hover:bg-purple-300 transition">保存回忆卡</button>
+            </section>
+
+            <section class="bg-slate-800/70 border border-purple-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">今日回忆卡</h2>
+                    <button id="clearRecall" class="text-xs text-purple-200 hover:text-white">清空</button>
+                </div>
+                <div id="card" class="space-y-3 text-sm"></div>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const recallInput = document.getElementById('recallInput');
+        const saveRecall = document.getElementById('saveRecall');
+        const clearRecall = document.getElementById('clearRecall');
+        const card = document.getElementById('card');
+
+        const storageKey = 'recall-cards-data';
+
+        const render = (data) => {
+            if (!data) {
+                card.innerHTML = '<p class="text-slate-500">还没有回忆卡。</p>';
+                return;
+            }
+            card.innerHTML = `
+                <p class="text-xs text-slate-500">${data.time}</p>
+                <ul class="list-disc list-inside text-slate-300">${data.items.map(item => `<li>${item}</li>`).join('')}</ul>
+            `;
+        };
+
+        saveRecall.addEventListener('click', () => {
+            const items = recallInput.value.split('\n').map(item => item.trim()).filter(Boolean).slice(0, 3);
+            const data = { items, time: new Date().toLocaleString() };
+            localStorage.setItem(storageKey, JSON.stringify(data));
+            render(data);
+        });
+
+        clearRecall.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            render(null);
+        });
+
+        render(JSON.parse(localStorage.getItem(storageKey) || 'null'));
+    </script>
+</body>
+
+</html>

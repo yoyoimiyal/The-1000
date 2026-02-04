@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>通勤计时记录</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-slate-200/70">Commute Timer</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-200">通勤计时记录</h1>
+            <p class="text-sm text-slate-400 mt-2">记录每次通勤耗时。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-900/70 border border-slate-400/20 rounded-2xl p-6 shadow-lg text-center">
+                <div id="timer" class="text-6xl font-bold text-slate-200">00:00</div>
+                <div class="flex gap-3 mt-6">
+                    <button id="start"
+                        class="flex-1 py-3 rounded-xl bg-slate-200 text-slate-900 font-semibold hover:bg-slate-100 transition">开始</button>
+                    <button id="stop" disabled
+                        class="flex-1 py-3 rounded-xl bg-slate-700 text-slate-400 font-semibold cursor-not-allowed">停止</button>
+                </div>
+            </section>
+
+            <section class="bg-slate-900/70 border border-slate-400/20 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-lg font-semibold mb-4">通勤记录</h2>
+                <ul id="history" class="space-y-2 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const timer = document.getElementById('timer');
+        const start = document.getElementById('start');
+        const stop = document.getElementById('stop');
+        const history = document.getElementById('history');
+
+        const storageKey = 'commute-timer-history';
+        let startTime = null;
+        let timerId = null;
+
+        const format = (seconds) => {
+            const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const s = String(seconds % 60).padStart(2, '0');
+            return `${m}:${s}`;
+        };
+
+        const renderHistory = () => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            history.innerHTML = '';
+            if (!data.length) {
+                history.innerHTML = '<li class="text-slate-500">暂无记录。</li>';
+                return;
+            }
+            data.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.textContent = item;
+                history.appendChild(li);
+            });
+        };
+
+        start.addEventListener('click', () => {
+            startTime = Date.now();
+            start.disabled = true;
+            stop.disabled = false;
+            start.className = 'flex-1 py-3 rounded-xl bg-slate-700 text-slate-400 font-semibold cursor-not-allowed';
+            stop.className = 'flex-1 py-3 rounded-xl bg-rose-400 text-slate-950 font-semibold hover:bg-rose-300 transition';
+            timerId = setInterval(() => {
+                const diff = Math.floor((Date.now() - startTime) / 1000);
+                timer.textContent = format(diff);
+            }, 1000);
+        });
+
+        stop.addEventListener('click', () => {
+            clearInterval(timerId);
+            const diff = Math.floor((Date.now() - startTime) / 1000);
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            data.unshift(`通勤 ${format(diff)} · ${new Date().toLocaleDateString()}`);
+            localStorage.setItem(storageKey, JSON.stringify(data.slice(0, 5)));
+            renderHistory();
+            timer.textContent = '00:00';
+            start.disabled = false;
+            stop.disabled = true;
+            start.className = 'flex-1 py-3 rounded-xl bg-slate-200 text-slate-900 font-semibold hover:bg-slate-100 transition';
+            stop.className = 'flex-1 py-3 rounded-xl bg-slate-700 text-slate-400 font-semibold cursor-not-allowed';
+        });
+
+        renderHistory();
+    </script>
+</body>
+
+</html>

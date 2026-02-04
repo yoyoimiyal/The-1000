@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>气球快戳</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-6">
+            <p class="text-xs uppercase tracking-[0.4em] text-pink-200/70">Balloon Pop</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-pink-200">气球快戳</h1>
+            <p class="text-sm text-slate-400 mt-2">在 30 秒内戳破尽可能多的气球。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.2fr]">
+            <section class="bg-slate-900/70 border border-pink-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-4">
+                        <p class="text-xs text-slate-400">剩余时间</p>
+                        <p id="time" class="text-2xl font-semibold">30</p>
+                    </div>
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-4">
+                        <p class="text-xs text-slate-400">分数</p>
+                        <p id="score" class="text-2xl font-semibold">0</p>
+                    </div>
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-4">
+                        <p class="text-xs text-slate-400">命中率</p>
+                        <p id="accuracy" class="text-2xl font-semibold">--</p>
+                    </div>
+                </div>
+                <button id="start"
+                    class="mt-6 w-full py-3 rounded-xl bg-pink-400 text-slate-950 font-semibold hover:bg-pink-300 transition">开始</button>
+                <p class="text-xs text-slate-500 mt-3">点击气球得分，点击空白不扣分但会影响命中率。</p>
+            </section>
+
+            <section class="bg-slate-900/70 border border-pink-400/20 rounded-2xl p-6 shadow-lg">
+                <div id="arena" class="relative w-full h-80 bg-slate-950/70 rounded-2xl border border-slate-800 overflow-hidden"></div>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-800 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const start = document.getElementById('start');
+        const arena = document.getElementById('arena');
+        const timeEl = document.getElementById('time');
+        const scoreEl = document.getElementById('score');
+        const accuracyEl = document.getElementById('accuracy');
+
+        let timerId = null;
+        let spawnId = null;
+        let remaining = 30;
+        let score = 0;
+        let clicks = 0;
+        let hits = 0;
+
+        const colors = ['bg-pink-400', 'bg-rose-400', 'bg-fuchsia-400', 'bg-purple-400'];
+
+        const updateStats = () => {
+            scoreEl.textContent = score;
+            timeEl.textContent = remaining;
+            accuracyEl.textContent = clicks ? `${Math.round((hits / clicks) * 100)}%` : '--';
+        };
+
+        const spawnBalloon = () => {
+            const balloon = document.createElement('button');
+            const size = 30 + Math.random() * 40;
+            balloon.className = `absolute rounded-full shadow-lg ${colors[Math.floor(Math.random() * colors.length)]}`;
+            balloon.style.width = `${size}px`;
+            balloon.style.height = `${size}px`;
+            balloon.style.left = `${Math.random() * (arena.clientWidth - size)}px`;
+            balloon.style.top = `${Math.random() * (arena.clientHeight - size)}px`;
+            balloon.addEventListener('click', (event) => {
+                event.stopPropagation();
+                hits += 1;
+                clicks += 1;
+                score += 1;
+                balloon.remove();
+                updateStats();
+            });
+            arena.appendChild(balloon);
+            setTimeout(() => balloon.remove(), 1200);
+        };
+
+        arena.addEventListener('click', () => {
+            clicks += 1;
+            updateStats();
+        });
+
+        const resetGame = () => {
+            arena.innerHTML = '';
+            remaining = 30;
+            score = 0;
+            clicks = 0;
+            hits = 0;
+            updateStats();
+        };
+
+        start.addEventListener('click', () => {
+            resetGame();
+            start.disabled = true;
+            start.className = 'mt-6 w-full py-3 rounded-xl bg-slate-700 text-slate-400 font-semibold cursor-not-allowed';
+
+            timerId = setInterval(() => {
+                remaining -= 1;
+                updateStats();
+                if (remaining <= 0) {
+                    clearInterval(timerId);
+                    clearInterval(spawnId);
+                    start.disabled = false;
+                    start.className = 'mt-6 w-full py-3 rounded-xl bg-pink-400 text-slate-950 font-semibold hover:bg-pink-300 transition';
+                }
+            }, 1000);
+
+            spawnId = setInterval(spawnBalloon, 500);
+        });
+
+        updateStats();
+    </script>
+</body>
+
+</html>

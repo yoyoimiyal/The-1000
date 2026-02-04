@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专注语录生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-indigo-200/70">Focus Quotes</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-indigo-200">专注语录生成器</h1>
+            <p class="text-sm text-slate-400 mt-2">随机生成一句专注宣言。</p>
+        </header>
+
+        <div class="bg-slate-900/70 border border-indigo-400/20 rounded-2xl p-8 shadow-lg text-center">
+            <div id="quote" class="text-2xl font-semibold text-indigo-200">准备开始</div>
+            <p class="text-sm text-slate-400 mt-3">点击按钮获取新的语录。</p>
+            <button id="generate"
+                class="mt-6 px-6 py-3 rounded-xl bg-indigo-400 text-slate-950 font-semibold hover:bg-indigo-300 transition">生成语录</button>
+            <ul id="history" class="mt-6 space-y-2 text-sm"></ul>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const quote = document.getElementById('quote');
+        const generate = document.getElementById('generate');
+        const history = document.getElementById('history');
+
+        const quotes = [
+            '保持专注，一小步也算前进。',
+            '把注意力放在下一件最重要的事。',
+            '深呼吸，重新回到当下。',
+            '现在的专注，决定今天的质量。',
+            '给自己 25 分钟，世界会不同。'
+        ];
+
+        const storageKey = 'focus-quotes-history';
+
+        const renderHistory = (data) => {
+            history.innerHTML = '';
+            if (!data.length) {
+                history.innerHTML = '<li class="text-slate-500">暂无记录。</li>';
+                return;
+            }
+            data.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.textContent = item;
+                history.appendChild(li);
+            });
+        };
+
+        generate.addEventListener('click', () => {
+            const pick = quotes[Math.floor(Math.random() * quotes.length)];
+            quote.textContent = pick;
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            data.unshift(pick);
+            localStorage.setItem(storageKey, JSON.stringify(data.slice(0, 5)));
+            renderHistory(data.slice(0, 5));
+        });
+
+        renderHistory(JSON.parse(localStorage.getItem(storageKey) || '[]'));
+    </script>
+</body>
+
+</html>

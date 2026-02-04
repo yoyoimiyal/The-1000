@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图案织机</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #020617;
+            color: #e2e8f0;
+        }
+
+        canvas {
+            background: #0f172a;
+            border-radius: 16px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-5xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">图案织机</h1>
+                <p class="text-sm text-slate-300">生成重复网格纹样。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-700 rounded-2xl p-4 grid gap-4 lg:grid-cols-[1fr_220px]">
+            <canvas id="canvas" width="720" height="420" class="w-full h-[420px]"></canvas>
+            <div class="text-sm flex flex-col gap-4">
+                <label class="flex flex-col gap-2">单元尺寸
+                    <input id="size" type="range" min="20" max="80" value="40">
+                </label>
+                <label class="flex flex-col gap-2">密度
+                    <input id="density" type="range" min="2" max="8" value="4">
+                </label>
+                <button id="regen" class="px-3 py-2 rounded-xl bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/30">重新编织</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const sizeInput = document.getElementById('size');
+        const densityInput = document.getElementById('density');
+        const regenBtn = document.getElementById('regen');
+        let seed = Math.random() * 1000;
+
+        function random() {
+            const x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
+        }
+
+        function draw() {
+            const size = Number(sizeInput.value);
+            const density = Number(densityInput.value);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let y = 0; y < canvas.height; y += size) {
+                for (let x = 0; x < canvas.width; x += size) {
+                    const hue = Math.floor(random() * 360);
+                    ctx.fillStyle = `hsla(${hue}, 70%, 60%, 0.8)`;
+                    ctx.fillRect(x, y, size, size);
+                    for (let i = 0; i < density; i++) {
+                        ctx.strokeStyle = `hsla(${hue + i * 10}, 80%, 70%, 0.6)`;
+                        ctx.beginPath();
+                        ctx.moveTo(x + random() * size, y);
+                        ctx.lineTo(x + size, y + random() * size);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        regenBtn.addEventListener('click', () => {
+            seed = Math.random() * 1000;
+            draw();
+        });
+        [sizeInput, densityInput].forEach((input) => input.addEventListener('input', draw));
+        draw();
+    </script>
+</body>
+
+</html>
