@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>目标阶梯拆分器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-indigo-200/70">Goal Ladder</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-indigo-200">目标阶梯拆分器</h1>
+            <p class="text-sm text-slate-300 mt-2">把目标拆成可以一步步完成的阶梯，形成清晰行动路径。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1.05fr_1fr]">
+            <section class="bg-slate-900/70 border border-indigo-500/30 rounded-2xl p-6 shadow-lg">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-slate-300 mb-2">核心目标</label>
+                        <input id="goalInput" type="text" placeholder="例如：完成一次产品提案"
+                            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="flex-1">
+                            <label class="block text-sm text-slate-300 mb-2">阶梯数量</label>
+                            <input id="stepCount" type="number" min="3" max="8" value="5"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                        </div>
+                        <button id="generateSteps"
+                            class="mt-6 px-4 py-3 rounded-xl bg-indigo-400 text-slate-950 font-semibold hover:bg-indigo-300 transition">生成</button>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <h2 class="text-sm text-slate-300 mb-3">拆解提示</h2>
+                    <ul class="text-xs text-slate-400 space-y-2">
+                        <li>• 每一级写出一个可执行动作，不要太大。</li>
+                        <li>• 先完成顺序，再调整优先级。</li>
+                        <li>• 允许迭代，完成后再细化。</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="bg-slate-900/70 border border-indigo-500/30 rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">我的目标阶梯</h2>
+                    <button id="saveLadder" class="text-xs text-indigo-200 hover:text-white">保存</button>
+                </div>
+                <div id="ladder" class="space-y-3"></div>
+                <p id="ladderEmpty" class="text-sm text-slate-500 mt-4">填写目标并生成阶梯。</p>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-400 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const goalInput = document.getElementById('goalInput');
+        const stepCount = document.getElementById('stepCount');
+        const generateSteps = document.getElementById('generateSteps');
+        const ladder = document.getElementById('ladder');
+        const ladderEmpty = document.getElementById('ladderEmpty');
+        const saveLadder = document.getElementById('saveLadder');
+
+        const storageKey = 'goal-ladder-data';
+
+        const renderLadder = (data) => {
+            ladder.innerHTML = '';
+            if (!data || data.steps.length === 0) {
+                ladderEmpty.classList.remove('hidden');
+                return;
+            }
+            ladderEmpty.classList.add('hidden');
+            data.steps.forEach((step, index) => {
+                const item = document.createElement('div');
+                item.className = 'bg-slate-950/70 border border-slate-700 rounded-xl p-3';
+                item.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" ${step.done ? 'checked' : ''} class="accent-indigo-400" data-index="${index}" />
+                        <span class="text-xs text-slate-500">第 ${index + 1} 阶</span>
+                    </div>
+                    <textarea class="w-full mt-2 bg-transparent text-sm text-slate-200 focus:outline-none" rows="2" data-step="${index}">${step.text}</textarea>
+                `;
+                ladder.appendChild(item);
+            });
+        };
+
+        const loadLadder = () => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || 'null');
+            if (data) {
+                goalInput.value = data.goal;
+                stepCount.value = data.steps.length;
+                renderLadder(data);
+            }
+        };
+
+        const getCurrentData = () => {
+            const steps = Array.from(ladder.querySelectorAll('textarea')).map((textarea, index) => {
+                const checkbox = ladder.querySelector(`input[data-index="${index}"]`);
+                return {
+                    text: textarea.value.trim(),
+                    done: checkbox ? checkbox.checked : false
+                };
+            });
+            return {
+                goal: goalInput.value.trim(),
+                steps
+            };
+        };
+
+        generateSteps.addEventListener('click', () => {
+            const count = Math.max(3, Math.min(8, Number(stepCount.value)));
+            const steps = Array.from({ length: count }, () => ({ text: '', done: false }));
+            renderLadder({ goal: goalInput.value.trim(), steps });
+        });
+
+        saveLadder.addEventListener('click', () => {
+            const data = getCurrentData();
+            localStorage.setItem(storageKey, JSON.stringify(data));
+        });
+
+        ladder.addEventListener('change', (event) => {
+            if (event.target.matches('input[type="checkbox"]')) {
+                saveLadder.click();
+            }
+        });
+
+        ladder.addEventListener('input', (event) => {
+            if (event.target.matches('textarea')) {
+                saveLadder.click();
+            }
+        });
+
+        loadLadder();
+    </script>
+</body>
+
+</html>
