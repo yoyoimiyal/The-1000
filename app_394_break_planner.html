@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>能量休息编排</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-yellow-200/70">Break Planner</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-yellow-200">能量休息编排</h1>
+            <p class="text-sm text-slate-400 mt-2">根据专注时长自动推荐休息节奏。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-900/70 border border-yellow-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">专注总时长（分钟）</label>
+                <input id="sessionMinutes" type="number" min="30" value="180"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300" />
+                <label class="block text-sm text-slate-300 mb-2 mt-4">每轮专注（分钟）</label>
+                <input id="blockMinutes" type="number" min="15" value="45"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300" />
+                <button id="planBreaks"
+                    class="mt-6 w-full py-3 rounded-xl bg-yellow-400 text-slate-950 font-semibold hover:bg-yellow-300 transition">生成方案</button>
+            </section>
+
+            <section class="bg-slate-900/70 border border-yellow-400/20 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-lg font-semibold mb-4">休息安排</h2>
+                <ul id="breakList" class="space-y-2 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-800 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const sessionMinutes = document.getElementById('sessionMinutes');
+        const blockMinutes = document.getElementById('blockMinutes');
+        const planBreaks = document.getElementById('planBreaks');
+        const breakList = document.getElementById('breakList');
+
+        const storageKey = 'break-plan-data';
+
+        const render = (items) => {
+            breakList.innerHTML = '';
+            if (!items.length) {
+                breakList.innerHTML = '<li class="text-slate-500">暂无安排。</li>';
+                return;
+            }
+            items.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2 flex items-center justify-between';
+                li.innerHTML = `<span>${item.label}</span><span class="text-yellow-200">休息 ${item.breakTime} 分钟</span>`;
+                breakList.appendChild(li);
+            });
+        };
+
+        const buildPlan = () => {
+            const total = Math.max(30, Number(sessionMinutes.value));
+            const block = Math.max(15, Number(blockMinutes.value));
+            const cycles = Math.floor(total / block);
+            const items = Array.from({ length: cycles }, (_, index) => ({
+                label: `第 ${index + 1} 轮结束`,
+                breakTime: index % 3 === 2 ? 15 : 5
+            }));
+            render(items);
+            localStorage.setItem(storageKey, JSON.stringify({ total, block, items }));
+        };
+
+        planBreaks.addEventListener('click', buildPlan);
+
+        const cached = JSON.parse(localStorage.getItem(storageKey) || 'null');
+        if (cached) {
+            sessionMinutes.value = cached.total;
+            blockMinutes.value = cached.block;
+            render(cached.items || []);
+        } else {
+            buildPlan();
+        }
+    </script>
+</body>
+
+</html>
