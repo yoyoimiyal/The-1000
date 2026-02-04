@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>情绪色卡日记</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-slate-400">Mood Palette</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-pink-300">情绪色卡日记</h1>
+            <p class="text-sm text-slate-400 mt-2">选择当下心情，生成专属色卡并记录你的感受。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1.1fr_1fr]">
+            <section class="bg-slate-800/70 border border-slate-700 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-lg font-semibold mb-4">今天的心情</h2>
+                <div id="moodButtons" class="flex flex-wrap gap-3"></div>
+
+                <div class="mt-6">
+                    <label class="block text-sm text-slate-300 mb-2">一句话记录</label>
+                    <textarea id="moodNote" rows="3"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                        placeholder="例如：今天完成了一个难题，感觉轻松。"></textarea>
+                </div>
+
+                <button id="saveMood"
+                    class="mt-5 w-full py-3 rounded-xl bg-pink-400 text-slate-950 font-semibold hover:bg-pink-300 transition">保存记录</button>
+            </section>
+
+            <section class="bg-slate-800/70 border border-slate-700 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-lg font-semibold mb-4">今日色卡</h2>
+                <div id="palette" class="grid grid-cols-5 gap-2 mb-4"></div>
+                <div class="text-sm text-slate-300" id="paletteLabel">请选择一个心情。</div>
+                <div class="mt-6 flex items-center justify-between">
+                    <h3 class="text-sm text-slate-400">历史记录</h3>
+                    <button id="clearMood" class="text-xs text-slate-500 hover:text-slate-200">清空</button>
+                </div>
+                <ul id="moodHistory" class="mt-3 space-y-3 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const moods = {
+            '开心': ['#F9E547', '#F6C453', '#F28D35', '#F0623E', '#D93D32'],
+            '平静': ['#B6E3E9', '#94D2E6', '#6CB6D4', '#4B8EB5', '#2F5E8A'],
+            '紧张': ['#FCA5A5', '#FB7185', '#F43F5E', '#E11D48', '#9F1239'],
+            '低落': ['#CBD5F5', '#A5B4FC', '#818CF8', '#6366F1', '#4338CA'],
+            '充满能量': ['#FDE68A', '#FCD34D', '#FB923C', '#F97316', '#EA580C']
+        };
+
+        const moodButtons = document.getElementById('moodButtons');
+        const palette = document.getElementById('palette');
+        const paletteLabel = document.getElementById('paletteLabel');
+        const moodNote = document.getElementById('moodNote');
+        const moodHistory = document.getElementById('moodHistory');
+        const saveMood = document.getElementById('saveMood');
+        const clearMood = document.getElementById('clearMood');
+
+        let currentMood = null;
+        const storageKey = 'mood-palette-diary';
+
+        const renderPalette = (colors, label) => {
+            palette.innerHTML = '';
+            colors.forEach(color => {
+                const div = document.createElement('div');
+                div.className = 'h-12 rounded-xl border border-white/10';
+                div.style.background = color;
+                palette.appendChild(div);
+            });
+            paletteLabel.textContent = label;
+        };
+
+        const renderHistory = () => {
+            const history = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            moodHistory.innerHTML = '';
+            if (history.length === 0) {
+                moodHistory.innerHTML = '<li class="text-slate-500">暂无记录，保存一次心情吧。</li>';
+                return;
+            }
+            history.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'bg-slate-900/70 border border-slate-700 rounded-xl p-3';
+                const swatches = item.colors.map(color => `<span class="inline-block w-4 h-4 rounded-full" style="background:${color}"></span>`).join('');
+                li.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-semibold text-slate-200">${item.mood}</span>
+                        <span class="text-xs text-slate-500">${item.time}</span>
+                    </div>
+                    <div class="flex gap-1 mb-2">${swatches}</div>
+                    <p class="text-slate-300 text-xs">${item.note || '（无文字记录）'}</p>
+                `;
+                moodHistory.appendChild(li);
+            });
+        };
+
+        Object.keys(moods).forEach(mood => {
+            const btn = document.createElement('button');
+            btn.textContent = mood;
+            btn.className = 'px-3 py-2 rounded-full border border-slate-700 text-sm hover:border-pink-400 hover:text-pink-200 transition';
+            btn.addEventListener('click', () => {
+                currentMood = mood;
+                renderPalette(moods[mood], `当前心情：${mood}`);
+            });
+            moodButtons.appendChild(btn);
+        });
+
+        saveMood.addEventListener('click', () => {
+            if (!currentMood) {
+                paletteLabel.textContent = '请先选择一个心情。';
+                return;
+            }
+            const history = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            history.unshift({
+                mood: currentMood,
+                colors: moods[currentMood],
+                note: moodNote.value.trim(),
+                time: new Date().toLocaleString()
+            });
+            localStorage.setItem(storageKey, JSON.stringify(history.slice(0, 6)));
+            moodNote.value = '';
+            renderHistory();
+        });
+
+        clearMood.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            renderHistory();
+        });
+
+        renderPalette(['#1f2937', '#111827', '#0f172a', '#020617', '#0b1120'], '请选择一个心情。');
+        renderHistory();
+    </script>
+</body>
+
+</html>

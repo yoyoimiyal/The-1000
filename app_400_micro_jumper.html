@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>400 · 里程碑庆祝页</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-6">
+            <p class="text-xs uppercase tracking-[0.4em] text-lime-200/70">Milestone 400</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-lime-200">400 · 里程碑庆祝页</h1>
+            <p class="text-sm text-slate-400 mt-2">感谢你的坚持！留下一句庆祝话并点亮烟花。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.2fr]">
+            <section class="bg-slate-900/70 border border-lime-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-4">
+                        <p class="text-xs text-slate-400">庆祝次数</p>
+                        <p id="cheerCount" class="text-2xl font-semibold">0</p>
+                    </div>
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-4">
+                        <p class="text-xs text-slate-400">里程碑等级</p>
+                        <p id="badgeLevel" class="text-2xl font-semibold">🏆</p>
+                    </div>
+                </div>
+                <label class="block text-sm text-slate-300 mt-6 mb-2">我的庆祝语</label>
+                <input id="cheerInput" type="text" placeholder="例如：400达成！继续冲刺！"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lime-300" />
+                <button id="celebrate"
+                    class="mt-4 w-full py-3 rounded-xl bg-lime-400 text-slate-950 font-semibold hover:bg-lime-300 transition">点亮庆祝</button>
+                <p id="hint" class="text-xs text-slate-500 mt-3">每次庆祝都会生成一张祝福卡片。</p>
+            </section>
+
+            <section class="bg-slate-900/70 border border-lime-400/20 rounded-2xl p-6 shadow-lg">
+                <div id="field" class="relative w-full h-72 bg-slate-950/70 rounded-2xl border border-slate-800 overflow-hidden">
+                    <div id="fireworks" class="absolute inset-0 pointer-events-none"></div>
+                    <div class="absolute bottom-6 left-6 text-xl">🎉</div>
+                    <div class="absolute bottom-6 right-6 text-xl">🎊</div>
+                </div>
+                <div class="mt-4 space-y-2 text-sm" id="cheerList"></div>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-800 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const cheerInput = document.getElementById('cheerInput');
+        const celebrate = document.getElementById('celebrate');
+        const cheerCount = document.getElementById('cheerCount');
+        const badgeLevel = document.getElementById('badgeLevel');
+        const hint = document.getElementById('hint');
+        const cheerList = document.getElementById('cheerList');
+        const fireworks = document.getElementById('fireworks');
+
+        const storageKey = 'milestone-400-cheers';
+
+        const spark = () => {
+            const sparkEl = document.createElement('div');
+            sparkEl.className = 'absolute w-3 h-3 rounded-full bg-lime-300 animate-ping';
+            sparkEl.style.left = `${Math.random() * 90 + 5}%`;
+            sparkEl.style.top = `${Math.random() * 70 + 10}%`;
+            fireworks.appendChild(sparkEl);
+            setTimeout(() => sparkEl.remove(), 600);
+        };
+
+        const renderCheers = (data) => {
+            cheerList.innerHTML = '';
+            if (!data.length) {
+                cheerList.innerHTML = '<p class="text-slate-500 text-sm">还没有庆祝语，快写下第一句吧！</p>';
+                return;
+            }
+            data.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2';
+                card.innerHTML = `<p class="text-sm text-lime-200">${item.text}</p><p class="text-xs text-slate-500 mt-1">${item.time}</p>`;
+                cheerList.appendChild(card);
+            });
+        };
+
+        const updateBadge = (count) => {
+            if (count >= 20) badgeLevel.textContent = '👑';
+            else if (count >= 10) badgeLevel.textContent = '🏆';
+            else if (count >= 5) badgeLevel.textContent = '⭐';
+            else badgeLevel.textContent = '🎉';
+        };
+
+        const loadCheers = () => JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+        celebrate.addEventListener('click', () => {
+            const text = cheerInput.value.trim() || '继续冲刺！';
+            const data = loadCheers();
+            data.unshift({ text, time: new Date().toLocaleString() });
+            localStorage.setItem(storageKey, JSON.stringify(data.slice(0, 6)));
+            cheerInput.value = '';
+            cheerCount.textContent = data.length;
+            updateBadge(data.length);
+            renderCheers(data.slice(0, 6));
+            hint.textContent = '庆祝成功！再来一次？';
+            for (let i = 0; i < 6; i += 1) setTimeout(spark, i * 120);
+        });
+
+        const cached = loadCheers();
+        cheerCount.textContent = cached.length;
+        updateBadge(cached.length);
+        renderCheers(cached.slice(0, 6));
+    </script>
+</body>
+
+</html>

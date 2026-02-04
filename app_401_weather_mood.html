@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天气心情卡</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-sky-200/70">Weather Mood</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-sky-200">天气心情卡</h1>
+            <p class="text-sm text-slate-400 mt-2">选择天气与心情，生成今日氛围卡。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-800/70 border border-sky-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">天气</label>
+                <div id="weatherOptions" class="flex flex-wrap gap-3"></div>
+                <label class="block text-sm text-slate-300 mt-6 mb-2">心情</label>
+                <div id="moodOptions" class="flex flex-wrap gap-3"></div>
+                <button id="saveCard"
+                    class="mt-6 w-full py-3 rounded-xl bg-sky-400 text-slate-950 font-semibold hover:bg-sky-300 transition">保存卡片</button>
+            </section>
+
+            <section class="bg-slate-800/70 border border-sky-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">今日卡片</h2>
+                    <button id="clearCard" class="text-xs text-sky-200 hover:text-white">清空</button>
+                </div>
+                <div id="card" class="bg-slate-900/70 border border-slate-700 rounded-xl p-4 space-y-3 text-sm"></div>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const weatherOptions = document.getElementById('weatherOptions');
+        const moodOptions = document.getElementById('moodOptions');
+        const saveCard = document.getElementById('saveCard');
+        const clearCard = document.getElementById('clearCard');
+        const card = document.getElementById('card');
+
+        const weathers = ['晴朗', '多云', '小雨', '大风', '夜晚'];
+        const moods = ['轻松', '专注', '兴奋', '平静', '期待'];
+
+        let selectedWeather = '';
+        let selectedMood = '';
+
+        const storageKey = 'weather-mood-card';
+
+        const renderOptions = (items, container, type) => {
+            container.innerHTML = '';
+            items.forEach(item => {
+                const btn = document.createElement('button');
+                btn.textContent = item;
+                btn.className = 'px-3 py-2 rounded-full border border-slate-700 text-sm hover:border-sky-300 hover:text-sky-200 transition';
+                btn.addEventListener('click', () => {
+                    if (type === 'weather') selectedWeather = item;
+                    if (type === 'mood') selectedMood = item;
+                });
+                container.appendChild(btn);
+            });
+        };
+
+        const renderCard = (data) => {
+            if (!data) {
+                card.innerHTML = '<p class="text-slate-500">还没有卡片。</p>';
+                return;
+            }
+            card.innerHTML = `
+                <div class="text-2xl">${data.weather} · ${data.mood}</div>
+                <p class="text-slate-400">${data.time}</p>
+                <p class="text-slate-300">愿今天的你保持 ${data.mood} 的节奏。</p>
+            `;
+        };
+
+        saveCard.addEventListener('click', () => {
+            const data = {
+                weather: selectedWeather || '未选择天气',
+                mood: selectedMood || '未选择心情',
+                time: new Date().toLocaleString()
+            };
+            localStorage.setItem(storageKey, JSON.stringify(data));
+            renderCard(data);
+        });
+
+        clearCard.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            renderCard(null);
+        });
+
+        renderOptions(weathers, weatherOptions, 'weather');
+        renderOptions(moods, moodOptions, 'mood');
+        renderCard(JSON.parse(localStorage.getItem(storageKey) || 'null'));
+    </script>
+</body>
+
+</html>

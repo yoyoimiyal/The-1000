@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学习连击计数</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-green-200/70">Study Streak</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-green-200">学习连击计数</h1>
+            <p class="text-sm text-slate-400 mt-2">每天打卡，保持连击。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-900/70 border border-green-400/20 rounded-2xl p-6 shadow-lg text-center">
+                <p class="text-xs text-slate-400">当前连击</p>
+                <div id="streak" class="text-6xl font-bold text-green-200">0</div>
+                <p id="lastCheck" class="text-sm text-slate-400 mt-3">尚未打卡</p>
+                <button id="checkIn"
+                    class="mt-6 w-full py-3 rounded-xl bg-green-400 text-slate-950 font-semibold hover:bg-green-300 transition">今日打卡</button>
+                <button id="reset" class="mt-3 w-full py-3 rounded-xl border border-slate-700 text-slate-300 hover:border-green-300 hover:text-white transition">重置</button>
+            </section>
+
+            <section class="bg-slate-900/70 border border-green-400/20 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-lg font-semibold mb-4">最近记录</h2>
+                <ul id="history" class="space-y-2 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const streak = document.getElementById('streak');
+        const lastCheck = document.getElementById('lastCheck');
+        const checkIn = document.getElementById('checkIn');
+        const reset = document.getElementById('reset');
+        const history = document.getElementById('history');
+
+        const storageKey = 'study-streak-data';
+
+        const render = (data) => {
+            streak.textContent = data.count;
+            lastCheck.textContent = data.last || '尚未打卡';
+            history.innerHTML = '';
+            if (!data.history.length) {
+                history.innerHTML = '<li class="text-slate-500">暂无记录。</li>';
+                return;
+            }
+            data.history.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.textContent = item;
+                history.appendChild(li);
+            });
+        };
+
+        const load = () => JSON.parse(localStorage.getItem(storageKey) || '{"count":0,"last":"","history":[]}');
+
+        checkIn.addEventListener('click', () => {
+            const data = load();
+            data.count += 1;
+            const time = new Date().toLocaleString();
+            data.last = time;
+            data.history.unshift(`打卡：${time}`);
+            localStorage.setItem(storageKey, JSON.stringify({ ...data, history: data.history.slice(0, 6) }));
+            render({ ...data, history: data.history.slice(0, 6) });
+        });
+
+        reset.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            render(load());
+        });
+
+        render(load());
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>精力能量条</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="max-w-4xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">精力能量条</h1>
+                <p class="text-sm text-slate-400">记录当前精力状态。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-400 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <div class="flex items-center gap-3 text-sm">
+                <label class="flex-1">当前能量
+                    <input id="level" type="range" min="0" max="100" value="60" class="w-full">
+                </label>
+                <div id="label" class="text-lg font-semibold w-16 text-right">60%</div>
+            </div>
+            <div class="h-6 rounded-full bg-slate-800 overflow-hidden">
+                <div id="bar" class="h-6 bg-emerald-400" style="width: 60%;"></div>
+            </div>
+            <button id="log" class="px-3 py-2 rounded-xl bg-cyan-500/20 text-cyan-100 text-sm">记录当前状态</button>
+            <ul id="history" class="space-y-2 text-sm text-slate-300"></ul>
+        </div>
+    </div>
+
+    <script>
+        const levelInput = document.getElementById('level');
+        const label = document.getElementById('label');
+        const bar = document.getElementById('bar');
+        const logBtn = document.getElementById('log');
+        const history = document.getElementById('history');
+        const STORAGE_KEY = 'miniapp_energy_bar';
+        let logs = [];
+
+        function updateBar() {
+            const value = Number(levelInput.value);
+            label.textContent = `${value}%`;
+            bar.style.width = `${value}%`;
+            bar.className = value > 70 ? 'h-6 bg-emerald-400' : value > 40 ? 'h-6 bg-amber-400' : 'h-6 bg-rose-400';
+        }
+
+        function renderLogs() {
+            history.innerHTML = '';
+            logs.forEach((log) => {
+                const li = document.createElement('li');
+                li.className = 'rounded-xl bg-slate-950/70 border border-slate-800 px-3 py-2';
+                li.textContent = `${log.time} · ${log.value}%`;
+                history.appendChild(li);
+            });
+        }
+
+        logBtn.addEventListener('click', () => {
+            logs.unshift({ time: new Date().toLocaleTimeString(), value: levelInput.value });
+            logs = logs.slice(0, 6);
+            renderLogs();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+        });
+
+        levelInput.addEventListener('input', updateBar);
+
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) logs = JSON.parse(stored);
+        renderLogs();
+        updateBar();
+    </script>
+</body>
+
+</html>

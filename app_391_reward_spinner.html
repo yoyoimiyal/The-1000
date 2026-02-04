@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>奖励转盘挑选器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-pink-200/70">Reward Spinner</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-pink-200">奖励转盘挑选器</h1>
+            <p class="text-sm text-slate-400 mt-2">把奖励写进列表，完成任务后抽一个放松。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-800/70 border border-pink-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">奖励清单（每行一个）</label>
+                <textarea id="rewardInput" rows="6"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    placeholder="例如：喝杯拿铁\n看一集剧\n散步10分钟"></textarea>
+                <div class="flex gap-3 mt-4">
+                    <button id="saveRewards"
+                        class="flex-1 py-3 rounded-xl bg-pink-400 text-slate-950 font-semibold hover:bg-pink-300 transition">保存清单</button>
+                    <button id="spin"
+                        class="px-4 py-3 rounded-xl border border-slate-700 text-slate-300 hover:border-pink-300 hover:text-white transition">抽一个</button>
+                </div>
+            </section>
+
+            <section class="bg-slate-800/70 border border-pink-400/20 rounded-2xl p-6 shadow-lg text-center">
+                <div class="text-2xl font-semibold text-pink-200" id="selectedReward">等待抽取</div>
+                <p class="text-sm text-slate-400 mt-3">抽到奖励后记得兑现。</p>
+                <div class="mt-6">
+                    <h3 class="text-sm text-slate-400 mb-2">最近抽取</h3>
+                    <ul id="rewardHistory" class="space-y-2 text-sm"></ul>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const rewardInput = document.getElementById('rewardInput');
+        const saveRewards = document.getElementById('saveRewards');
+        const spin = document.getElementById('spin');
+        const selectedReward = document.getElementById('selectedReward');
+        const rewardHistory = document.getElementById('rewardHistory');
+
+        const storageKey = 'reward-spinner-data';
+
+        const renderHistory = (data) => {
+            rewardHistory.innerHTML = '';
+            if (!data.history.length) {
+                rewardHistory.innerHTML = '<li class="text-slate-500">暂无记录。</li>';
+                return;
+            }
+            data.history.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'bg-slate-900/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.textContent = item;
+                rewardHistory.appendChild(li);
+            });
+        };
+
+        const load = () => JSON.parse(localStorage.getItem(storageKey) || '{"rewards":[],"history":[]}');
+
+        saveRewards.addEventListener('click', () => {
+            const data = load();
+            data.rewards = rewardInput.value.split('\n').map(item => item.trim()).filter(Boolean);
+            localStorage.setItem(storageKey, JSON.stringify(data));
+        });
+
+        spin.addEventListener('click', () => {
+            const data = load();
+            if (!data.rewards.length) {
+                selectedReward.textContent = '请先保存奖励清单。';
+                return;
+            }
+            const pick = data.rewards[Math.floor(Math.random() * data.rewards.length)];
+            selectedReward.textContent = pick;
+            data.history.unshift(pick);
+            localStorage.setItem(storageKey, JSON.stringify({ rewards: data.rewards, history: data.history.slice(0, 5) }));
+            renderHistory({ rewards: data.rewards, history: data.history.slice(0, 5) });
+        });
+
+        const cached = load();
+        if (cached.rewards.length) {
+            rewardInput.value = cached.rewards.join('\n');
+        }
+        renderHistory(cached);
+    </script>
+</body>
+
+</html>

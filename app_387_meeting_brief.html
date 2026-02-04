@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会议纪要速记卡</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-rose-200/70">Meeting Brief</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-rose-200">会议纪要速记卡</h1>
+            <p class="text-sm text-slate-400 mt-2">快速记录议题、结论与待办，导出当天会议卡片。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-800/70 border border-rose-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-slate-300 mb-2">会议主题</label>
+                        <input id="meetingTitle" type="text" placeholder="例如：项目对齐会"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" />
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-300 mb-2">关键结论</label>
+                        <textarea id="meetingSummary" rows="4"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+                            placeholder="一句话总结会议达成内容"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-300 mb-2">待办事项（每行一个）</label>
+                        <textarea id="meetingTodos" rows="4"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"></textarea>
+                    </div>
+                </div>
+                <button id="saveBrief"
+                    class="mt-6 w-full py-3 rounded-xl bg-rose-400 text-slate-950 font-semibold hover:bg-rose-300 transition">保存卡片</button>
+            </section>
+
+            <section class="bg-slate-800/70 border border-rose-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">纪要卡</h2>
+                    <button id="clearBrief" class="text-xs text-rose-200 hover:text-white">清空</button>
+                </div>
+                <div id="briefCard" class="bg-slate-900/70 border border-slate-700 rounded-xl p-4 space-y-3 text-sm"></div>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const meetingTitle = document.getElementById('meetingTitle');
+        const meetingSummary = document.getElementById('meetingSummary');
+        const meetingTodos = document.getElementById('meetingTodos');
+        const saveBrief = document.getElementById('saveBrief');
+        const clearBrief = document.getElementById('clearBrief');
+        const briefCard = document.getElementById('briefCard');
+
+        const storageKey = 'meeting-brief-card';
+
+        const renderCard = (data) => {
+            if (!data) {
+                briefCard.innerHTML = '<p class="text-slate-500">暂无纪要卡。</p>';
+                return;
+            }
+            const todoList = data.todos.length
+                ? `<ul class="list-disc list-inside text-slate-300">${data.todos.map(todo => `<li>${todo}</li>`).join('')}</ul>`
+                : '<p class="text-slate-500">暂无待办</p>';
+            briefCard.innerHTML = `
+                <div>
+                    <p class="text-xs text-slate-500">会议主题</p>
+                    <p class="text-lg font-semibold">${data.title || '未命名会议'}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500">关键结论</p>
+                    <p>${data.summary || '暂无记录'}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500">待办事项</p>
+                    ${todoList}
+                </div>
+                <p class="text-xs text-slate-600">更新：${data.updated}</p>
+            `;
+        };
+
+        const load = () => JSON.parse(localStorage.getItem(storageKey) || 'null');
+
+        saveBrief.addEventListener('click', () => {
+            const data = {
+                title: meetingTitle.value.trim(),
+                summary: meetingSummary.value.trim(),
+                todos: meetingTodos.value.split('\n').map(item => item.trim()).filter(Boolean),
+                updated: new Date().toLocaleString()
+            };
+            localStorage.setItem(storageKey, JSON.stringify(data));
+            renderCard(data);
+        });
+
+        clearBrief.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            renderCard(null);
+        });
+
+        const cached = load();
+        if (cached) {
+            meetingTitle.value = cached.title;
+            meetingSummary.value = cached.summary;
+            meetingTodos.value = cached.todos.join('\n');
+            renderCard(cached);
+        } else {
+            renderCard(null);
+        }
+    </script>
+</body>
+
+</html>

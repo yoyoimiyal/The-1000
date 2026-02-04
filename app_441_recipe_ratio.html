@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配方比例计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="max-w-4xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">配方比例计算器</h1>
+                <p class="text-sm text-slate-400">调整份数，快速计算原料。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-400 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 space-y-4">
+            <div class="grid gap-3 md:grid-cols-3 text-sm">
+                <label class="flex flex-col gap-2">当前份数
+                    <input id="base" type="number" value="2" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2">
+                </label>
+                <label class="flex flex-col gap-2">目标份数
+                    <input id="target" type="number" value="4" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2">
+                </label>
+                <label class="flex flex-col gap-2">比例系数
+                    <input id="ratio" type="text" readonly class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-slate-300">
+                </label>
+            </div>
+
+            <div class="grid gap-3 md:grid-cols-2">
+                <textarea id="ingredients" rows="6" placeholder="输入原料，例如：\n面粉 200g\n牛奶 300ml" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm"></textarea>
+                <textarea id="output" rows="6" readonly class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-slate-300"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const baseInput = document.getElementById('base');
+        const targetInput = document.getElementById('target');
+        const ratioInput = document.getElementById('ratio');
+        const ingredientsInput = document.getElementById('ingredients');
+        const output = document.getElementById('output');
+
+        function parseLine(line, ratio) {
+            const match = line.match(/(\d+(?:\.\d+)?)(.*)/);
+            if (!match) return line;
+            const value = Number(match[1]);
+            const rest = match[2];
+            return `${(value * ratio).toFixed(1)}${rest}`;
+        }
+
+        function update() {
+            const base = Math.max(1, Number(baseInput.value));
+            const target = Math.max(1, Number(targetInput.value));
+            const ratio = target / base;
+            ratioInput.value = ratio.toFixed(2);
+            const lines = ingredientsInput.value.split('\n');
+            output.value = lines.map((line) => parseLine(line, ratio)).join('\n');
+        }
+
+        [baseInput, targetInput, ingredientsInput].forEach((input) => input.addEventListener('input', update));
+        update();
+    </script>
+</body>
+
+</html>

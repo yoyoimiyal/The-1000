@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>太阳丝带</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        .panel {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid #334155;
+            border-radius: 16px;
+        }
+        .soft {
+            color: #94a3b8;
+        }
+        .btn {
+            background: rgba(56, 189, 248, 0.2);
+            color: #e0f2fe;
+            padding: 0.5rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        canvas {
+            border-radius: 16px;
+            background: rgba(2, 6, 23, 0.9);
+        }
+        .tag {
+            border-radius: 999px;
+            padding: 0.1rem 0.5rem;
+            background: rgba(148, 163, 184, 0.2);
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-6xl mx-auto p-6 space-y-4">
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold">太阳丝带</h1>
+                <p class="text-sm text-slate-300">生成光带随时间律动。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <section class="grid gap-4 lg:grid-cols-[2fr_1fr]">
+            <div class="panel p-4 space-y-4">
+                <canvas id="simCanvas" width="720" height="420" class="w-full h-[420px]"></canvas>
+                <div class="flex flex-wrap items-center gap-3 text-xs soft">
+                    <span>拖动画布注入能量</span>
+                    <span>滚轮调节注入强度</span>
+                    <span>双击清空场点</span>
+                </div>
+            </div>
+            <div class="panel p-4 space-y-3 text-sm">
+                <h2 class="text-lg font-semibold">场域控制</h2>
+                <label class="flex flex-col gap-2">粒子数量
+                    <input id="count" type="range" min="80" max="240" value="140">
+                </label>
+                <label class="flex flex-col gap-2">场强
+                    <input id="field" type="range" min="1" max="10" value="4">
+                </label>
+                <label class="flex flex-col gap-2">阻尼
+                    <input id="drag" type="range" min="2" max="12" value="6">
+                </label>
+                <label class="flex flex-col gap-2">颜色模式
+                    <select id="colorMode" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+                        <option value="speed">速度</option>
+                        <option value="hue">随机色</option>
+                        <option value="field">场力色</option>
+                    </select>
+                </label>
+                <label class="flex flex-col gap-2">轨迹残影
+                    <input id="trail" type="range" min="5" max="80" value="20">
+                </label>
+                <button id="reset" class="btn">重置粒子</button>
+                <button id="preset" class="btn">随机预设</button>
+                <div class="space-y-2 text-xs soft" id="metrics"></div>
+            </div>
+        </section>
+
+        <script>
+            const canvas = document.getElementById('simCanvas');
+            const ctx = canvas.getContext('2d');
+            const countInput = document.getElementById('count');
+            const fieldInput = document.getElementById('field');
+            const dragInput = document.getElementById('drag');
+            const colorMode = document.getElementById('colorMode');
+            const trailInput = document.getElementById('trail');
+            const resetBtn = document.getElementById('reset');
+            const presetBtn = document.getElementById('preset');
+            const metrics = document.getElementById('metrics');
+
+            let particles = [];
+            let attractors = [];
+            let injectionPower = 1;
+            let lastFrame = 0;
+
+            const presets = [
+                { count: 100, field: 4, drag: 6, trail: 25 },
+                { count: 180, field: 7, drag: 4, trail: 12 },
+                { count: 220, field: 3, drag: 8, trail: 30 },
+                { count: 140, field: 9, drag: 5, trail: 18 }
+            ];
+
+            function createParticle() {
+                return {
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    hue: Math.random() * 360
+                };
+            }
+
+            function resetParticles() {
+                particles = Array.from({ length: Number(countInput.value) }, createParticle);
+            }
+
+            function updateMetrics() {
+                const avgSpeed = particles.reduce((sum, p) => sum + Math.hypot(p.vx, p.vy), 0) / particles.length;
+                metrics.innerHTML = `
+                    <div>平均速度：${avgSpeed.toFixed(2)}</div>
+                    <div>场点数量：${attractors.length}</div>
+                    <div>注入力度：${injectionPower.toFixed(1)}</div>
+                    <div>颜色模式：${colorMode.value}</div>
+                `;
+            }
+
+            function applyField(particle) {
+                attractors.forEach((a) => {
+                    const dx = a.x - particle.x;
+                    const dy = a.y - particle.y;
+                    const dist = Math.hypot(dx, dy) || 1;
+                    const force = (Number(fieldInput.value) * injectionPower) / (dist * 0.6);
+                    particle.vx += (dx / dist) * force;
+                    particle.vy += (dy / dist) * force;
+                });
+            }
+
+            function updateParticles(delta) {
+                const drag = Number(dragInput.value) * 0.01;
+                particles.forEach((particle) => {
+                    applyField(particle);
+                    particle.vx *= (1 - drag);
+                    particle.vy *= (1 - drag);
+                    particle.x += particle.vx * (delta / 16);
+                    particle.y += particle.vy * (delta / 16);
+
+                    if (particle.x < 0 || particle.x > canvas.width) particle.vx *= -0.8;
+                    if (particle.y < 0 || particle.y > canvas.height) particle.vy *= -0.8;
+                    particle.x = Math.max(0, Math.min(canvas.width, particle.x));
+                    particle.y = Math.max(0, Math.min(canvas.height, particle.y));
+                });
+            }
+
+            function getColor(particle) {
+                if (colorMode.value === 'speed') {
+                    const speed = Math.min(1, Math.hypot(particle.vx, particle.vy) / 6);
+                    return `hsla(${200 + speed * 120}, 80%, 60%, 0.7)`;
+                }
+                if (colorMode.value === 'field') {
+                    return `hsla(${Number(fieldInput.value) * 30}, 80%, 60%, 0.7)`;
+                }
+                return `hsla(${particle.hue}, 80%, 60%, 0.7)`;
+            }
+
+            function draw() {
+                ctx.fillStyle = `rgba(2, 6, 23, ${Number(trailInput.value) / 100})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                particles.forEach((particle) => {
+                    ctx.fillStyle = getColor(particle);
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                attractors.forEach((a) => {
+                    ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)';
+                    ctx.beginPath();
+                    ctx.arc(a.x, a.y, 8, 0, Math.PI * 2);
+                    ctx.stroke();
+                });
+            }
+
+            function loop(timestamp) {
+                const delta = timestamp - lastFrame;
+                lastFrame = timestamp;
+                updateParticles(delta);
+                draw();
+                updateMetrics();
+                requestAnimationFrame(loop);
+            }
+
+            canvas.addEventListener('mousemove', (event) => {
+                if (event.buttons !== 1) return;
+                const rect = canvas.getBoundingClientRect();
+                attractors.push({
+                    x: event.clientX - rect.left,
+                    y: event.clientY - rect.top,
+                    life: 120
+                });
+            });
+
+            canvas.addEventListener('dblclick', () => {
+                attractors = [];
+            });
+
+            canvas.addEventListener('wheel', (event) => {
+                injectionPower = Math.max(0.5, Math.min(3, injectionPower + event.deltaY * -0.001));
+            });
+
+            resetBtn.addEventListener('click', () => {
+                attractors = [];
+                resetParticles();
+            });
+
+            presetBtn.addEventListener('click', () => {
+                const preset = presets[Math.floor(Math.random() * presets.length)];
+                countInput.value = preset.count;
+                fieldInput.value = preset.field;
+                dragInput.value = preset.drag;
+                trailInput.value = preset.trail;
+                resetParticles();
+            });
+
+            setInterval(() => {
+                attractors.forEach((a) => a.life -= 1);
+                attractors = attractors.filter((a) => a.life > 0);
+            }, 100);
+
+            countInput.addEventListener('input', resetParticles);
+            resetParticles();
+            requestAnimationFrame(loop);
+        </script>
+
+    
+<!-- Additional diagnostics panel for sim -->
+<div class="panel p-4 text-xs soft">
+    <p>提示：尝试不同预设观察粒子流动变化。</p>
+    <p>拖动时场点会自动衰减，避免过度拥挤。</p>
+</div>
+
+</div>
+</body>
+
+</html>

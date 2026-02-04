@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>预算方块</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="max-w-4xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">预算方块</h1>
+                <p class="text-sm text-slate-400">用方块可视化每一类预算占比。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-400 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 grid gap-4 lg:grid-cols-[1fr_240px]">
+            <div>
+                <div class="flex items-center gap-3 text-sm mb-3">
+                    <label>总预算</label>
+                    <input id="total" type="number" value="5000" class="w-32 rounded-lg bg-slate-950 border border-slate-700 px-2 py-1">
+                </div>
+                <div id="grid" class="grid grid-cols-10 gap-2"></div>
+            </div>
+            <div class="space-y-3 text-sm" id="controls"></div>
+        </div>
+    </div>
+
+    <script>
+        const totalInput = document.getElementById('total');
+        const grid = document.getElementById('grid');
+        const controls = document.getElementById('controls');
+        const categories = [
+            { label: '餐饮', color: 'bg-rose-400' },
+            { label: '交通', color: 'bg-amber-400' },
+            { label: '住房', color: 'bg-emerald-400' },
+            { label: '娱乐', color: 'bg-sky-400' },
+            { label: '储蓄', color: 'bg-violet-400' }
+        ];
+        let values = categories.map(() => 20);
+
+        function renderControls() {
+            controls.innerHTML = '';
+            categories.forEach((cat, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'flex flex-col gap-2';
+                wrapper.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span>${cat.label}</span>
+                        <span class="text-xs text-slate-400" id="amount-${index}"></span>
+                    </div>
+                    <input data-index="${index}" type="range" min="5" max="50" value="${values[index]}" class="w-full">
+                `;
+                controls.appendChild(wrapper);
+            });
+        }
+
+        function renderBlocks() {
+            grid.innerHTML = '';
+            const total = Number(totalInput.value) || 0;
+            const totalPercent = values.reduce((sum, value) => sum + value, 0);
+            categories.forEach((cat, index) => {
+                const count = Math.round((values[index] / totalPercent) * 100);
+                for (let i = 0; i < count; i++) {
+                    const block = document.createElement('div');
+                    block.className = `h-6 rounded ${cat.color}`;
+                    grid.appendChild(block);
+                }
+                const amount = Math.round((values[index] / totalPercent) * total);
+                const amountEl = document.getElementById(`amount-${index}`);
+                if (amountEl) amountEl.textContent = `${amount} 元`;
+            });
+        }
+
+        controls.addEventListener('input', (event) => {
+            const index = Number(event.target.dataset.index);
+            if (!Number.isNaN(index)) {
+                values[index] = Number(event.target.value);
+                renderBlocks();
+            }
+        });
+
+        totalInput.addEventListener('input', renderBlocks);
+        renderControls();
+        renderBlocks();
+    </script>
+</body>
+
+</html>

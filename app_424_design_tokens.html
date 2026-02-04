@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设计令牌生成</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-violet-200/70">Design Tokens</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-violet-200">设计令牌生成</h1>
+            <p class="text-sm text-slate-400 mt-2">快速生成颜色与圆角令牌。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-800/70 border border-violet-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">主色</label>
+                <input id="primaryColor" type="color" value="#6366f1" class="w-full h-12 rounded-xl border border-slate-700" />
+                <label class="block text-sm text-slate-300 mt-4 mb-2">圆角（px）</label>
+                <input id="radius" type="number" value="12" min="0"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+                <button id="generate"
+                    class="mt-6 w-full py-3 rounded-xl bg-violet-400 text-slate-950 font-semibold hover:bg-violet-300 transition">生成令牌</button>
+            </section>
+
+            <section class="bg-slate-800/70 border border-violet-400/20 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-lg font-semibold mb-4">令牌输出</h2>
+                <pre id="output" class="bg-slate-950/70 border border-slate-700 rounded-xl p-4 text-sm text-slate-300 whitespace-pre-wrap"></pre>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const primaryColor = document.getElementById('primaryColor');
+        const radius = document.getElementById('radius');
+        const generate = document.getElementById('generate');
+        const output = document.getElementById('output');
+
+        const updateOutput = () => {
+            const tokens = {
+                color: {
+                    primary: primaryColor.value,
+                    surface: '#0f172a',
+                    text: '#e2e8f0'
+                },
+                radius: {
+                    md: `${radius.value}px`,
+                    lg: `${Number(radius.value) + 6}px`
+                }
+            };
+            output.textContent = JSON.stringify(tokens, null, 2);
+        };
+
+        generate.addEventListener('click', updateOutput);
+        updateOutput();
+    </script>
+</body>
+
+</html>
