@@ -111,7 +111,7 @@
             const normalizeBtn = document.getElementById('normalize');
             const historyEl = document.getElementById('history');
 
-            const STORAGE_KEY = `miniapp_${title.replace(/\s+/g, '_')}_history`;
+            const STORAGE_KEY = `miniapp_${document.title.replace(/\s+/g, '_')}_history`;
             let history = [];
 
             function applyScenario() {

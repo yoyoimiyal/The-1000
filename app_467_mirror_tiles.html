@@ -98,7 +98,7 @@
             const statusEl = document.getElementById('status');
             const historyEl = document.getElementById('history');
 
-            const STORAGE_KEY = `miniapp_${title.replace(/\s+/g, '_')}_best`;
+            const STORAGE_KEY = `miniapp_${document.title.replace(/\s+/g, '_')}_best`;
             let size = Number(sizeInput.value);
             let grid = [];
             let target = [];
