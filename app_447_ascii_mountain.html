@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII 山脉</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #0b1120;
+            color: #e2e8f0;
+        }
+
+        pre {
+            font-family: "Fira Code", "JetBrains Mono", monospace;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-4xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">ASCII 山脉</h1>
+                <p class="text-sm text-slate-300">生成 ASCII 风格的山脉轮廓。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-700 rounded-2xl p-4 grid gap-4 lg:grid-cols-[1fr_220px]">
+            <pre id="output" class="text-xs leading-4 bg-slate-950/70 border border-slate-800 rounded-xl p-4"></pre>
+            <div class="text-sm flex flex-col gap-4">
+                <label class="flex flex-col gap-2">山峰数量
+                    <input id="peaks" type="range" min="3" max="12" value="6">
+                </label>
+                <label class="flex flex-col gap-2">高度
+                    <input id="height" type="range" min="8" max="20" value="14">
+                </label>
+                <button id="regen" class="px-3 py-2 rounded-xl bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/30">刷新</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+        const peaksInput = document.getElementById('peaks');
+        const heightInput = document.getElementById('height');
+        const regenBtn = document.getElementById('regen');
+
+        function generate() {
+            const peaks = Number(peaksInput.value);
+            const height = Number(heightInput.value);
+            const width = peaks * 6;
+            const lines = [];
+            for (let row = 0; row < height; row++) {
+                let line = '';
+                for (let col = 0; col < width; col++) {
+                    const peak = Math.floor(col / 6);
+                    const center = peak * 6 + 3;
+                    const offset = Math.abs(col - center);
+                    const peakHeight = height - Math.floor(Math.random() * 4);
+                    if (height - row <= peakHeight - offset) {
+                        line += '^';
+                    } else {
+                        line += ' ';
+                    }
+                }
+                lines.push(line);
+            }
+            output.textContent = lines.join('\n');
+        }
+
+        [peaksInput, heightInput].forEach((input) => input.addEventListener('input', generate));
+        regenBtn.addEventListener('click', generate);
+        generate();
+    </script>
+</body>
+
+</html>

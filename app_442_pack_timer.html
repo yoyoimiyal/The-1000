@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打包倒计时</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="max-w-4xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">打包倒计时</h1>
+                <p class="text-sm text-slate-400">设定出发时间，提醒打包进度。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-400 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="grid gap-4 lg:grid-cols-[240px_1fr]">
+            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 space-y-4">
+                <label class="flex flex-col gap-2 text-sm">出发时间
+                    <input id="time" type="time" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2">
+                </label>
+                <div class="text-xs text-slate-400">剩余时间</div>
+                <div id="countdown" class="text-2xl font-bold">--:--</div>
+            </div>
+            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+                <h2 class="text-lg font-semibold">打包清单</h2>
+                <div class="mt-3 flex gap-2">
+                    <input id="item" placeholder="新增项目" class="flex-1 rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+                    <button id="add" class="px-3 py-2 rounded-xl bg-cyan-500/20 text-cyan-100 text-sm">添加</button>
+                </div>
+                <ul id="list" class="mt-3 space-y-2 text-sm"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const timeInput = document.getElementById('time');
+        const countdown = document.getElementById('countdown');
+        const itemInput = document.getElementById('item');
+        const addBtn = document.getElementById('add');
+        const list = document.getElementById('list');
+        const STORAGE_KEY = 'miniapp_pack_timer';
+        let items = [];
+
+        function save() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                time: timeInput.value,
+                items
+            }));
+        }
+
+        function render() {
+            list.innerHTML = '';
+            items.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center gap-2 bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2';
+                li.innerHTML = `
+                    <input type="checkbox" data-index="${index}" ${item.done ? 'checked' : ''}>
+                    <span class="flex-1 ${item.done ? 'line-through text-slate-500' : ''}">${item.text}</span>
+                    <button data-remove="${index}" class="text-xs text-rose-200">删除</button>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function updateCountdown() {
+            if (!timeInput.value) {
+                countdown.textContent = '--:--';
+                return;
+            }
+            const [hours, minutes] = timeInput.value.split(':').map(Number);
+            const now = new Date();
+            const target = new Date();
+            target.setHours(hours, minutes, 0, 0);
+            let diff = target - now;
+            if (diff < 0) diff += 24 * 60 * 60 * 1000;
+            const totalMinutes = Math.floor(diff / 60000);
+            const h = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+            const m = (totalMinutes % 60).toString().padStart(2, '0');
+            countdown.textContent = `${h}:${m}`;
+        }
+
+        addBtn.addEventListener('click', () => {
+            const text = itemInput.value.trim();
+            if (!text) return;
+            items.push({ text, done: false });
+            itemInput.value = '';
+            render();
+            save();
+        });
+
+        list.addEventListener('click', (event) => {
+            if (event.target.type === 'checkbox') {
+                const index = Number(event.target.dataset.index);
+                items[index].done = event.target.checked;
+                render();
+                save();
+            }
+            if (event.target.dataset.remove) {
+                const index = Number(event.target.dataset.remove);
+                items.splice(index, 1);
+                render();
+                save();
+            }
+        });
+
+        timeInput.addEventListener('input', () => {
+            updateCountdown();
+            save();
+        });
+
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            timeInput.value = parsed.time || '';
+            items = parsed.items || [];
+        }
+        render();
+        updateCountdown();
+        setInterval(updateCountdown, 60000);
+    </script>
+</body>
+
+</html>

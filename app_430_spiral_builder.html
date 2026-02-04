@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>螺旋构建器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #030712;
+            color: #f8fafc;
+        }
+
+        canvas {
+            background: #0f172a;
+            border-radius: 16px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-5xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">螺旋构建器</h1>
+                <p class="text-sm text-slate-300">生成可控密度与方向的螺旋轨迹。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-700 rounded-2xl p-4 grid gap-4 lg:grid-cols-[1fr_220px]">
+            <canvas id="canvas" width="720" height="420" class="w-full h-[420px]"></canvas>
+            <div class="text-sm flex flex-col gap-4">
+                <label class="flex flex-col gap-2">旋转速度
+                    <input id="spin" type="range" min="1" max="12" value="6">
+                </label>
+                <label class="flex flex-col gap-2">间距
+                    <input id="gap" type="range" min="4" max="16" value="8">
+                </label>
+                <label class="flex flex-col gap-2">点数
+                    <input id="count" type="range" min="200" max="1200" value="600">
+                </label>
+                <button id="flip" class="px-3 py-2 rounded-xl bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/30">反转方向</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const spinInput = document.getElementById('spin');
+        const gapInput = document.getElementById('gap');
+        const countInput = document.getElementById('count');
+        const flipBtn = document.getElementById('flip');
+        let direction = 1;
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const spin = Number(spinInput.value) * 0.01 * direction;
+            const gap = Number(gapInput.value);
+            const count = Number(countInput.value);
+
+            for (let i = 0; i < count; i++) {
+                const angle = i * spin;
+                const radius = i / gap;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                ctx.fillStyle = `hsla(${(i / count) * 360}, 80%, 60%, 0.8)`;
+                ctx.fillRect(x, y, 2, 2);
+            }
+        }
+
+        flipBtn.addEventListener('click', () => {
+            direction *= -1;
+            draw();
+        });
+
+        [spinInput, gapInput, countInput].forEach((input) => input.addEventListener('input', draw));
+        draw();
+    </script>
+</body>
+
+</html>
