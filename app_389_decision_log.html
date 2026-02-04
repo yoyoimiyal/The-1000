@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>决策日志板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-amber-200/70">Decision Log</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-amber-200">决策日志板</h1>
+            <p class="text-sm text-slate-400 mt-2">记录关键决策、理由与回顾日期。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-800/70 border border-amber-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-slate-300 mb-2">决策事项</label>
+                        <input id="decisionTitle" type="text" placeholder="例如：选择A方案"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-300 mb-2">决策理由</label>
+                        <textarea id="decisionReason" rows="3"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-300 mb-2">回顾日期</label>
+                        <input id="reviewDate" type="date"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                    </div>
+                </div>
+                <button id="saveDecision"
+                    class="mt-6 w-full py-3 rounded-xl bg-amber-400 text-slate-950 font-semibold hover:bg-amber-300 transition">保存决策</button>
+            </section>
+
+            <section class="bg-slate-800/70 border border-amber-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">决策列表</h2>
+                    <button id="clearDecisions" class="text-xs text-amber-200 hover:text-white">清空</button>
+                </div>
+                <ul id="decisionList" class="space-y-3 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const decisionTitle = document.getElementById('decisionTitle');
+        const decisionReason = document.getElementById('decisionReason');
+        const reviewDate = document.getElementById('reviewDate');
+        const saveDecision = document.getElementById('saveDecision');
+        const clearDecisions = document.getElementById('clearDecisions');
+        const decisionList = document.getElementById('decisionList');
+
+        const storageKey = 'decision-log-board';
+
+        const render = () => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            decisionList.innerHTML = '';
+            if (!data.length) {
+                decisionList.innerHTML = '<li class="text-slate-500">暂无决策记录。</li>';
+                return;
+            }
+            data.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'bg-slate-900/70 border border-slate-700 rounded-xl p-3 space-y-2';
+                li.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="font-semibold">${item.title}</span>
+                        <span class="text-xs text-amber-200">回顾 ${item.review || '未设置'}</span>
+                    </div>
+                    <p class="text-slate-300 text-xs">${item.reason || '暂无理由'}</p>
+                    <p class="text-xs text-slate-600">记录时间：${item.time}</p>
+                `;
+                decisionList.appendChild(li);
+            });
+        };
+
+        saveDecision.addEventListener('click', () => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            data.unshift({
+                title: decisionTitle.value.trim(),
+                reason: decisionReason.value.trim(),
+                review: reviewDate.value,
+                time: new Date().toLocaleString()
+            });
+            localStorage.setItem(storageKey, JSON.stringify(data.slice(0, 6)));
+            render();
+        });
+
+        clearDecisions.addEventListener('click', () => {
+            localStorage.removeItem(storageKey);
+            render();
+        });
+
+        render();
+    </script>
+</body>
+
+</html>

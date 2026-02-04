@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>目标爆破</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #0b1120;
+            color: #f8fafc;
+        }
+
+        .target {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 999px;
+            background: radial-gradient(circle at 30% 30%, #fde68a, #f97316);
+            box-shadow: 0 0 12px rgba(249, 115, 22, 0.6);
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-4xl mx-auto p-6 flex flex-col gap-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">目标爆破</h1>
+                <p class="text-sm text-slate-300">30 秒内点击尽可能多的目标。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-700 rounded-2xl p-4">
+            <div class="flex flex-wrap gap-4 text-sm">
+                <div>得分：<span id="score">0</span></div>
+                <div>剩余时间：<span id="time">30</span>s</div>
+                <button id="start" class="px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/30">开始</button>
+            </div>
+            <div id="arena" class="relative mt-4 h-[420px] rounded-xl bg-slate-950/60 border border-slate-800 overflow-hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        const arena = document.getElementById('arena');
+        const scoreEl = document.getElementById('score');
+        const timeEl = document.getElementById('time');
+        const startBtn = document.getElementById('start');
+        let score = 0;
+        let timeLeft = 30;
+        let timer = null;
+        let spawnTimer = null;
+
+        function spawnTarget() {
+            const target = document.createElement('div');
+            target.className = 'target';
+            const size = Math.random() * 20 + 30;
+            target.style.width = `${size}px`;
+            target.style.height = `${size}px`;
+            target.style.left = `${Math.random() * (arena.clientWidth - size)}px`;
+            target.style.top = `${Math.random() * (arena.clientHeight - size)}px`;
+            target.addEventListener('click', () => {
+                score += 1;
+                scoreEl.textContent = score;
+                target.remove();
+            });
+            arena.appendChild(target);
+            setTimeout(() => target.remove(), 1200);
+        }
+
+        function tick() {
+            timeLeft -= 1;
+            timeEl.textContent = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                clearInterval(spawnTimer);
+                timer = null;
+                spawnTimer = null;
+                startBtn.disabled = false;
+            }
+        }
+
+        startBtn.addEventListener('click', () => {
+            score = 0;
+            timeLeft = 30;
+            scoreEl.textContent = score;
+            timeEl.textContent = timeLeft;
+            arena.innerHTML = '';
+            startBtn.disabled = true;
+            timer = setInterval(tick, 1000);
+            spawnTimer = setInterval(spawnTarget, 400);
+        });
+    </script>
+</body>
+
+</html>

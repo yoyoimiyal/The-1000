@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>信号示波器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #020617;
+            color: #e2e8f0;
+        }
+
+        canvas {
+            background: #000;
+            border-radius: 16px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-5xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">信号示波器</h1>
+                <p class="text-sm text-slate-300">模拟多频信号叠加。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-700 rounded-2xl p-4 grid gap-4 lg:grid-cols-[1fr_220px]">
+            <canvas id="canvas" width="720" height="420" class="w-full h-[420px]"></canvas>
+            <div class="text-sm flex flex-col gap-4">
+                <label class="flex flex-col gap-2">频率 A
+                    <input id="freqA" type="range" min="1" max="10" value="3">
+                </label>
+                <label class="flex flex-col gap-2">频率 B
+                    <input id="freqB" type="range" min="1" max="10" value="6">
+                </label>
+                <label class="flex flex-col gap-2">噪声
+                    <input id="noise" type="range" min="0" max="100" value="20">
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const freqA = document.getElementById('freqA');
+        const freqB = document.getElementById('freqB');
+        const noiseInput = document.getElementById('noise');
+        let time = 0;
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const fA = Number(freqA.value) * 0.02;
+            const fB = Number(freqB.value) * 0.02;
+            const noise = Number(noiseInput.value) * 0.3;
+            for (let x = 0; x <= canvas.width; x += 4) {
+                const y = canvas.height / 2
+                    + Math.sin(x * fA + time) * 80
+                    + Math.sin(x * fB + time * 1.3) * 40
+                    + (Math.random() - 0.5) * noise;
+                if (x === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+            time += 0.02;
+            requestAnimationFrame(draw);
+        }
+
+        draw();
+    </script>
+</body>
+
+</html>

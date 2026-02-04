@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目预算拆分</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-cyan-200/70">Budget Split</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-cyan-200">项目预算拆分</h1>
+            <p class="text-sm text-slate-400 mt-2">快速拆分预算比例并自动计算金额。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-900/70 border border-cyan-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">总预算（元）</label>
+                <input id="totalBudget" type="number" min="1" value="10000"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300" />
+                <label class="block text-sm text-slate-300 mt-4 mb-2">拆分比例（%）</label>
+                <div class="grid grid-cols-3 gap-3">
+                    <input id="ratioA" type="number" min="0" value="50"
+                        class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300" />
+                    <input id="ratioB" type="number" min="0" value="30"
+                        class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300" />
+                    <input id="ratioC" type="number" min="0" value="20"
+                        class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300" />
+                </div>
+                <button id="calc"
+                    class="mt-6 w-full py-3 rounded-xl bg-cyan-400 text-slate-950 font-semibold hover:bg-cyan-300 transition">计算拆分</button>
+            </section>
+
+            <section class="bg-slate-900/70 border border-cyan-400/20 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-lg font-semibold mb-4">拆分结果</h2>
+                <ul id="result" class="space-y-2 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const totalBudget = document.getElementById('totalBudget');
+        const ratioA = document.getElementById('ratioA');
+        const ratioB = document.getElementById('ratioB');
+        const ratioC = document.getElementById('ratioC');
+        const calc = document.getElementById('calc');
+        const result = document.getElementById('result');
+
+        const calculate = () => {
+            const total = Number(totalBudget.value);
+            const ratios = [Number(ratioA.value), Number(ratioB.value), Number(ratioC.value)];
+            result.innerHTML = '';
+            ratios.forEach((ratio, index) => {
+                const amount = ((total * ratio) / 100).toFixed(2);
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.innerHTML = `<span>部分 ${index + 1}（${ratio}%）</span><span class="text-cyan-200">${amount} 元</span>`;
+                result.appendChild(li);
+            });
+        };
+
+        calc.addEventListener('click', calculate);
+        calculate();
+    </script>
+</body>
+
+</html>

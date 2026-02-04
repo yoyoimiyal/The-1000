@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>时间盒计划板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="max-w-4xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">时间盒计划板</h1>
+                <p class="text-sm text-slate-400">用时间盒拆分今日任务。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-400 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 space-y-4">
+            <div class="grid gap-3 md:grid-cols-[1fr_120px_120px]">
+                <input id="task" placeholder="任务描述" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+                <input id="duration" type="number" min="15" value="30" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+                <button id="add" class="rounded-xl bg-cyan-500/20 text-cyan-100 text-sm">添加</button>
+            </div>
+            <div id="board" class="space-y-2"></div>
+        </div>
+    </div>
+
+    <script>
+        const taskInput = document.getElementById('task');
+        const durationInput = document.getElementById('duration');
+        const addBtn = document.getElementById('add');
+        const board = document.getElementById('board');
+        const STORAGE_KEY = 'miniapp_timeboxing_board';
+        let items = [];
+
+        function save() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+        }
+
+        function render() {
+            board.innerHTML = '';
+            items.forEach((item, index) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-3 bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2';
+                row.innerHTML = `
+                    <div class="flex-1">
+                        <div class="text-sm font-semibold">${item.task}</div>
+                        <div class="text-xs text-slate-400">${item.duration} 分钟</div>
+                    </div>
+                    <button data-action="done" data-index="${index}" class="text-xs px-2 py-1 rounded-full bg-slate-800">${item.done ? '已完成' : '完成'}</button>
+                    <button data-action="remove" data-index="${index}" class="text-xs px-2 py-1 rounded-full bg-rose-500/20 text-rose-200">移除</button>
+                `;
+                board.appendChild(row);
+            });
+        }
+
+        addBtn.addEventListener('click', () => {
+            const task = taskInput.value.trim();
+            if (!task) return;
+            const duration = Math.max(5, Number(durationInput.value));
+            items.push({ task, duration, done: false });
+            taskInput.value = '';
+            render();
+            save();
+        });
+
+        board.addEventListener('click', (event) => {
+            const btn = event.target.closest('button');
+            if (!btn) return;
+            const index = Number(btn.dataset.index);
+            if (btn.dataset.action === 'done') {
+                items[index].done = !items[index].done;
+            }
+            if (btn.dataset.action === 'remove') {
+                items.splice(index, 1);
+            }
+            render();
+            save();
+        });
+
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) items = JSON.parse(stored);
+        render();
+    </script>
+</body>
+
+</html>

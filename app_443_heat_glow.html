@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>热感光晕</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #020617;
+            color: #e2e8f0;
+        }
+
+        canvas {
+            background: #0f172a;
+            border-radius: 16px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-5xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">热感光晕</h1>
+                <p class="text-sm text-slate-300">拖动画布加入热源，观察光晕扩散。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-700 rounded-2xl p-4 grid gap-4 lg:grid-cols-[1fr_220px]">
+            <canvas id="canvas" width="720" height="420" class="w-full h-[420px]"></canvas>
+            <div class="text-sm flex flex-col gap-4">
+                <label class="flex flex-col gap-2">强度
+                    <input id="intensity" type="range" min="10" max="80" value="40">
+                </label>
+                <label class="flex flex-col gap-2">扩散
+                    <input id="spread" type="range" min="20" max="120" value="60">
+                </label>
+                <button id="clear" class="px-3 py-2 rounded-xl bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/30">清除热源</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const intensityInput = document.getElementById('intensity');
+        const spreadInput = document.getElementById('spread');
+        const clearBtn = document.getElementById('clear');
+        const points = [];
+
+        canvas.addEventListener('mousemove', (event) => {
+            if (event.buttons !== 1) return;
+            const rect = canvas.getBoundingClientRect();
+            points.push({
+                x: event.clientX - rect.left,
+                y: event.clientY - rect.top,
+                life: 1
+            });
+        });
+
+        clearBtn.addEventListener('click', () => points.splice(0, points.length));
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const intensity = Number(intensityInput.value);
+            const spread = Number(spreadInput.value);
+
+            points.forEach((point) => {
+                const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, spread);
+                gradient.addColorStop(0, `rgba(250, 204, 21, ${point.life})`);
+                gradient.addColorStop(1, 'rgba(15, 23, 42, 0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, spread, 0, Math.PI * 2);
+                ctx.fill();
+                point.life -= 0.005 * (80 / intensity);
+            });
+
+            for (let i = points.length - 1; i >= 0; i--) {
+                if (points[i].life <= 0) points.splice(i, 1);
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        draw();
+    </script>
+</body>
+
+</html>

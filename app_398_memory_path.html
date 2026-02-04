@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>路径记忆挑战</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-6">
+            <p class="text-xs uppercase tracking-[0.4em] text-emerald-200/70">Memory Path</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-emerald-200">路径记忆挑战</h1>
+            <p class="text-sm text-slate-400 mt-2">记住高亮顺序并复现。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.2fr]">
+            <section class="bg-slate-900/70 border border-emerald-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-4">
+                        <p class="text-xs text-slate-400">关卡</p>
+                        <p id="level" class="text-2xl font-semibold">1</p>
+                    </div>
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-4">
+                        <p class="text-xs text-slate-400">最高</p>
+                        <p id="best" class="text-2xl font-semibold">1</p>
+                    </div>
+                </div>
+                <button id="start"
+                    class="mt-6 w-full py-3 rounded-xl bg-emerald-400 text-slate-950 font-semibold hover:bg-emerald-300 transition">开始</button>
+                <p id="status" class="text-xs text-slate-500 mt-3">观察高亮顺序。</p>
+            </section>
+
+            <section class="bg-slate-900/70 border border-emerald-400/20 rounded-2xl p-6 shadow-lg">
+                <div id="grid" class="grid grid-cols-3 gap-3"></div>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-800 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const grid = document.getElementById('grid');
+        const start = document.getElementById('start');
+        const levelEl = document.getElementById('level');
+        const bestEl = document.getElementById('best');
+        const status = document.getElementById('status');
+
+        const storageKey = 'memory-path-best';
+        let sequence = [];
+        let inputIndex = 0;
+        let level = 1;
+        let accepting = false;
+
+        const buildGrid = () => {
+            grid.innerHTML = '';
+            for (let i = 0; i < 9; i += 1) {
+                const cell = document.createElement('button');
+                cell.className = 'h-20 rounded-xl bg-slate-800 hover:bg-slate-700 transition';
+                cell.dataset.index = i;
+                cell.addEventListener('click', () => handleClick(i, cell));
+                grid.appendChild(cell);
+            }
+        };
+
+        const highlight = (index) => {
+            const cell = grid.querySelector(`[data-index="${index}"]`);
+            if (!cell) return;
+            cell.classList.add('bg-emerald-400');
+            setTimeout(() => {
+                cell.classList.remove('bg-emerald-400');
+                cell.classList.add('bg-slate-800');
+            }, 400);
+        };
+
+        const playSequence = () => {
+            accepting = false;
+            status.textContent = '记住顺序...';
+            sequence.forEach((value, idx) => {
+                setTimeout(() => highlight(value), idx * 600);
+            });
+            setTimeout(() => {
+                status.textContent = '轮到你了！';
+                accepting = true;
+                inputIndex = 0;
+            }, sequence.length * 600 + 200);
+        };
+
+        const nextLevel = () => {
+            level += 1;
+            levelEl.textContent = level;
+            sequence.push(Math.floor(Math.random() * 9));
+            playSequence();
+        };
+
+        const reset = () => {
+            level = 1;
+            levelEl.textContent = level;
+            sequence = [Math.floor(Math.random() * 9)];
+            playSequence();
+        };
+
+        const handleClick = (index, cell) => {
+            if (!accepting) return;
+            if (sequence[inputIndex] === index) {
+                inputIndex += 1;
+                cell.classList.add('bg-emerald-300');
+                setTimeout(() => cell.classList.remove('bg-emerald-300'), 200);
+                if (inputIndex >= sequence.length) {
+                    status.textContent = '正确！进入下一关。';
+                    const best = Number(localStorage.getItem(storageKey) || 1);
+                    if (level > best) {
+                        localStorage.setItem(storageKey, level);
+                        bestEl.textContent = level;
+                    }
+                    setTimeout(nextLevel, 800);
+                }
+            } else {
+                status.textContent = '记错了，重新开始。';
+                accepting = false;
+                setTimeout(reset, 1000);
+            }
+        };
+
+        start.addEventListener('click', () => {
+            start.disabled = true;
+            start.className = 'mt-6 w-full py-3 rounded-xl bg-slate-700 text-slate-400 font-semibold cursor-not-allowed';
+            reset();
+        });
+
+        buildGrid();
+        bestEl.textContent = localStorage.getItem(storageKey) || '1';
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务估时扑克</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <p class="text-xs uppercase tracking-[0.4em] text-blue-200/70">Task Poker</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-200">任务估时扑克</h1>
+            <p class="text-sm text-slate-400 mt-2">用卡片快速估算任务复杂度。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            <section class="bg-slate-900/70 border border-blue-400/20 rounded-2xl p-6 shadow-lg">
+                <label class="block text-sm text-slate-300 mb-2">任务名称</label>
+                <input id="taskInput" type="text" placeholder="例如：整理需求文档"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                <div class="flex flex-wrap gap-3 mt-4" id="cardDeck"></div>
+            </section>
+
+            <section class="bg-slate-900/70 border border-blue-400/20 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-lg font-semibold mb-4">估算记录</h2>
+                <ul id="history" class="space-y-2 text-sm"></ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-700 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const taskInput = document.getElementById('taskInput');
+        const cardDeck = document.getElementById('cardDeck');
+        const history = document.getElementById('history');
+        const cards = [1, 2, 3, 5, 8, 13];
+        const storageKey = 'task-poker-history';
+
+        const renderHistory = () => {
+            const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            history.innerHTML = '';
+            if (!data.length) {
+                history.innerHTML = '<li class="text-slate-500">暂无记录。</li>';
+                return;
+            }
+            data.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-slate-900/70 border border-slate-700 rounded-xl px-3 py-2';
+                li.innerHTML = `<span>${item.task}</span><span class="text-blue-200">${item.point} 点</span>`;
+                history.appendChild(li);
+            });
+        };
+
+        cards.forEach(point => {
+            const btn = document.createElement('button');
+            btn.textContent = point;
+            btn.className = 'px-4 py-3 rounded-xl bg-slate-800 text-slate-200 hover:bg-slate-700 transition';
+            btn.addEventListener('click', () => {
+                const task = taskInput.value.trim() || '未命名任务';
+                const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                data.unshift({ task, point });
+                localStorage.setItem(storageKey, JSON.stringify(data.slice(0, 6)));
+                taskInput.value = '';
+                renderHistory();
+            });
+            cardDeck.appendChild(btn);
+        });
+
+        renderHistory();
+    </script>
+</body>
+
+</html>

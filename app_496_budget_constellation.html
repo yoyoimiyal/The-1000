@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>预算星座</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: radial-gradient(circle at top, #111827, #0f172a 55%, #020617);
+            color: #e2e8f0;
+        }
+        .panel {
+            background: rgba(15, 23, 42, 0.78);
+            border: 1px solid #334155;
+            border-radius: 18px;
+            box-shadow: 0 20px 50px rgba(2, 6, 23, 0.45);
+        }
+        .soft {
+            color: #94a3b8;
+        }
+        .btn {
+            background: rgba(56, 189, 248, 0.2);
+            color: #e0f2fe;
+            padding: 0.55rem 0.9rem;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(56, 189, 248, 0.2);
+        }
+        canvas {
+            border-radius: 18px;
+            background: rgba(2, 6, 23, 0.92);
+        }
+        .tag {
+            border-radius: 999px;
+            padding: 0.15rem 0.6rem;
+            background: rgba(148, 163, 184, 0.16);
+            font-size: 0.7rem;
+        }
+        .chip {
+            border-radius: 999px;
+            padding: 0.25rem 0.75rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-6xl mx-auto p-6 space-y-5">
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold">预算星座</h1>
+                <p class="text-sm text-slate-300">绘制预算星座与占比。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <section class="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+            <div class="panel p-4 space-y-4">
+                <canvas id="chart" width="720" height="360" class="w-full h-[360px]"></canvas>
+                <div class="grid gap-3 md:grid-cols-3 text-sm">
+                    <label class="flex flex-col gap-2">指标 A
+                        <input id="metricA" type="range" min="10" max="100" value="60">
+                    </label>
+                    <label class="flex flex-col gap-2">指标 B
+                        <input id="metricB" type="range" min="10" max="100" value="45">
+                    </label>
+                    <label class="flex flex-col gap-2">指标 C
+                        <input id="metricC" type="range" min="10" max="100" value="80">
+                    </label>
+                </div>
+                <div class="grid gap-3 md:grid-cols-2 text-sm">
+                    <label class="flex flex-col gap-2">偏移
+                        <input id="offset" type="range" min="-20" max="20" value="0">
+                    </label>
+                    <label class="flex flex-col gap-2">波动
+                        <input id="variance" type="range" min="0" max="30" value="12">
+                    </label>
+                </div>
+            </div>
+            <div class="panel p-4 space-y-3 text-sm">
+                <h2 class="text-lg font-semibold">分析摘要</h2>
+                <div id="insights" class="space-y-2"></div>
+                <div class="pt-2 border-t border-slate-700">
+                    <label class="flex flex-col gap-2">预测跨度 (小时)
+                        <input id="span" type="range" min="6" max="24" value="12">
+                    </label>
+                    <label class="flex flex-col gap-2">场景
+                        <select id="scenario" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+                            <option value="base">基础</option>
+                            <option value="peak">高峰</option>
+                            <option value="steady">稳态</option>
+                        </select>
+                    </label>
+                    <button id="save" class="btn">保存快照</button>
+                    <button id="normalize" class="btn">归一化</button>
+                </div>
+                <ul id="history" class="text-xs soft space-y-2"></ul>
+            </div>
+        </section>
+
+        <section class="panel p-4 grid gap-4 lg:grid-cols-2">
+            <div>
+                <h3 class="text-lg font-semibold">指标建议</h3>
+                <ul id="tips" class="mt-3 space-y-2 text-xs soft"></ul>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold">趋势注释</h3>
+                <div id="annotations" class="mt-3 space-y-2 text-xs soft"></div>
+            </div>
+        </section>
+
+        <script>
+            const chart = document.getElementById('chart');
+            const ctx = chart.getContext('2d');
+            const metricA = document.getElementById('metricA');
+            const metricB = document.getElementById('metricB');
+            const metricC = document.getElementById('metricC');
+            const offsetInput = document.getElementById('offset');
+            const varianceInput = document.getElementById('variance');
+            const spanInput = document.getElementById('span');
+            const scenarioInput = document.getElementById('scenario');
+            const insights = document.getElementById('insights');
+            const saveBtn = document.getElementById('save');
+            const normalizeBtn = document.getElementById('normalize');
+            const historyEl = document.getElementById('history');
+            const tipsEl = document.getElementById('tips');
+            const annotations = document.getElementById('annotations');
+
+            const STORAGE_KEY = `miniapp_${document.title.replace(/\s+/g, '_')}_history`;
+            let history = [];
+
+            function applyScenario() {
+                if (scenarioInput.value === 'peak') {
+                    metricA.value = 70;
+                    metricB.value = 60;
+                    metricC.value = 95;
+                }
+                if (scenarioInput.value === 'steady') {
+                    metricA.value = 50;
+                    metricB.value = 50;
+                    metricC.value = 50;
+                }
+            }
+
+            function generateSeries() {
+                const span = Number(spanInput.value);
+                const base = Number(metricA.value) + Number(offsetInput.value);
+                const mid = Number(metricB.value);
+                const peak = Number(metricC.value);
+                const variance = Number(varianceInput.value);
+                const data = [];
+                for (let i = 0; i <= span; i++) {
+                    const ratio = i / span;
+                    const wave = Math.sin(ratio * Math.PI * 2) * variance;
+                    const value = base * (1 - ratio) + peak * ratio + Math.sin(ratio * Math.PI) * mid * 0.4 + wave;
+                    data.push(value);
+                }
+                return data;
+            }
+
+            function drawChart() {
+                ctx.clearRect(0, 0, chart.width, chart.height);
+                const data = generateSeries();
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.8)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                data.forEach((value, index) => {
+                    const x = (index / (data.length - 1)) * chart.width;
+                    const y = chart.height - (value / 120) * chart.height;
+                    if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(14, 116, 144, 0.3)';
+                ctx.lineTo(chart.width, chart.height);
+                ctx.lineTo(0, chart.height);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            function updateInsights() {
+                const data = generateSeries();
+                const avg = data.reduce((sum, value) => sum + value, 0) / data.length;
+                const max = Math.max(...data);
+                const min = Math.min(...data);
+                insights.innerHTML = '';
+                const rows = [
+                    { label: '平均值', value: avg.toFixed(1) },
+                    { label: '峰值', value: max.toFixed(1) },
+                    { label: '谷值', value: min.toFixed(1) },
+                    { label: '波动区间', value: `${(max - min).toFixed(1)}` }
+                ];
+                rows.forEach((row) => {
+                    const card = document.createElement('div');
+                    card.className = 'flex items-center justify-between bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2';
+                    card.innerHTML = `<span class="soft">${row.label}</span><span>${row.value}</span>`;
+                    insights.appendChild(card);
+                });
+            }
+
+            function renderHistory() {
+                historyEl.innerHTML = '';
+                history.slice(0, 5).forEach((item) => {
+                    const li = document.createElement('li');
+                    li.className = 'bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2';
+                    li.textContent = `${item.time} · A:${item.a} B:${item.b} C:${item.c} · span:${item.span}`;
+                    historyEl.appendChild(li);
+                });
+            }
+
+            function renderTips() {
+                tipsEl.innerHTML = '';
+                const list = [
+                    '高峰场景适合安排重点任务。',
+                    '稳态场景适合复盘与整理。',
+                    '波动较大时应减少多线程任务。'
+                ];
+                list.forEach((text) => {
+                    const li = document.createElement('li');
+                    li.className = 'bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2';
+                    li.textContent = text;
+                    tipsEl.appendChild(li);
+                });
+            }
+
+            function renderAnnotations() {
+                annotations.innerHTML = '';
+                const data = generateSeries();
+                const peak = Math.max(...data);
+                const peakIndex = data.indexOf(peak);
+                const row = document.createElement('div');
+                row.className = 'bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2';
+                row.textContent = `峰值出现在第 ${peakIndex} 小时，强度 ${peak.toFixed(1)}`;
+                annotations.appendChild(row);
+            }
+
+            function saveSnapshot() {
+                history.unshift({
+                    time: new Date().toLocaleTimeString(),
+                    a: metricA.value,
+                    b: metricB.value,
+                    c: metricC.value,
+                    span: spanInput.value
+                });
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+                renderHistory();
+            }
+
+            function normalizeMetrics() {
+                const values = [metricA.value, metricB.value, metricC.value].map(Number);
+                const max = Math.max(...values);
+                const min = Math.min(...values);
+                const range = max - min || 1;
+                metricA.value = Math.round(((metricA.value - min) / range) * 100);
+                metricB.value = Math.round(((metricB.value - min) / range) * 100);
+                metricC.value = Math.round(((metricC.value - min) / range) * 100);
+                drawChart();
+                updateInsights();
+                renderAnnotations();
+            }
+
+            [metricA, metricB, metricC, spanInput, offsetInput, varianceInput].forEach((input) => input.addEventListener('input', () => {
+                drawChart();
+                updateInsights();
+                renderAnnotations();
+            }));
+
+            scenarioInput.addEventListener('change', () => {
+                applyScenario();
+                drawChart();
+                updateInsights();
+                renderAnnotations();
+            });
+
+            saveBtn.addEventListener('click', saveSnapshot);
+            normalizeBtn.addEventListener('click', normalizeMetrics);
+
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) history = JSON.parse(stored);
+            drawChart();
+            updateInsights();
+            renderHistory();
+            renderTips();
+            renderAnnotations();
+        </script>
+
+    </div>
+</body>
+
+</html>

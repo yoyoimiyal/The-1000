@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>颜色记忆翻翻乐</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #0b1120;
+            color: #f8fafc;
+        }
+
+        .card {
+            background: #1e293b;
+            border-radius: 12px;
+            height: 80px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .card.revealed {
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-4xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">颜色记忆翻翻乐</h1>
+                <p class="text-sm text-slate-300">找到所有配对颜色。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-700 rounded-2xl p-6 space-y-4">
+            <div class="flex items-center gap-4 text-sm">
+                <div>翻开次数：<span id="moves">0</span></div>
+                <button id="reset" class="px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/30">重新开始</button>
+            </div>
+            <div id="grid" class="grid grid-cols-4 gap-3"></div>
+        </div>
+    </div>
+
+    <script>
+        const colors = ['#f87171', '#fb923c', '#facc15', '#4ade80', '#38bdf8', '#a78bfa'];
+        const grid = document.getElementById('grid');
+        const movesEl = document.getElementById('moves');
+        const resetBtn = document.getElementById('reset');
+        let flipped = [];
+        let moves = 0;
+
+        function shuffle(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+
+        function setup() {
+            grid.innerHTML = '';
+            flipped = [];
+            moves = 0;
+            movesEl.textContent = moves;
+            const palette = shuffle([...colors, ...colors]);
+            palette.forEach((color) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.dataset.color = color;
+                card.addEventListener('click', () => reveal(card));
+                grid.appendChild(card);
+            });
+        }
+
+        function reveal(card) {
+            if (card.classList.contains('matched') || flipped.includes(card) || flipped.length === 2) return;
+            card.classList.add('revealed');
+            card.style.background = card.dataset.color;
+            flipped.push(card);
+
+            if (flipped.length === 2) {
+                moves += 1;
+                movesEl.textContent = moves;
+                const [first, second] = flipped;
+                if (first.dataset.color === second.dataset.color) {
+                    first.classList.add('matched');
+                    second.classList.add('matched');
+                    flipped = [];
+                } else {
+                    setTimeout(() => {
+                        first.style.background = '#1e293b';
+                        second.style.background = '#1e293b';
+                        first.classList.remove('revealed');
+                        second.classList.remove('revealed');
+                        flipped = [];
+                    }, 600);
+                }
+            }
+        }
+
+        resetBtn.addEventListener('click', setup);
+        setup();
+    </script>
+</body>
+
+</html>

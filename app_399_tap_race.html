@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极速点击赛</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl">
+        <header class="text-center mb-6">
+            <p class="text-xs uppercase tracking-[0.4em] text-orange-200/70">Tap Race</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-orange-200">极速点击赛</h1>
+            <p class="text-sm text-slate-400 mt-2">10 秒内点击尽可能多的按钮。</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-[1fr_1.2fr]">
+            <section class="bg-slate-900/70 border border-orange-400/20 rounded-2xl p-6 shadow-lg">
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-4">
+                        <p class="text-xs text-slate-400">剩余时间</p>
+                        <p id="time" class="text-2xl font-semibold">10</p>
+                    </div>
+                    <div class="bg-slate-950/70 border border-slate-700 rounded-xl p-4">
+                        <p class="text-xs text-slate-400">点击数</p>
+                        <p id="count" class="text-2xl font-semibold">0</p>
+                    </div>
+                </div>
+                <button id="start"
+                    class="mt-6 w-full py-3 rounded-xl bg-orange-400 text-slate-950 font-semibold hover:bg-orange-300 transition">开始</button>
+            </section>
+
+            <section class="bg-slate-900/70 border border-orange-400/20 rounded-2xl p-6 shadow-lg flex items-center justify-center">
+                <button id="tap"
+                    class="w-48 h-48 rounded-full bg-orange-400 text-slate-950 text-2xl font-bold shadow-lg hover:bg-orange-300 transition">点击</button>
+            </section>
+        </div>
+    </div>
+
+    <div class="fixed bottom-8 text-center w-full">
+        <a href="./navigation.html"
+            class="text-xs text-slate-500 hover:text-white border border-slate-800 px-4 py-2 rounded-full transition">Exit</a>
+    </div>
+
+    <script>
+        const start = document.getElementById('start');
+        const tap = document.getElementById('tap');
+        const timeEl = document.getElementById('time');
+        const countEl = document.getElementById('count');
+
+        let remaining = 10;
+        let count = 0;
+        let timerId = null;
+        let running = false;
+
+        const reset = () => {
+            remaining = 10;
+            count = 0;
+            timeEl.textContent = remaining;
+            countEl.textContent = count;
+        };
+
+        const startGame = () => {
+            reset();
+            running = true;
+            start.disabled = true;
+            start.className = 'mt-6 w-full py-3 rounded-xl bg-slate-700 text-slate-400 font-semibold cursor-not-allowed';
+            timerId = setInterval(() => {
+                remaining -= 1;
+                timeEl.textContent = remaining;
+                if (remaining <= 0) {
+                    clearInterval(timerId);
+                    running = false;
+                    start.disabled = false;
+                    start.className = 'mt-6 w-full py-3 rounded-xl bg-orange-400 text-slate-950 font-semibold hover:bg-orange-300 transition';
+                }
+            }, 1000);
+        };
+
+        tap.addEventListener('click', () => {
+            if (!running) return;
+            count += 1;
+            countEl.textContent = count;
+        });
+
+        start.addEventListener('click', startGame);
+    </script>
+</body>
+
+</html>

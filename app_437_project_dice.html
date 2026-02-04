@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目骰子</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="max-w-4xl mx-auto p-6 space-y-4">
+        <header class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">项目骰子</h1>
+                <p class="text-sm text-slate-400">掷骰生成项目限制与创意方向。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-400 hover:text-white">返回导航</a>
+        </header>
+
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <div class="grid gap-3 md:grid-cols-3 text-sm">
+                <div class="rounded-xl bg-slate-950/70 border border-slate-800 px-4 py-3">
+                    <div class="text-xs text-slate-400">时间限制</div>
+                    <div id="time" class="text-lg font-semibold"></div>
+                </div>
+                <div class="rounded-xl bg-slate-950/70 border border-slate-800 px-4 py-3">
+                    <div class="text-xs text-slate-400">团队规模</div>
+                    <div id="team" class="text-lg font-semibold"></div>
+                </div>
+                <div class="rounded-xl bg-slate-950/70 border border-slate-800 px-4 py-3">
+                    <div class="text-xs text-slate-400">核心方向</div>
+                    <div id="theme" class="text-lg font-semibold"></div>
+                </div>
+            </div>
+            <button id="roll" class="px-4 py-2 rounded-xl bg-cyan-500/20 text-cyan-100">掷骰</button>
+        </div>
+    </div>
+
+    <script>
+        const timeEl = document.getElementById('time');
+        const teamEl = document.getElementById('team');
+        const themeEl = document.getElementById('theme');
+        const rollBtn = document.getElementById('roll');
+
+        const times = ['2 小时', '1 天', '3 天', '1 周', '2 周'];
+        const teams = ['单人', '2 人', '3 人', '5 人', '跨职能'];
+        const themes = ['教育', '健康', '游戏', '生产力', '视觉艺术', '社区'];
+
+        function roll() {
+            timeEl.textContent = times[Math.floor(Math.random() * times.length)];
+            teamEl.textContent = teams[Math.floor(Math.random() * teams.length)];
+            themeEl.textContent = themes[Math.floor(Math.random() * themes.length)];
+        }
+
+        rollBtn.addEventListener('click', roll);
+        roll();
+    </script>
+</body>
+
+</html>
