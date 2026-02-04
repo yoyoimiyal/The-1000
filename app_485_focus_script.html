@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专注脚本台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: radial-gradient(circle at top, #111827, #0f172a 55%, #020617);
+            color: #e2e8f0;
+        }
+        .panel {
+            background: rgba(15, 23, 42, 0.78);
+            border: 1px solid #334155;
+            border-radius: 18px;
+            box-shadow: 0 20px 50px rgba(2, 6, 23, 0.45);
+        }
+        .soft {
+            color: #94a3b8;
+        }
+        .btn {
+            background: rgba(56, 189, 248, 0.2);
+            color: #e0f2fe;
+            padding: 0.55rem 0.9rem;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(56, 189, 248, 0.2);
+        }
+        canvas {
+            border-radius: 18px;
+            background: rgba(2, 6, 23, 0.92);
+        }
+        .tag {
+            border-radius: 999px;
+            padding: 0.15rem 0.6rem;
+            background: rgba(148, 163, 184, 0.16);
+            font-size: 0.7rem;
+        }
+        .chip {
+            border-radius: 999px;
+            padding: 0.25rem 0.75rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="max-w-6xl mx-auto p-6 space-y-5">
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold">专注脚本台</h1>
+                <p class="text-sm text-slate-300">设计专注脚本并记录执行。</p>
+            </div>
+            <a href="./navigation.html" class="text-xs uppercase tracking-widest text-slate-300 hover:text-white">返回导航</a>
+        </header>
+
+        <section class="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+            <div class="panel p-4 space-y-4">
+                <div class="flex flex-col md:flex-row gap-3">
+                    <input id="taskInput" placeholder="新增条目" class="flex-1 rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+                    <select id="priorityInput" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+                        <option value="高">高优先级</option>
+                        <option value="中" selected>中优先级</option>
+                        <option value="低">低优先级</option>
+                    </select>
+                    <select id="tagInput" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+                        <option value="规划">规划</option>
+                        <option value="执行" selected>执行</option>
+                        <option value="回顾">回顾</option>
+                    </select>
+                    <button id="addBtn" class="btn">添加</button>
+                </div>
+                <div class="grid gap-3" id="list"></div>
+            </div>
+            <div class="panel p-4 space-y-4 text-sm">
+                <h2 class="text-lg font-semibold">节奏概览</h2>
+                <div class="space-y-2" id="summary"></div>
+                <div class="pt-2 border-t border-slate-700">
+                    <label class="flex flex-col gap-2">专注块数量
+                        <input id="blocks" type="range" min="3" max="10" value="5">
+                    </label>
+                    <label class="flex flex-col gap-2">单块时长 (分钟)
+                        <input id="duration" type="range" min="15" max="90" value="30">
+                    </label>
+                    <label class="flex flex-col gap-2">休息比例 (%)
+                        <input id="breakRatio" type="range" min="5" max="30" value="15">
+                    </label>
+                </div>
+                <div class="pt-2 border-t border-slate-700">
+                    <label class="flex flex-col gap-2">筛选标签
+                        <select id="filterTag" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+                            <option value="全部">全部</option>
+                            <option value="规划">规划</option>
+                            <option value="执行">执行</option>
+                            <option value="回顾">回顾</option>
+                        </select>
+                    </label>
+                    <label class="flex flex-col gap-2">排序方式
+                        <select id="sortMode" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+                            <option value="priority">优先级</option>
+                            <option value="status">完成状态</option>
+                            <option value="time">创建时间</option>
+                        </select>
+                    </label>
+                </div>
+                <button id="exportBtn" class="btn">导出 JSON</button>
+                <textarea id="exportArea" rows="6" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-xs" readonly></textarea>
+                <div class="text-xs soft">拖动调整优先级，或点击完成。</div>
+            </div>
+        </section>
+
+        <section class="panel p-4 grid gap-4 lg:grid-cols-2">
+            <div>
+                <h3 class="text-lg font-semibold">时间安排</h3>
+                <div id="timeline" class="mt-3 space-y-2 text-xs soft"></div>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold">能量提示</h3>
+                <ul id="suggestions" class="mt-3 space-y-2 text-xs soft"></ul>
+            </div>
+        </section>
+
+        <script>
+            const taskInput = document.getElementById('taskInput');
+            const priorityInput = document.getElementById('priorityInput');
+            const tagInput = document.getElementById('tagInput');
+            const addBtn = document.getElementById('addBtn');
+            const list = document.getElementById('list');
+            const summary = document.getElementById('summary');
+            const blocksInput = document.getElementById('blocks');
+            const durationInput = document.getElementById('duration');
+            const breakRatioInput = document.getElementById('breakRatio');
+            const filterTag = document.getElementById('filterTag');
+            const sortMode = document.getElementById('sortMode');
+            const exportBtn = document.getElementById('exportBtn');
+            const exportArea = document.getElementById('exportArea');
+            const timeline = document.getElementById('timeline');
+            const suggestions = document.getElementById('suggestions');
+
+            const STORAGE_KEY = `miniapp_${document.title.replace(/\s+/g, '_')}_items`;
+            const PRIORITY_SCORE = { '高': 3, '中': 2, '低': 1 };
+            let items = [];
+
+            function save() {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+            }
+
+            function createItemCard(item, index) {
+                const card = document.createElement('div');
+                card.className = 'flex flex-wrap items-center gap-3 bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2';
+                card.innerHTML = `
+                    <div class="flex-1">
+                        <div class="text-sm font-semibold">${item.title}</div>
+                        <div class="text-xs soft">优先级：${item.priority} · 标签：${item.tag} · 状态：${item.done ? '已完成' : '进行中'}</div>
+                    </div>
+                    <span class="tag">${item.tag}</span>
+                    <button data-action="up" data-index="${index}" class="text-xs px-2 py-1 rounded-full bg-slate-800">上移</button>
+                    <button data-action="down" data-index="${index}" class="text-xs px-2 py-1 rounded-full bg-slate-800">下移</button>
+                    <button data-action="toggle" data-index="${index}" class="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-200">完成</button>
+                    <button data-action="remove" data-index="${index}" class="text-xs px-2 py-1 rounded-full bg-rose-500/20 text-rose-200">删除</button>
+                `;
+                return card;
+            }
+
+            function getFilteredItems() {
+                let result = [...items];
+                if (filterTag.value !== '全部') {
+                    result = result.filter((item) => item.tag === filterTag.value);
+                }
+                if (sortMode.value === 'priority') {
+                    result.sort((a, b) => PRIORITY_SCORE[b.priority] - PRIORITY_SCORE[a.priority]);
+                }
+                if (sortMode.value === 'status') {
+                    result.sort((a, b) => Number(a.done) - Number(b.done));
+                }
+                if (sortMode.value === 'time') {
+                    result.sort((a, b) => a.created - b.created);
+                }
+                return result;
+            }
+
+            function renderTimeline() {
+                timeline.innerHTML = '';
+                const focusBlocks = Number(blocksInput.value);
+                const duration = Number(durationInput.value);
+                for (let i = 0; i < focusBlocks; i++) {
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center justify-between bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2';
+                    row.innerHTML = `<span class="soft">第 ${i + 1} 段</span><span>${duration} 分钟</span>`;
+                    timeline.appendChild(row);
+                }
+            }
+
+            function renderSuggestions() {
+                suggestions.innerHTML = '';
+                const focusBlocks = Number(blocksInput.value);
+                const breakRatio = Number(breakRatioInput.value) / 100;
+                const breakTime = Math.round(focusBlocks * Number(durationInput.value) * breakRatio);
+                const list = [
+                    `预计休息总时长 ${breakTime} 分钟`,
+                    `建议完成高优先级任务 ${Math.min(items.length, 3)} 条`,
+                    '预留至少 10 分钟整理回顾'
+                ];
+                list.forEach((text) => {
+                    const li = document.createElement('li');
+                    li.className = 'bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2';
+                    li.textContent = text;
+                    suggestions.appendChild(li);
+                });
+            }
+
+            function render() {
+                list.innerHTML = '';
+                getFilteredItems().forEach((item, index) => list.appendChild(createItemCard(item, index)));
+                updateSummary();
+                renderTimeline();
+                renderSuggestions();
+                save();
+            }
+
+            function updateSummary() {
+                summary.innerHTML = '';
+                const total = items.length;
+                const done = items.filter((item) => item.done).length;
+                const focusBlocks = Number(blocksInput.value);
+                const duration = Number(durationInput.value);
+                const breakRatio = Number(breakRatioInput.value) / 100;
+                const focusTime = focusBlocks * duration;
+                const breakTime = Math.round(focusTime * breakRatio);
+                const priorityScore = items.reduce((sum, item) => sum + PRIORITY_SCORE[item.priority], 0);
+                const tagMap = items.reduce((acc, item) => {
+                    acc[item.tag] = (acc[item.tag] || 0) + 1;
+                    return acc;
+                }, {});
+
+                const info = [
+                    { label: '总条目', value: total },
+                    { label: '已完成', value: done },
+                    { label: '预计专注时间', value: `${focusTime} 分钟` },
+                    { label: '休息时间', value: `${breakTime} 分钟` },
+                    { label: '优先级指数', value: priorityScore },
+                    { label: '标签分布', value: Object.entries(tagMap).map(([k, v]) => `${k}:${v}`).join(' / ') || '暂无' }
+                ];
+                info.forEach((row) => {
+                    const card = document.createElement('div');
+                    card.className = 'flex items-center justify-between bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2';
+                    card.innerHTML = `<span class="soft">${row.label}</span><span>${row.value}</span>`;
+                    summary.appendChild(card);
+                });
+            }
+
+            addBtn.addEventListener('click', () => {
+                const titleText = taskInput.value.trim();
+                if (!titleText) return;
+                items.push({
+                    title: titleText,
+                    priority: priorityInput.value,
+                    tag: tagInput.value,
+                    done: false,
+                    created: Date.now()
+                });
+                taskInput.value = '';
+                render();
+            });
+
+            list.addEventListener('click', (event) => {
+                const btn = event.target.closest('button');
+                if (!btn) return;
+                const index = Number(btn.dataset.index);
+                if (btn.dataset.action === 'up' && index > 0) {
+                    [items[index - 1], items[index]] = [items[index], items[index - 1]];
+                }
+                if (btn.dataset.action === 'down' && index < items.length - 1) {
+                    [items[index + 1], items[index]] = [items[index], items[index + 1]];
+                }
+                if (btn.dataset.action === 'toggle') {
+                    items[index].done = !items[index].done;
+                }
+                if (btn.dataset.action === 'remove') {
+                    items.splice(index, 1);
+                }
+                render();
+            });
+
+            exportBtn.addEventListener('click', () => {
+                exportArea.value = JSON.stringify({
+                    blocks: Number(blocksInput.value),
+                    duration: Number(durationInput.value),
+                    breakRatio: Number(breakRatioInput.value),
+                    items
+                }, null, 2);
+            });
+
+            [blocksInput, durationInput, breakRatioInput, filterTag, sortMode].forEach((input) => input.addEventListener('input', updateSummary));
+            [filterTag, sortMode].forEach((input) => input.addEventListener('change', render));
+
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) items = JSON.parse(stored);
+            render();
+        </script>
+
+    </div>
+</body>
+
+</html>
